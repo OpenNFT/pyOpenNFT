@@ -6,6 +6,8 @@
 Welcome to pyOpenNFT's documentation!
 =====================================
 
+pyOpenNFT is an open-source Python framework for real-time fMRI neurofeedback training.
+
 .. toctree::
    :maxdepth: 2
    :caption: Contents:
