@@ -1,0 +1,43 @@
+[tool.poetry]
+name = "pyopennft"
+version = "0.1.0"
+description = "An open-source Python framework for real-time fMRI neurofeedback training"
+authors = ["OpenNFT Team <opennft@gmail.com>"]
+license = "GPL-3.0"
+readme = "README.md"
+keywords = ["neurofeedback", "neurofeedback-training", "opennft"]
+
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Science/Research",
+    "Topic :: Software Development :: Libraries",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.6",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+include = [
+    "CHANGELOG.md",
+    "CONTRIBUTORS",
+    "LICENSE",
+]
+
+packages = [
+    { include = "opennft" },
+]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+importlib-metadata = "^2.0.0"
+numpy = "^1.19.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.1.1"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
