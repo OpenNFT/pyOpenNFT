@@ -3,8 +3,8 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to pyOpenNFT's documentation!
-=====================================
+pyOpenNFT
+=========
 
 pyOpenNFT is an open-source Python framework for real-time fMRI neurofeedback training.
 

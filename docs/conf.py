@@ -55,3 +55,20 @@ html_theme = 'alabaster'
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+html_theme_options = {
+    'logo': 'logo.png',
+    'fixed_sidebar': 'true',
+    'show_powered_by': 'false',
+
+    'description': 'An open-source Python framework for real-time fMRI neurofeedback training',
+
+    'github_user': 'opennft',
+    'github_repo': 'pyOpenNFT',
+    'github_type': 'star',
+
+    'extra_nav_links': {
+        'GitHub repository': 'https://github.com/opennft/pyOpenNFT',
+        # 'PyPI': 'https://pypi.org/project/pyOpenNFT',
+    },
+}
