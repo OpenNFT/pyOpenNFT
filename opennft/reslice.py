@@ -2,7 +2,7 @@
 import numpy as np
 import sys
 
-class Python_Reslicing():
+class Reslicing():
 
     def __init__(self, parent=None):
         super().__init__(parent=parent)
@@ -59,35 +59,32 @@ class Python_Reslicing():
                 read_vol = 0
 
             if read_vol:
-                if not np.isfinite(flags.interp):
-                    v = np.abs(self.kspace3d(spm_bsplinc(P[i], np.zeros((3,2))), ...,
-                                             P['mat'][0]/P['mat'][i]))
+                # if not np.isfinite(flags.interp):
+                #     v = np.abs(self.kspace3d(spm_bsplinc(P["mat"][i], P["dim"][i], P["Vol"][i], P["C"][i], np.zeros((3,2))), ...,
+                #                              P['mat'][0]/P['mat'][i]))
+                # for x3 in range(0,P['dim'][0][2]):
+                #     if flags.mean:
+                #         Integral[:,:,x3] += self.nan2zero(v[:,:,x3] * self.getmask(np.linalg.inv(P['mat'][0]/P['mat'][i]),x1,x2,x3, ...,
+                #                    P['dim'][i][0:3],flags.wrap))
+                #     if flags.mask:
+                #         tmp = v[:,:,x3]
+                #         tmp[msk[x3]] = 0
+                #         v[:,:,x3] = tmp
+                # else:
+
+                v = np.zeros(P['dim'][0])
                 for x3 in range(0,P['dim'][0][2]):
+                    tmp, y1, y2, y3 = self.getmask(np.linalg.inv(P['mat'][0]/P['mat'][i]),x1,x2,x3, ...,
+                               P['dim'][i][0:3],flags.wrap)
+                    v[:,:,x3] = spm_bsplins(P['C'][i], y1, y2, y3, d)
+
                     if flags.mean:
-                        Integral[:,:,x3] += self.nan2zero(v[:,:,x3] * self.getmask(np.linalg.inv(P['mat'][0]/P['mat'][i]),x1,x2,x3, ...,
-                                   P['dim'][i][0:3],flags.wrap))
+                        Integral[:, :, x3] += self.nan2zero(v[:,:,:x3])
+
                     if flags.mask:
-                        tmp = v[:,:,x3]
+                        tmp = v[:, :, x3]
                         tmp[msk[x3]] = 0
-                        v[:,:,x3] = tmp
-                else:
-                    # was commented in matlab version
-                    # C = spm_dsplinc(P[i], d)
-                    v = np.zeros(P['dim'][0])
-                    for x3 in range(0,P['dim'][0][2]):
-                        tmp, y1, y2, y3 = self.getmask(np.linalg.inv(P['mat'][0]/P['mat'][i]),x1,x2,x3, ...,
-                                   P['dim'][i][0:3],flags.wrap)
-                        v[:,:,x3] = spm_bsplins(P['C'][i], y1, y2, y3, d)
-                        # TODO: equivalent for python; was commented in matalb version
-                        # v(~tmp)      = 0
-
-                        if flags.mean:
-                            Integral[:, :, x3] += self.nan2zero(v[:,:,:x3])
-
-                        if flags.mask:
-                            tmp = v[:, :, x3]
-                            tmp[msk[x3]] = 0
-                            v[:, :, x3] = tmp
+                        v[:, :, x3] = tmp
 
                 if write_vol:
                     V0 = v
