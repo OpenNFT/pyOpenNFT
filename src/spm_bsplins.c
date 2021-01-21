@@ -42,7 +42,6 @@ static void fun(double c[], int m0, int m1, int m2,
     int cond, int (*bnd[])(), double f[])
 {
     int j;
-    double NaN = mxGetNaN();
 
     for(j=0; j<n; j++)
     {
@@ -51,7 +50,7 @@ static void fun(double c[], int m0, int m1, int m2,
             ((cond&4) | (x2[j]>=1-TINY && x2[j]<=m2+TINY)))
             f[j] = sample3(c, m0,m1,m2, x0[j]-1,x1[j]-1,x2[j]-1, d, bnd);
         else
-            f[j] = NaN;
+            f[j] = nan;
     }
 }
 
@@ -68,34 +67,33 @@ Loop through data and resample the points and their derivatives
     f   - resampled data
     df0, df1, df2   - gradients
 */
-static void dfun(double c[], int m0, int m1, int m2,
-    int n, double x0[], double x1[], double x2[],int d[],
-    int cond, int (*bnd[])(),
-    double f[], double df0[], double df1[], double df2[])
-{
-    int j;
-    double NaN = mxGetNaN();
-
-    for(j=0; j<n; j++)
-    {
-        if (((cond&1) | (x0[j]>=1-TINY && x0[j]<=m0+TINY)) &&
-            ((cond&2) | (x1[j]>=1-TINY && x1[j]<=m1+TINY)) &&
-            ((cond&4) | (x2[j]>=1-TINY && x2[j]<=m2+TINY)))
-            f[j] = dsample3(c, m0,m1,m2, x0[j]-1,x1[j]-1,x2[j]-1, d,
-                &df0[j],&df1[j],&df2[j], bnd);
-        else
-            f[j] = NaN;
-    }
-}
+//static void dfun(double c[], int m0, int m1, int m2,
+//    int n, double x0[], double x1[], double x2[],int d[],
+//    int cond, int (*bnd[])(),
+//    double f[], double df0[], double df1[], double df2[])
+//{
+//    int j;
+//    double NaN = mxGetNaN();
+//
+//    for(j=0; j<n; j++)
+//    {
+//        if (((cond&1) | (x0[j]>=1-TINY && x0[j]<=m0+TINY)) &&
+//            ((cond&2) | (x1[j]>=1-TINY && x1[j]<=m1+TINY)) &&
+//            ((cond&4) | (x2[j]>=1-TINY && x2[j]<=m2+TINY)))
+//            f[j] = dsample3(c, m0,m1,m2, x0[j]-1,x1[j]-1,x2[j]-1, d,
+//                &df0[j],&df1[j],&df2[j], bnd);
+//        else
+//            f[j] = NaN;
+//    }
+//}
 
 
 /***************************************************************************************/
-void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::array y3, py::array d)
 {
     int k, d[3], n, nd;
     int m0=1, m1=1, m2=1;
     double *x0, *x1, *x2, *c, *f, *df0, *df1, *df2;
-    const mwSize *dims;
     int (*bnd[3])();
     int cond;
 
@@ -113,83 +111,85 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
                 f   - sampled function
                 df0, df1, df2   - sampled derivatives
     */
-    if (nrhs < 5 || nlhs>4)
-        mexErrMsgTxt("Incorrect usage.");
 
-    for(k=0; k<5; k++)
-    {
-        if (!mxIsNumeric(prhs[k]) || mxIsComplex(prhs[k]) ||
-            mxIsSparse(prhs[k]) || !mxIsDouble(prhs[k]))
-            mexErrMsgTxt("Input must be numeric, real, full and double precision.");
-    }
-
-    if ((mxGetM(prhs[4])*mxGetN(prhs[4]) != 3) && (mxGetM(prhs[4])*mxGetN(prhs[4]) != 6))
-        mexErrMsgTxt("Incorrect usage.");
+    py::buffer_info d_info = d.request();
+    auto ptr = static_cast<double*>(d_info.ptr);
+    int n = static_cast<int>(d_info.shape[0]);
+    int m = static_cast<int>(d_info.shape[1]);
 
     /* Degree of spline */
     for(k=0; k<3; k++)
     {
-        d[k] = floor(mxGetPr(prhs[4])[k]+0.5);
+        d[k] = floor(ptr[k*m]+0.5);
         if (d[k]<0 || d[k]>7)
-            mexErrMsgTxt("Bad spline degree.");
+            printf("\033[0;31m SPM ERROR: Bad spline degree. \033[0m");
     }
 
     cond = 0;
     for(k=0; k<3; k++) bnd[k] = mirror;
-    if (mxGetM(prhs[4])*mxGetN(prhs[4]) == 6)
+    if (n*m == 6)
     {
         for(k=0; k<3; k++)
-            if (mxGetPr(prhs[4])[k+3])
+            if (ptr[k*m+1])
             {
                 bnd[k] = wrap;
                 cond += 1<<k;
             }
     }
 
-    /* if (d==0 && nlhs>1)
-        mexErrMsgTxt("Cant compute gradients when using B-spline(0) interp."); */
-
     /* Dimensions of coefficient volume */
-    nd = mxGetNumberOfDimensions(prhs[0]);
-    if (nd>3) mexErrMsgTxt("Too many coefficient dimensions.");
-    dims = mxGetDimensions(prhs[0]);
-    if (nd>=1) m0 = dims[0];
-    if (nd>=2) m1 = dims[1];
-    if (nd>=3) m2 = dims[2];
+    py::buffer_info С_info = С.request();
+    auto ptr = static_cast<double*>(С_info.ptr);
+    if (info.ndim>=1) m0 = С_info.shape[0]);
+    if (info.ndim>=2) m1 = С_info.shape[1];
+    if (info.ndim>=3) m2 = С_info.shape[2];
 
     /* Dimensions of sampling co-ordinates */
-    nd = mxGetNumberOfDimensions(prhs[1]);
-    dims = mxGetDimensions(prhs[1]);
-    if (mxGetNumberOfDimensions(prhs[2]) != nd || mxGetNumberOfDimensions(prhs[3]) != nd)
-        mexErrMsgTxt("Incompatible dimensions.");
+    py::buffer_info y1_info = y1.request();
+    py::buffer_info y2_info = y2.request();
+    py::buffer_info y3_info = y3.request();
+
+    nd = y1_info.ndim;
+    if (y2_info.ndim != nd || y3_info.ndim != nd)
+        printf("\033[0;31m SPM ERROR: Incompatible dimensions. \033[0m");
     n = 1;
     for(k=0; k<nd; k++)
     {
-        if (mxGetDimensions(prhs[2])[k] != dims[k] || mxGetDimensions(prhs[3])[k] != dims[k])
-            mexErrMsgTxt("Incompatible dimensions.");
-        n *=dims[k];
+        if (y2_info.shape[k] != y1_info.shape[k] || y3_info.shape[k] != y1_info.shape[k])
+            printf("\033[0;31m SPM ERROR: Incompatible dimensions. \033[0m");
+        n *=y1_info.shape[k];
     }
 
     /* Sampled data same size as sampling co-ords */
-    plhs[0] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
+    py::array_t<double> func = py::array_t<double>(С_info.size);
+    py::buffer_info func_info = func.request();
+    double *f = static_cast<double*>(func_info.ptr);
 
     /* Pointers to double precision data */
-    c  = mxGetPr(prhs[0]);
-    x0 = mxGetPr(prhs[1]);
-    x1 = mxGetPr(prhs[2]);
-    x2 = mxGetPr(prhs[3]);
-    f  = mxGetPr(plhs[0]);
+    c  = static_cast<double*>(С_info.ptr);
+    x0 = static_cast<double*>(y1_info.ptr);
+    x1 = static_cast<double*>(y2_info.ptr);
+    x2 = static_cast<double*>(y3_info.ptr);
 
-    if (nlhs<=1)
-        fun(c, m0,m1,m2, n, x0,x1,x2, d, cond,bnd, f);
-    else
-    {
-        plhs[1] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
-        plhs[2] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
-        plhs[3] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
-        df0 = mxGetPr(plhs[1]);
-        df1 = mxGetPr(plhs[2]);
-        df2 = mxGetPr(plhs[3]);
-        dfun(c, m0,m1,m2, n, x0,x1,x2, d, cond,bnd, f,df0,df1,df2);
-    }
+//    if (nlhs<=1)
+    fun(c, m0,m1,m2, n, x0,x1,x2, d, cond,bnd, f);
+//    else
+//    {
+//        plhs[1] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
+//        plhs[2] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
+//        plhs[3] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
+//        df0 = mxGetPr(plhs[1]);
+//        df1 = mxGetPr(plhs[2]);
+//        df2 = mxGetPr(plhs[3]);
+//        dfun(c, m0,m1,m2, n, x0,x1,x2, d, cond,bnd, f,df0,df1,df2);
+//    }
+
+    return f;
+
+}
+
+PYBIND11_MODULE(python_spm, m) {
+
+    m.def("spm_bsplins", &spm_bsplins);
+
 }
