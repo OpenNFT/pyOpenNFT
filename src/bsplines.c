@@ -24,7 +24,6 @@
  *  IEEE Signal Processing Magazine 16(6):22-38 (1999).
  *
 */
-#include "mex.h"
 #include <stdlib.h>
 #include <math.h>
 #ifdef IMAGE_SINGLE

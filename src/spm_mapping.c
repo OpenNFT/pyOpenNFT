@@ -544,7 +544,7 @@ static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
 
 /**************************************************************************/
 
-MAPTYPE *get_maps(const py::dict ptr, int *n)
+MAPTYPE *get_maps(const py::array ptr, int *n)
 {
 //    if (mxIsStruct(ptr))
 //         return(get_maps_struct(ptr, n));
@@ -575,28 +575,28 @@ void voxdim(MAPTYPE *map, double vdim[3])
 
 /**************************************************************************/
 
-int get_dtype(const mxArray *ptr)
-{
-    mxArray *tmp;
-    double *pr;
-
-    if (!mxIsStruct(ptr))
-    {
-        mexErrMsgTxt("Not a structure.");
-        return(0);
-    }
-    tmp=mxGetField(ptr,0,"dt");
-    if (tmp == (mxArray *)0)
-    {
-        mexErrMsgTxt("Cant find dt.");
-    }
-    if (mxGetM(tmp)*mxGetN(tmp) != 2)
-    {
-        mexErrMsgTxt("Wrong sized dt.");
-    }
-    pr = mxGetPr(tmp);
-
-    return((int)fabs(pr[0]));
-}
+//int get_dtype(const mxArray *ptr)
+//{
+//    mxArray *tmp;
+//    double *pr;
+//
+//    if (!mxIsStruct(ptr))
+//    {
+//        mexErrMsgTxt("Not a structure.");
+//        return(0);
+//    }
+//    tmp=mxGetField(ptr,0,"dt");
+//    if (tmp == (mxArray *)0)
+//    {
+//        mexErrMsgTxt("Cant find dt.");
+//    }
+//    if (mxGetM(tmp)*mxGetN(tmp) != 2)
+//    {
+//        mexErrMsgTxt("Wrong sized dt.");
+//    }
+//    pr = mxGetPr(tmp);
+//
+//    return((int)fabs(pr[0]));
+//}
 
 /**************************************************************************/

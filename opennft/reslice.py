@@ -1,5 +1,6 @@
 
 import numpy as np
+import python_spm as spm
 import sys
 
 class Reslicing():
@@ -76,7 +77,7 @@ class Reslicing():
                 for x3 in range(0,P['dim'][0][2]):
                     tmp, y1, y2, y3 = self.getmask(np.linalg.inv(P['mat'][0]/P['mat'][i]),x1,x2,x3, ...,
                                P['dim'][i][0:3],flags.wrap)
-                    v[:,:,x3] = spm_bsplins(P['C'][i], y1, y2, y3, d)
+                    v[:,:,x3] = spm.spm_bsplins(P['C'][i], y1, y2, y3, d)
 
                     if flags.mean:
                         Integral[:, :, x3] += self.nan2zero(v[:,:,:x3])

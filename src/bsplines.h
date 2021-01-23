@@ -7,7 +7,7 @@
 #else
 #define IMAGE_DTYPE double
 #endif
- 
+
 void splinc_wrap(IMAGE_DTYPE c[], int m, double p[], int np);
 void splinc_mirror(IMAGE_DTYPE c[], int m, double p[], int np);
 int get_poles(int d, int *np, double p[]);
