@@ -8,6 +8,8 @@
 
 namespace py = pybind11;
 
-py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::array y3, py::array d);
+using DoubleArray = py::array_t<double>;
+
+DoubleArray spm_bsplins(DoubleArray C, DoubleArray y1, DoubleArray y2, DoubleArray y3, DoubleArray d);
 
 #endif // _SPM_BSPLINS_H_

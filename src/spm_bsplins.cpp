@@ -52,7 +52,7 @@ static void fun(double c[], int m0, int m1, int m2,
             ((cond&4) | (x2[j]>=1-TINY && x2[j]<=m2+TINY)))
             f[j] = sample3(c, m0, m1, m2, x0[j]-1, x1[j]-1, x2[j]-1, d, bnd);
         else
-            f[j] = nan;
+            f[j] = 0.0;  // FIXME: must be NaN instead of Zero
     }
 }
 
@@ -91,11 +91,11 @@ Loop through data and resample the points and their derivatives
 
 
 /***************************************************************************************/
-py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::array y3, py::array d)
+DoubleArray spm_bsplins(DoubleArray C, DoubleArray y1, DoubleArray y2, DoubleArray y3, DoubleArray d)
 {
     int k, dd[3], nd;
     int m0=1, m1=1, m2=1;
-    double *x0, *x1, *x2, *c, *f, *df0, *df1, *df2;
+    double *df0, *df1, *df2;
     int cond;
     int (*bnd[3])(int, int);
 
@@ -115,9 +115,9 @@ py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::arr
     */
 
     py::buffer_info d_info = d.request();
-    double *ptr = static_cast<double*>(d_info.ptr);
-    int n = static_cast<int>(d_info.shape[0]);
-    int m = static_cast<int>(d_info.shape[1]);
+    double *ptr = static_cast<double *>(d_info.ptr);
+    int n = d_info.shape[0];
+    int m = d_info.shape[1];
 
     /* Degree of spline */
     for(k=0; k<3; k++)
@@ -148,7 +148,6 @@ py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::arr
 
     /* Dimensions of coefficient volume */
     py::buffer_info C_info = C.request();
-    ptr = static_cast<double*>(C_info.ptr);
 
     if (C_info.ndim>=1) m0 = C_info.shape[0];
     if (C_info.ndim>=2) m1 = C_info.shape[1];
@@ -171,15 +170,15 @@ py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::arr
     }
 
     /* Sampled data same size as sampling co-ords */
-    py::array_t<double> func = py::array_t<double>(C_info.size);
+    auto func = DoubleArray(C_info.size);
     py::buffer_info func_info = func.request();
 
     /* Pointers to double precision data */
-    f = static_cast<double*>(func_info.ptr);
-    c  = static_cast<double*>(C_info.ptr);
-    x0 = static_cast<double*>(y1_info.ptr);
-    x1 = static_cast<double*>(y2_info.ptr);
-    x2 = static_cast<double*>(y3_info.ptr);
+    double *f = static_cast<double *>(func_info.ptr);
+    double *c  = static_cast<double *>(C_info.ptr);
+    double *x0 = static_cast<double *>(y1_info.ptr);
+    double *x1 = static_cast<double *>(y2_info.ptr);
+    double *x2 = static_cast<double *>(y3_info.ptr);
 
 //    if (nlhs<=1)
     fun(c, m0, m1, m2, n, x0, x1, x2, dd, cond, bnd, f);
@@ -194,6 +193,5 @@ py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::arr
 //        dfun(c, m0,m1,m2, n, x0,x1,x2, d, cond,bnd, f,df0,df1,df2);
 //    }
 
-    return f;
-
+    return func;
 }

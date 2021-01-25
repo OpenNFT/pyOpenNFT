@@ -40,7 +40,7 @@ Deconvolve the B-spline basis functions from the image volume
 */
 static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])(IMAGE_DTYPE[], int, double[], int))
 {
-    double  p[4];
+    double p[4];
     double *cp;
     int np;
     int i, j, k, n;
@@ -48,7 +48,7 @@ static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])(IMAGE_
 
     /* Check that dimensions don't exceed size of f */
     if (vol->dim[1]>10240 ||vol->dim[2]>10240)
-        return(1);
+        return 1;
 
     /* Do a straight copy */
     cp = c;
@@ -124,12 +124,13 @@ static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])(IMAGE_
             }
         }
     }
-    return(0);
+
+    return 0;
 }
 
 /***************************************************************************************
 */
-py::array_t<double> spm_bsplinc(py::array v, py::array C, py::array splDgr)
+DoubleArray spm_bsplinc(DoubleArray v, DoubleArray C, DoubleArray splDgr)
 {
     py::buffer_info info = splDgr.request();
 
@@ -162,8 +163,12 @@ py::array_t<double> spm_bsplinc(py::array v, py::array C, py::array splDgr)
     if (n*m == 6)
     {
         for(k=0; k<3; k++)
+        {
             if (ptr[k*m+1])
+            {
                 splinc[k] = splinc_wrap;
+            }
+        }
     }
 
     vol = get_maps(v, &k);
@@ -176,9 +181,9 @@ py::array_t<double> spm_bsplinc(py::array v, py::array C, py::array splDgr)
 
     info = v.request();
 
-    py::array_t<double> coeffs = py::array_t<double>(info.size);
+    auto coeffs = DoubleArray(info.size);
     py::buffer_info coeffs_info = coeffs.request();
-    double *c = static_cast<double*>(coeffs_info.ptr);
+    double *c = static_cast<double *>(coeffs_info.ptr);
 
     sts = vol_coeffs(vol, c, d, splinc);
 
