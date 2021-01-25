@@ -10,7 +10,7 @@ PYBIND11_MODULE(pyspm, m) {
         Python adaptation of SPM for OpenNFT project
         --------------------------------------------
 
-        .. codeauthor:: Nikita Davydov and OpenNFT Team
+        .. codeauthor:: SPM Toolbox Team, Nikita Davydov and OpenNFT Team
 
         .. currentmodule:: pyspm
         .. autosummary::
