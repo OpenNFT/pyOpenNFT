@@ -27,13 +27,9 @@
 
 #include <math.h>
 #include <stdio.h>
-#include "spm_mapping.h"
-#include "bsplines.h"
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-#include <pybind11/embed.h>
 
-namespace py = pybind11;
+#include "bsplines.h"
+#include "spm_bsplinc.h"
 
 /***************************************************************************************
 Deconvolve the B-spline basis functions from the image volume
@@ -42,7 +38,7 @@ Deconvolve the B-spline basis functions from the image volume
     d - the spline degree
     splinc0, splinc1, splinc2   - functions for 1D deconvolutions
 */
-static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])())
+static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])(IMAGE_DTYPE[], int, double[], int))
 {
     double  p[4];
     double *cp;
@@ -68,7 +64,8 @@ static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])())
                 resample(1,vol,cp,&di,&dj,&dk,0, 0.0);
 
                 /* Not sure how best to handle NaNs */
-                if (!mxIsFinite(*cp)) *cp = 0.0;
+                // FIXME: replace mxIsFinite to ...
+//                if (!mxIsFinite(*cp)) *cp = 0.0;
             }
         }
     }
@@ -135,14 +132,14 @@ static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])())
 py::array_t<double> spm_bsplinc(py::array v, py::array C, py::array splDgr)
 {
     py::buffer_info info = splDgr.request();
+
     auto ptr = static_cast<double*>(info.ptr);
     int n = static_cast<int>(info.shape[0]);
     int m = static_cast<int>(info.shape[1]);
 
     int k, d[3], sts;
-    MAPTYPE *vol, *get_maps();
-    double *c;
-    void (*splinc[3])();
+    MAPTYPE *vol;
+    void (*splinc[3])(IMAGE_DTYPE[], int, double[], int);
 
 //    if (nrhs < 2 || nlhs > 1)
 //        mexErrMsgTxt("Incorrect usage.");
@@ -157,7 +154,11 @@ py::array_t<double> spm_bsplinc(py::array v, py::array C, py::array splDgr)
             printf("\033[0;31m SPM ERROR: Bad spline degree. \033[0m");
     }
 
-    for(k=0; k<3; k++) splinc[k] = splinc_mirror;
+    for(k=0; k<3; k++)
+    {
+        splinc[k] = splinc_mirror;
+    }
+
     if (n*m == 6)
     {
         for(k=0; k<3; k++)
@@ -165,14 +166,16 @@ py::array_t<double> spm_bsplinc(py::array v, py::array C, py::array splDgr)
                 splinc[k] = splinc_wrap;
     }
 
-    vol=get_maps(v, &k);
+    vol = get_maps(v, &k);
+
     if (k!=1)
     {
         free_maps(vol, k);
         printf("\033[0;31m SPM ERROR: Too many images. \033[0m");
     }
 
-    py::buffer_info info = v.request();
+    info = v.request();
+
     py::array_t<double> coeffs = py::array_t<double>(info.size);
     py::buffer_info coeffs_info = coeffs.request();
     double *c = static_cast<double*>(coeffs_info.ptr);
@@ -184,13 +187,8 @@ py::array_t<double> spm_bsplinc(py::array v, py::array C, py::array splDgr)
         free_maps(vol, k);
         printf("\033[0;31m SPM ERROR: Problem with deconvolution. \033[0m");
     }
+
     free_maps(vol, k);
 
     return coeffs;
-}
-
-PYBIND11_MODULE(python_spm, m) {
-
-    m.def("spm_bsplinc", &spm_bsplinc);
-
 }

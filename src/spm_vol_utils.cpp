@@ -239,9 +239,11 @@
 
 #include <math.h>
 #include <stdlib.h>
-#define RINT(A) floor((A)+0.5)
+
 #include "spm_make_lookup.h"
 #include "spm_getdata.h"
+
+#define RINT(A) floor((A)+0.5)
 
 static void (*make_lookup)() = make_lookup_poly, (*make_lookup_grad)() = make_lookup_poly_grad;
 
@@ -795,4 +797,3 @@ IMAGE_DTYPE *vol[];
             RESAMPLE_D_POLY(m,vol,out,gradx,grady,gradz,x,y,z,xdim,ydim,zdim, hold+1, background, scale,offset);
     }
 }
-

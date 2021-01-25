@@ -28,12 +28,12 @@
 #include <sys/mman.h>
 #endif
 
-#include "spm_mapping.h"
-#include "spm_datatypes.h"
-
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 #include <pybind11/embed.h>
+
+#include "spm_mapping.h"
+#include "spm_datatypes.h"
 
 namespace py = pybind11;
 

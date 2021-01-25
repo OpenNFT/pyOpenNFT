@@ -21,8 +21,10 @@
 */
 
 #include <math.h>
-#include "mex.h"
+
 #include "bsplines.h"
+#include "spm_bsplins.h"
+
 
 /***************************************************************************************
 Loop through data and resample the points
@@ -39,7 +41,7 @@ Loop through data and resample the points
 
 static void fun(double c[], int m0, int m1, int m2,
     int n, double x0[], double x1[], double x2[], int d[],
-    int cond, int (*bnd[])(), double f[])
+    int cond, int (*bnd[])(int, int), double f[])
 {
     int j;
 
@@ -48,7 +50,7 @@ static void fun(double c[], int m0, int m1, int m2,
         if (((cond&1) | (x0[j]>=1-TINY && x0[j]<=m0+TINY)) &&
             ((cond&2) | (x1[j]>=1-TINY && x1[j]<=m1+TINY)) &&
             ((cond&4) | (x2[j]>=1-TINY && x2[j]<=m2+TINY)))
-            f[j] = sample3(c, m0,m1,m2, x0[j]-1,x1[j]-1,x2[j]-1, d, bnd);
+            f[j] = sample3(c, m0, m1, m2, x0[j]-1, x1[j]-1, x2[j]-1, d, bnd);
         else
             f[j] = nan;
     }
@@ -69,7 +71,7 @@ Loop through data and resample the points and their derivatives
 */
 //static void dfun(double c[], int m0, int m1, int m2,
 //    int n, double x0[], double x1[], double x2[],int d[],
-//    int cond, int (*bnd[])(),
+//    int cond, int (*bnd[])(int, int),
 //    double f[], double df0[], double df1[], double df2[])
 //{
 //    int j;
@@ -91,11 +93,11 @@ Loop through data and resample the points and their derivatives
 /***************************************************************************************/
 py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::array y3, py::array d)
 {
-    int k, d[3], n, nd;
+    int k, dd[3], nd;
     int m0=1, m1=1, m2=1;
     double *x0, *x1, *x2, *c, *f, *df0, *df1, *df2;
-    int (*bnd[3])();
     int cond;
+    int (*bnd[3])(int, int);
 
     /* Usage:
             f = function(c,x0,x1,x2,d)
@@ -113,36 +115,44 @@ py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::arr
     */
 
     py::buffer_info d_info = d.request();
-    auto ptr = static_cast<double*>(d_info.ptr);
+    double *ptr = static_cast<double*>(d_info.ptr);
     int n = static_cast<int>(d_info.shape[0]);
     int m = static_cast<int>(d_info.shape[1]);
 
     /* Degree of spline */
     for(k=0; k<3; k++)
     {
-        d[k] = floor(ptr[k*m]+0.5);
-        if (d[k]<0 || d[k]>7)
+        dd[k] = floor(ptr[k*m]+0.5);
+        if (dd[k]<0 || dd[k]>7)
             printf("\033[0;31m SPM ERROR: Bad spline degree. \033[0m");
     }
 
     cond = 0;
-    for(k=0; k<3; k++) bnd[k] = mirror;
+
+    for(k=0; k<3; k++)
+    {
+        bnd[k] = mirror;
+    }
+
     if (n*m == 6)
     {
         for(k=0; k<3; k++)
+        {
             if (ptr[k*m+1])
             {
                 bnd[k] = wrap;
                 cond += 1<<k;
             }
+        }
     }
 
     /* Dimensions of coefficient volume */
-    py::buffer_info С_info = С.request();
-    auto ptr = static_cast<double*>(С_info.ptr);
-    if (info.ndim>=1) m0 = С_info.shape[0]);
-    if (info.ndim>=2) m1 = С_info.shape[1];
-    if (info.ndim>=3) m2 = С_info.shape[2];
+    py::buffer_info C_info = C.request();
+    ptr = static_cast<double*>(C_info.ptr);
+
+    if (C_info.ndim>=1) m0 = C_info.shape[0];
+    if (C_info.ndim>=2) m1 = C_info.shape[1];
+    if (C_info.ndim>=3) m2 = C_info.shape[2];
 
     /* Dimensions of sampling co-ordinates */
     py::buffer_info y1_info = y1.request();
@@ -161,18 +171,18 @@ py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::arr
     }
 
     /* Sampled data same size as sampling co-ords */
-    py::array_t<double> func = py::array_t<double>(С_info.size);
+    py::array_t<double> func = py::array_t<double>(C_info.size);
     py::buffer_info func_info = func.request();
-    double *f = static_cast<double*>(func_info.ptr);
 
     /* Pointers to double precision data */
-    c  = static_cast<double*>(С_info.ptr);
+    f = static_cast<double*>(func_info.ptr);
+    c  = static_cast<double*>(C_info.ptr);
     x0 = static_cast<double*>(y1_info.ptr);
     x1 = static_cast<double*>(y2_info.ptr);
     x2 = static_cast<double*>(y3_info.ptr);
 
 //    if (nlhs<=1)
-    fun(c, m0,m1,m2, n, x0,x1,x2, d, cond,bnd, f);
+    fun(c, m0, m1, m2, n, x0, x1, x2, dd, cond, bnd, f);
 //    else
 //    {
 //        plhs[1] = mxCreateNumericArray(nd,dims, mxDOUBLE_CLASS, mxREAL);
@@ -185,11 +195,5 @@ py::array_t<double> spm_bsplins(py::array C, py::array y1, py::array y2, py::arr
 //    }
 
     return f;
-
-}
-
-PYBIND11_MODULE(python_spm, m) {
-
-    m.def("spm_bsplins", &spm_bsplins);
 
 }

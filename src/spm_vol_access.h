@@ -9,6 +9,7 @@
 #define _SPM_VOL_ACCESS_H_
 
 #include <sys/types.h>
+
 #ifdef SPM_WIN32
 typedef char *caddr_t;
 #else

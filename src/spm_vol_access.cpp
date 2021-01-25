@@ -9,11 +9,14 @@
 
 #include <math.h>
 #include <stdio.h>
-#include "spm_vol_access.h"
-#include "spm_datatypes.h"
+
 #ifdef SPM_WIN32
 #include <windows.h>
 #endif
+
+#include "spm_datatypes.h"
+#include "spm_vol_access.h"
+
 
 int get_datasize(int type)
 {

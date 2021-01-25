@@ -24,8 +24,10 @@
  *  IEEE Signal Processing Magazine 16(6):22-38 (1999).
  *
 */
+
 #include <stdlib.h>
 #include <math.h>
+
 #ifdef IMAGE_SINGLE
 #define IMAGE_DTYPE float
 #else
@@ -725,7 +727,7 @@ Resample a point
 */
 IMAGE_DTYPE sample3(IMAGE_DTYPE c[], int m0, int m1, int m2,
     IMAGE_DTYPE x0, IMAGE_DTYPE x1, IMAGE_DTYPE x2, int d[],
-    int (*bnd[])())
+    int (*bnd[])(int, int))
 {
     double w0[32], w1[32], w2[32]; /* B-spline weights */
     int    o0[32], o1[32], o2[32]; /* Offsets */
@@ -775,7 +777,7 @@ Resample a point and its gradients
 IMAGE_DTYPE dsample3(IMAGE_DTYPE c[], int m0, int m1, int m2,
     IMAGE_DTYPE x0, IMAGE_DTYPE x1, IMAGE_DTYPE x2,
     int d[], IMAGE_DTYPE *pg0, IMAGE_DTYPE *pg1, IMAGE_DTYPE *pg2,
-    int (*bnd[])())
+    int (*bnd[])(int, int))
 {
     double  w0[32],  w1[32],  w2[32]; /* B-spline weights */
     double dw0[32], dw1[32], dw2[32]; /* B-spline derivatives */
@@ -829,4 +831,3 @@ IMAGE_DTYPE dsample3(IMAGE_DTYPE c[], int m0, int m1, int m2,
 
     return((IMAGE_DTYPE)d2);
 }
-

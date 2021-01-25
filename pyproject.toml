@@ -30,6 +30,8 @@ packages = [
     { include = "opennft" },
 ]
 
+build = "buildext.py"
+
 [tool.poetry.dependencies]
 python = "^3.6"
 importlib-metadata = "^2.0.0"
