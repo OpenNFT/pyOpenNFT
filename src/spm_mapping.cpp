@@ -483,7 +483,7 @@ void free_maps(MAPTYPE *maps, int n)
 static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
 {
     int num_dims, jj, t, dtype = 0;
-    const mwSize *dims;
+    const size_t *dims;
     MAPTYPE *maps;
     unsigned char *dptr;
 
@@ -502,15 +502,15 @@ static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
     maps = (MAPTYPE *)calloc(1, sizeof(MAPTYPE));
 
     py::buffer_info info = v.request();
+    num_dims = info.ndim;
 
-    num_dims = static_cast<int>(info.ndim);
     if (num_dims > 3)
     {
         printf("\033[0;31m SPM ERROR: Too many dimensions. \033[0m");
     }
 
     for(jj=0; jj<num_dims; jj++)
-        maps->dim[jj]=static_cast<int>(info.shape[jj]);;
+        maps->dim[jj] = info.shape[jj];
     for(jj=num_dims; jj<3; jj++)
         maps->dim[jj]=1;
 
@@ -521,12 +521,12 @@ static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
 
     maps->dtype  = dtype;
 
-    maps->data   = (void  **)mxCalloc(maps->dim[2],sizeof(void *));
-    maps->scale  = (double *)mxCalloc(maps->dim[2],sizeof(double));
-    maps->offset = (double *)mxCalloc(maps->dim[2],sizeof(double));
+    maps->data   = (void  **)calloc(maps->dim[2], sizeof(void *));
+    maps->scale  = (double *)calloc(maps->dim[2], sizeof(double));
+    maps->offset = (double *)calloc(maps->dim[2], sizeof(double));
 
     t     = maps->dim[0]*maps->dim[1]*get_datasize(maps->dtype)/8;
-    dptr   =  static_cast<unsigned char*>(info.ptr);
+    dptr   =  static_cast<unsigned char*>(info.ptr);  // FIXME: it "v" unsigned char array?
 
     for(jj=0; jj<maps->dim[2]; jj++)
     {
@@ -539,7 +539,8 @@ static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
     maps->len       = 0;
 
     *n = 1;
-    return(maps);
+
+    return maps;
 }
 
 /**************************************************************************/
