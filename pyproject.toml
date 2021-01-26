@@ -35,8 +35,9 @@ build = "buildext.py"
 
 [tool.poetry.dependencies]
 python = ">=3.6.1,<4"
-importlib-metadata = "^2.0.0"
+importlib-metadata = "^3.4.0"
 numpy = "^1.19.2"
+pydicom = "^2.1.2"
 
 [tool.poetry.dev-dependencies]
 pybind11 = "^2.6.1"
