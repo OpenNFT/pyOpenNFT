@@ -13,6 +13,9 @@
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/embed.h>
 
 #ifdef SPM_WIN32
 #include <windows.h>
@@ -27,10 +30,6 @@
 #include <unistd.h>
 #include <sys/mman.h>
 #endif
-
-#include <pybind11/pybind11.h>
-#include <pybind11/numpy.h>
-#include <pybind11/embed.h>
 
 #include "spm_mapping.h"
 #include "spm_datatypes.h"
@@ -483,9 +482,8 @@ void free_maps(MAPTYPE *maps, int n)
 static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
 {
     int num_dims, jj, t, dtype = 0;
-    const size_t *dims;
     MAPTYPE *maps;
-    unsigned char *dptr;
+    double *dptr;
 
 //    if      (mxIsDouble(ptr)) dtype = SPM_DOUBLE;
 //    else if (mxIsSingle(ptr)) dtype = SPM_FLOAT;
@@ -521,12 +519,12 @@ static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
 
     maps->dtype  = dtype;
 
-    maps->data   = (void  **)calloc(maps->dim[2], sizeof(void *));
+    maps->data   = (double  **)calloc(maps->dim[2], sizeof(double *));
     maps->scale  = (double *)calloc(maps->dim[2], sizeof(double));
     maps->offset = (double *)calloc(maps->dim[2], sizeof(double));
 
     t     = maps->dim[0]*maps->dim[1]*get_datasize(maps->dtype)/8;
-    dptr   =  static_cast<unsigned char*>(info.ptr);  // FIXME: it "v" unsigned char array?
+    dptr   =  static_cast<double*>(info.ptr);  // FIXME: it "v" unsigned char array?
 
     for(jj=0; jj<maps->dim[2]; jj++)
     {

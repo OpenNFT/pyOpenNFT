@@ -21,7 +21,7 @@ typedef struct maptype
     int dim[3];          /* Dimensions of the volume */
     double *scale, *offset; /* Scalefactor and offset, such that true_intensity = vox*scale+offset */
     int dtype;              /* Data-type of volume */
-    void **data;            /* Pointer to data */
+    double **data;            /* Pointer to data */
     double mat[16];
 
     caddr_t addr;

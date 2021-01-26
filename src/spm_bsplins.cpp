@@ -95,7 +95,6 @@ DoubleArray spm_bsplins(DoubleArray C, DoubleArray y1, DoubleArray y2, DoubleArr
 {
     int k, dd[3], nd;
     int m0=1, m1=1, m2=1;
-    double *df0, *df1, *df2;
     int cond;
     int (*bnd[3])(int, int);
 
