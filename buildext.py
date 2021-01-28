@@ -53,9 +53,9 @@ def build(setup_kwargs: dict):
 
 def copy_files(dist: Distribution):
     build_cmd = dist.get_command_obj('build')
-    src_dir = ROOT_PATH / build_cmd.build_lib
+    lib_dir = ROOT_PATH / build_cmd.build_lib
 
-    for fpath in src_dir.iterdir():
+    for fpath in lib_dir.iterdir():
         shutil.copy2(fpath, ROOT_PATH)
 
 
