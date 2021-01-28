@@ -1,7 +1,7 @@
-load('mainLoopData.mat')
-load('P.mat')
+load('C:\pyOpenNFT\tests\data\mainLoopData.mat')
+load('C:\pyOpenNFT\tests\data\P.mat')
 
-inpFileName = "001_000007_000006.dcm";
+inpFileName = "C:\pyOpenNFT\tests\data\001_000007_000006.dcm";
 
 A0=[];x1=[];x2=[];x3=[];wt=[];deg=[];b=[];
 R(1,1).mat = mainLoopData.matTemplMotCorr;
@@ -51,3 +51,4 @@ if P.isZeroPadding
 else
     reslVol = spm_reslice_rt(R, flagsSpmReslice);
 end
+

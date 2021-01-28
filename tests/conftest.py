@@ -34,3 +34,30 @@ def main_loop_data(data_path: Path) -> dict:
 def p_struct(data_path: Path) -> dict:
     fp = str(data_path / 'P.mat')
     return loadmat(fp)
+
+@pytest.fixture(scope='session')
+def r_struct(data_path: Path) -> dict:
+    fp = str(data_path / 'R.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def flags_reslice(data_path: Path) -> dict:
+    fp = str(data_path / 'flagsSpmReslice.mat')
+    non_squeezed_struct = loadmat(fp, squeeze_me=False)
+    quality = non_squeezed_struct["flagsSpmReslice"]["quality"][0][0][0][0]
+    fwhm = non_squeezed_struct["flagsSpmReslice"]["fwhm"][0][0][0][0]
+    sep = non_squeezed_struct["flagsSpmReslice"]["sep"][0][0][0][0]
+    interp = non_squeezed_struct["flagsSpmReslice"]["interp"][0][0][0][0]
+    wrap = non_squeezed_struct["flagsSpmReslice"]["wrap"][0][0][0]
+    mask = non_squeezed_struct["flagsSpmReslice"]["mask"][0][0][0][0]
+    mean = non_squeezed_struct["flagsSpmReslice"]["mean"][0][0][0][0]
+    which = non_squeezed_struct["flagsSpmReslice"]["which"][0][0][0][0]
+    flagsSpmReslice = {"quality": quality,
+                                     "fwhm": fwhm,
+                                     "sep": sep,
+                                     "interp": interp,
+                                     "wrap": wrap,
+                                     "mask": mask,
+                                     "mean": mean,
+                                     "which": which}
+    return flagsSpmReslice
