@@ -1,14 +1,18 @@
 
 import sys
 from pathlib import Path
+import shutil
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
+
 from setuptools import setup
+from distutils.core import Distribution
 
 
 MODULE_NAME = 'pyspm'
 
-SOURCE_DIR = Path(__name__).parent / 'src'
+ROOT_PATH = Path(__name__).parent
+SOURCE_DIR = ROOT_PATH / 'src'
 SOURCES = sorted(map(str, SOURCE_DIR.glob('*.cpp')))
 
 DEFINE_MACROS = []
@@ -30,12 +34,20 @@ def build(setup_kwargs: dict):
     })
 
 
+def copy_files(dist: Distribution):
+    build_cmd = dist.get_command_obj('build')
+    src_dir = ROOT_PATH / build_cmd.build_lib
+
+    for fpath in src_dir.iterdir():
+        shutil.copy2(fpath, ROOT_PATH)
+
+
 def main():
-    """Minimal setup for build pybind11 extension modules
+    """Minimal setup for build pybind11 extension modules with debug symbols
 
     Usage::
 
-        python buildext.py build
+        python buildext.py build --debug
 
     """
 
@@ -44,7 +56,8 @@ def main():
     }
 
     build(setup_kwargs)
-    setup(**setup_kwargs)
+    dist = setup(**setup_kwargs)
+    copy_files(dist)
 
 
 if __name__ == '__main__':
