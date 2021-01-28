@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 
 from pybind11.setup_helpers import Pybind11Extension, build_ext
+from setuptools import setup
 
 
 MODULE_NAME = 'pyspm'
@@ -27,3 +28,24 @@ def build(setup_kwargs: dict):
         "ext_modules": ext_modules,
         "cmdclass": {"build_ext": build_ext}
     })
+
+
+def main():
+    """Minimal setup for build pybind11 extension modules
+
+    Usage::
+
+        python buildext.py build
+
+    """
+
+    setup_kwargs = {
+        'name': MODULE_NAME,
+    }
+
+    build(setup_kwargs)
+    setup(**setup_kwargs)
+
+
+if __name__ == '__main__':
+    main()
