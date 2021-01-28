@@ -35,10 +35,12 @@ def p_struct(data_path: Path) -> dict:
     fp = str(data_path / 'P.mat')
     return loadmat(fp)
 
+
 @pytest.fixture(scope='session')
 def r_struct(data_path: Path) -> dict:
     fp = str(data_path / 'R.mat')
     return loadmat(fp, squeeze_me=True)
+
 
 @pytest.fixture(scope='session')
 def flags_reslice(data_path: Path) -> dict:
