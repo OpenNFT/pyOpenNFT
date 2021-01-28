@@ -1,3 +1,20 @@
+"""
+Building Python extension modules via pybind11
+
+The script can be used from Poetry pyproject.toml:
+
+[tool.poetry]
+build = "buildext.py"
+...
+
+poetry install
+
+Or directly via distutils 'build' command:
+
+python buildext.py build
+python buildext.py build --debug  # for debug symbols
+
+"""
 
 import sys
 from pathlib import Path
