@@ -54,12 +54,16 @@ def flags_reslice(data_path: Path) -> dict:
     mask = non_squeezed_struct["flagsSpmReslice"]["mask"][0][0][0][0]
     mean = non_squeezed_struct["flagsSpmReslice"]["mean"][0][0][0][0]
     which = non_squeezed_struct["flagsSpmReslice"]["which"][0][0][0][0]
-    flagsSpmReslice = {"quality": quality,
-                                     "fwhm": fwhm,
-                                     "sep": sep,
-                                     "interp": interp,
-                                     "wrap": wrap,
-                                     "mask": mask,
-                                     "mean": mean,
-                                     "which": which}
-    return flagsSpmReslice
+
+    flags_spm_reslice = {
+        "quality": quality,
+        "fwhm": fwhm,
+        "sep": sep,
+        "interp": interp,
+        "wrap": wrap,
+        "mask": mask,
+        "mean": mean,
+        "which": which
+    }
+
+    return flags_spm_reslice
