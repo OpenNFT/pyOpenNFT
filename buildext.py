@@ -60,7 +60,7 @@ def copy_files(dist: Distribution):
 
 
 def main():
-    """Minimal setup for build pybind11 extension modules with debug symbols
+    """Minimal setup to build pybind11 extension modules with debug symbols
 
     Usage::
 
