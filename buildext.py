@@ -51,7 +51,7 @@ def build(setup_kwargs: dict):
     })
 
 
-def copy_files(dist: Distribution):
+def copy_lib_files(dist: Distribution):
     build_cmd = dist.get_command_obj('build')
     lib_dir = ROOT_PATH / build_cmd.build_lib
 
@@ -74,7 +74,7 @@ def main():
 
     build(setup_kwargs)
     dist = setup(**setup_kwargs)
-    copy_files(dist)
+    copy_lib_files(dist)
 
 
 if __name__ == '__main__':
