@@ -21,7 +21,7 @@ class Reslicing():
                 Integral = np.zeros((int(P['dim'][0][0]),int(P['dim'][0][1]),int(P['dim'][0][2])))
 
             if int(flags['mask']):
-                msk = [None]*P['dim'][0][2]
+                msk = [[] for i in range(P['dim'][0][2])] #[None]*P['dim'][0][2]
 
             for x3 in range(0,P['dim'][0][2]):
                 tmp = np.zeros((P['dim'][0][0],P['dim'][0][1]))
@@ -32,13 +32,14 @@ class Reslicing():
                         # TODO: Something
                         print(err)
                         raise
-                    tmp = tmp + self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3,P['dim'][i][0:3],flags['wrap'])
+                    temp_tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P['dim'][i][0:3],flags['wrap'])
+                    tmp = tmp + temp_tmp
 
-            if int(flags['mask']):
-                msk[x3] = np.argwhere(tmp != P.size)
+                if int(flags['mask']):
+                    msk[x3] = np.argwhere(tmp != P.size)
 
-            if int(flags['mean']):
-                Count[:,:,x3] = tmp
+                if int(flags['mean']):
+                    Count[:,:,x3] = tmp
 
         nread = P.size
         if not int(flags['mean']):
@@ -48,7 +49,7 @@ class Reslicing():
             if int(flags['which']) == 0:
                 nread = 0
 
-        x1, x2 = np.mgrid[1:P['dim'][0][0],1:P['dim'][0][1]]
+        x1, x2 = np.mgrid[1:P['dim'][0][0]+1,1:P['dim'][0][1]+1]
         nread = 0
         tempD = np.array([1, 1, 1], ndmin=2)*int(flags['interp'])
         d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
@@ -74,7 +75,7 @@ class Reslicing():
                         # TODO: Something
                         print(err)
                         raise
-                    tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3,P['dim'][i][0:3],flags['wrap'])
+                    tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P['dim'][i][0:3],flags['wrap'])
                     v[:,:,x3] = spm.bsplins(P['C'][i], y1, y2, y3, d)
 
                     if int(flags['mean']):
@@ -89,6 +90,8 @@ class Reslicing():
                     V0 = v
 
                 nread = nread + 1
+
+        return V0
 
 
     def kspace3d(self, v, M):

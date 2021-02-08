@@ -169,7 +169,7 @@ DoubleArray spm_bsplins(DoubleArray C, DoubleArray y1, DoubleArray y2, DoubleArr
     }
 
     /* Sampled data same size as sampling co-ords */
-    auto func = DoubleArray(C_info.size);
+    auto func = DoubleArray(y1_info.size);
     py::buffer_info func_info = func.request();
 
     /* Pointers to double precision data */
@@ -191,6 +191,6 @@ DoubleArray spm_bsplins(DoubleArray C, DoubleArray y1, DoubleArray y2, DoubleArr
 //        df2 = mxGetPr(plhs[3]);
 //        dfun(c, m0,m1,m2, n, x0,x1,x2, d, cond,bnd, f,df0,df1,df2);
 //    }
-
+    func.resize(y1_info.shape);
     return func;
 }
