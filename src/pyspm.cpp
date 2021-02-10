@@ -3,7 +3,7 @@
 
 #include "spm_bsplins.h"
 #include "spm_bsplinc.h"
-
+#include "spm_conv_vol.h"
 
 PYBIND11_MODULE(pyspm, m) {
     m.doc() = R"pbdoc(
@@ -18,8 +18,10 @@ PYBIND11_MODULE(pyspm, m) {
 
            bsplins
            bsplinc
+           conv_vol
     )pbdoc";
 
     m.def("bsplins", &spm_bsplins);
     m.def("bsplinc", &spm_bsplinc);
+    m.def("conv_vol", &spm_conv_vol);
 }

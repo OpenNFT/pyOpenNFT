@@ -301,7 +301,7 @@ j  = (length(y) - 1)/2;
 k  = (length(z) - 1)/2;
 d  = [hld*[1 1 1]' wrp(:)];
 
-Coef  = spm_bsplinc(P.Vol, d); 
+Coef  = spm_bsplinc(P.Vol, d);
 V = zeros(size(P.Vol));
 spm_conv_vol(Coef, V, x, y, z, -[i j k]);
 

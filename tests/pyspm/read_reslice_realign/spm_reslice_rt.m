@@ -174,9 +174,6 @@ for i = 2%1:numel(P)
                 [tmp, y1, y2, y3] = getmask(inv(P(1).mat\P(i).mat), x1, ...
                                           x2, x3,P(i).dim(1:3),flags.wrap);
                 v(:, :, x3)      = spm_bsplins(P(i).C, y1, y2, y3, d);
-                if x3==26
-                    disp("YES YES YES");
-                end
                 % v(~tmp)      = 0;
 
                 if flags.mean

@@ -25,6 +25,10 @@
  *
 */
 
+#include <pybind11/pybind11.h>
+#include <pybind11/numpy.h>
+#include <pybind11/embed.h>
+
 #include <math.h>
 #include <stdio.h>
 
@@ -64,8 +68,7 @@ static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])(IMAGE_
                 resample(1,vol,cp,&di,&dj,&dk,0, 0.0);
 
                 /* Not sure how best to handle NaNs */
-                // FIXME: replace mxIsFinite to ...
-//                if (!mxIsFinite(*cp)) *cp = 0.0;
+                if (isinf(*cp)) *cp = 0.0;
             }
         }
     }

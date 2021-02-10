@@ -192,8 +192,8 @@ int resample(int m, MAPTYPE *vol, double *out, double *x, double *y, double *z, 
 //    return(0);
 //}
 //
-//int slice(double *mat, double *image, int xdim1, int ydim1, MAPTYPE *vol, int hold, double background)
-//{
+int slice(double *mat, double *image, int xdim1, int ydim1, MAPTYPE *vol, int hold, double background)
+{
 //    extern int slice_uchar(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_schar(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_short(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
@@ -201,20 +201,20 @@ int resample(int m, MAPTYPE *vol, double *out, double *x, double *y, double *z, 
 //    extern int slice_int(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_uint(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_float(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
-//    extern int slice_double(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
+    extern int slice_double(double *, double *, int, int, double **, int, int, int, int, double, double*, double *);
 //    extern int slice_short_s(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_ushort_s(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_int_s(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_uint_s(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_float_s(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
 //    extern int slice_double_s(double *, double *, int, int, void **, int, int, int, int, double, double*, double *);
-//
-//    int sts = 1;
-//#ifdef SPM_WIN32
-//    /* https://msdn.microsoft.com/en-us/library/windows/desktop/aa366801.aspx */
-//    __try
-//    {
-//#endif
+
+    int sts = 1;
+#ifdef SPM_WIN32
+    /* https://msdn.microsoft.com/en-us/library/windows/desktop/aa366801.aspx */
+    __try
+    {
+#endif
 //    if (vol->dtype == SPM_UNSIGNED_CHAR)
 //         sts = slice_uchar(mat, image, xdim1,ydim1, vol->data, vol->dim[0],vol->dim[1],vol->dim[2],
 //            hold,background, vol->scale,vol->offset);
@@ -237,8 +237,8 @@ int resample(int m, MAPTYPE *vol, double *out, double *x, double *y, double *z, 
 //        sts = slice_float(mat, image, xdim1,ydim1, vol->data, vol->dim[0],vol->dim[1],vol->dim[2],
 //            hold,background, vol->scale,vol->offset);
 //    else if (vol->dtype == SPM_DOUBLE)
-//        sts = slice_double(mat, image, xdim1,ydim1, vol->data, vol->dim[0],vol->dim[1],vol->dim[2],
-//            hold,background, vol->scale,vol->offset);
+        sts = slice_double(mat, image, xdim1,ydim1, vol->data, vol->dim[0],vol->dim[1],vol->dim[2],
+            hold,background, vol->scale,vol->offset);
 //    else if (vol->dtype == SPM_SIGNED_SHORT_S)
 //        sts = slice_short_s(mat, image, xdim1,ydim1, vol->data, vol->dim[0],vol->dim[1],vol->dim[2],
 //            hold,background, vol->scale,vol->offset);
@@ -262,14 +262,14 @@ int resample(int m, MAPTYPE *vol, double *out, double *x, double *y, double *z, 
 //        (void)fprintf(stderr,"%d: Unknown datatype.\n", vol->dtype);
 //        sts = 1;
 //    }
-//#ifdef SPM_WIN32
-//    }
-//    __except(GetExceptionCode()==EXCEPTION_IN_PAGE_ERROR ?
-//        EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
-//    {
-//        (void)fprintf(stderr,"An exception occured while accessing the data.");
-//        sts = 1;
-//    }
-//#endif
-//    return(sts);
-//}
+#ifdef SPM_WIN32
+    }
+    __except(GetExceptionCode()==EXCEPTION_IN_PAGE_ERROR ?
+        EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+    {
+        (void)fprintf(stderr,"An exception occured while accessing the data.");
+        sts = 1;
+    }
+#endif
+    return(sts);
+}
