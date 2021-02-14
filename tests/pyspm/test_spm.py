@@ -8,7 +8,7 @@ from scipy.io import savemat
 from scipy.io import loadmat
 
 
-def test_spm_rt(dcm_image: np.array, main_loop_data: dict, p_struct: dict, matlab_result: np.array, rVol_struct : dict):
+def test_spm_rt(dcm_image: np.array, main_loop_data: dict, p_struct: dict, matlab_result: np.array, rVol_struct : dict, dcmData_struct : np.array, tmpVol_struct : np.array):
 
     try:
 
@@ -34,6 +34,7 @@ def test_spm_rt(dcm_image: np.array, main_loop_data: dict, p_struct: dict, matla
         dcmData = np.array(dcm_image, dtype=float)
         R[1]["mat"] = matVol
         tmpVol = i2v3.img2Dvol3D().img2Dvol3D(dcmData, slNrImg2DdimX, slNrImg2DdimY, dimVol)
+        # tmpVol = np.array(tmpVol_struct["tmpVol"], dtype=float)
 
         nrZeroPadVol = p_struct["nrZeroPadVol"].item()
         if p_struct["isZeroPadding"].item():

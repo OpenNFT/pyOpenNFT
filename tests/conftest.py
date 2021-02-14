@@ -41,6 +41,16 @@ def rVol_struct(data_path: Path) -> dict:
     return loadmat(fp, squeeze_me=True)
 
 @pytest.fixture(scope='session')
+def dcmData_struct(data_path: Path) -> np.array:
+    fp = str(data_path / 'dcmData.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def tmpVol_struct(data_path: Path) -> np.array:
+    fp = str(data_path / 'tmpVol.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
 def r_struct(data_path: Path) -> dict:
     fp = str(data_path / 'R.mat')
     return loadmat(fp, squeeze_me=True)

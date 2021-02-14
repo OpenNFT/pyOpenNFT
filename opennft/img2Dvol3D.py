@@ -14,7 +14,8 @@ class img2Dvol3D():
                 if sl>dim3D[2]:
                     break
                 else:
-                    vol3D[:,:,sl] = img2D[sy * dim3D[0]  : (sy+1) * dim3D[0] ,sx * dim3D[0] : (sx+1) * dim3D[0]]
+                    vol3D[:,:,sl] = img2D[sy * dim3D[0] : (sy+1) * dim3D[0],
+                                          sx * dim3D[0] : (sx+1) * dim3D[0]]
                 vol3D[:,:,sl] = np.rot90(vol3D[:,:,sl],3)
                 sl = sl+1
 
