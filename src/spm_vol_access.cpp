@@ -27,7 +27,7 @@ int get_datasize(int type)
 //    if (type == SPM_UNSIGNED_INT || type == SPM_UNSIGNED_INT_S) return(32);
 //    if (type == SPM_FLOAT || type == SPM_FLOAT_S) return(32);
 //    if (type == SPM_DOUBLE || type == SPM_DOUBLE_S) return(64);
-    return(64);
+    return(sizeof(double));
 }
 
 int resample(int m, MAPTYPE *vol, double *out, double *x, double *y, double *z, int hold, double background)

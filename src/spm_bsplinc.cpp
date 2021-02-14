@@ -133,7 +133,7 @@ static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])(IMAGE_
 
 /***************************************************************************************
 */
-DoubleArray spm_bsplinc(DoubleArray v, DoubleArray C, DoubleArray splDgr)
+DoubleArray spm_bsplinc(DoubleArray v, DoubleArray splDgr)
 {
     py::buffer_info info = splDgr.request();
 
@@ -196,6 +196,7 @@ DoubleArray spm_bsplinc(DoubleArray v, DoubleArray C, DoubleArray splDgr)
         printf("\033[0;31m SPM ERROR: Problem with deconvolution. \033[0m");
     }
 
+    coeffs.resize(info.shape);
     free_maps(vol, k);
 
     return coeffs;

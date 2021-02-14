@@ -358,7 +358,7 @@ void free_maps(MAPTYPE *maps, int n)
 //        mxFree(buf);
 //#endif
 //    }
-
+//
 //    tmp=mxGetField(ptr,i,"pinfo");
 //    if (tmp != (mxArray *)0)
 //    {
@@ -524,7 +524,7 @@ static MAPTYPE *get_maps_3dvol(const py::array v, int *n)
     maps->offset = (double *)calloc(maps->dim[2], sizeof(double));
 
     t     = maps->dim[0]*maps->dim[1]*get_datasize(maps->dtype)/8;
-    dptr   =  static_cast<double*>(info.ptr);  // FIXME: it "v" unsigned char array?
+    dptr   =  static_cast<double*>(info.ptr);
 
     for(jj=0; jj<maps->dim[2]; jj++)
     {

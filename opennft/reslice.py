@@ -11,37 +11,37 @@ class Reslicing():
     def spm_reslice(self, P, flags):
 
         if int(flags['mask']) or int(flags['mean']):
-            temp_x1 = np.transpose(np.array(range(1,P['dim'][0][0]+1), ndmin=2))
-            x1 = np.tile(temp_x1,(1,P['dim'][0][1]))
-            temp_x2 = np.transpose(np.array(range(1,P['dim'][0][1]+1), ndmin=2))
-            x2 = np.transpose(np.tile(temp_x2,(1,P['dim'][0][1])))
+            temp_x1 = np.transpose(np.array(range(1,P[0]['dim'][0]+1), ndmin=2))
+            x1 = np.tile(temp_x1,(1,P[0]['dim'][1]))
+            temp_x2 = np.transpose(np.array(range(1,P[0]['dim'][1]+1), ndmin=2))
+            x2 = np.transpose(np.tile(temp_x2,(1,P[0]['dim'][1])))
 
             if int(flags['mean']):
-                Count = np.zeros((int(P['dim'][0][0]),int(P['dim'][0][1]),int(P['dim'][0][2])))
-                Integral = np.zeros((int(P['dim'][0][0]),int(P['dim'][0][1]),int(P['dim'][0][2])))
+                Count = np.zeros((int(P[0]['dim'][0]),int(P[0]['dim'][1]),int(P[0]['dim'][2])))
+                Integral = np.zeros((int(P[0]['dim'][0]),int(P[0]['dim'][1]),int(P[0]['dim'][2])))
 
             if int(flags['mask']):
-                msk = [[] for i in range(P['dim'][0][2])] #[None]*P['dim'][0][2]
+                msk = [[] for i in range(P[0]['dim'][2])] #[None]*P['dim'][0][2]
 
-            for x3 in range(0,P['dim'][0][2]):
-                tmp = np.zeros((P['dim'][0][0],P['dim'][0][1]))
-                for i in range(0,P.size):
+            for x3 in range(0,P[0]['dim'][2]):
+                tmp = np.zeros((P[0]['dim'][0],P[0]['dim'][1]))
+                for i in range(0,len(P)):
                     try:
-                        tmpDivision = np.linalg.solve(P['mat'][0], P['mat'][i])
+                        tmpDivision = np.linalg.solve(P[0]['mat'], P[i]['mat'])
                     except np.linalg.LinAlgError as err:
                         # TODO: Something
                         print(err)
                         raise
-                    temp_tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P['dim'][i][0:3],flags['wrap'])
+                    temp_tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P[i]['dim'][0:3],flags['wrap'])
                     tmp = tmp + temp_tmp
 
                 if int(flags['mask']):
-                    msk[x3] = np.argwhere(tmp != P.size)
+                    msk[x3] = np.argwhere(tmp != len(P))
 
                 if int(flags['mean']):
                     Count[:,:,x3] = tmp
 
-        nread = P.size
+        nread = len(P)
         if not int(flags['mean']):
             if int(flags['which']) == 1:
                 nread = nread - 1
@@ -49,12 +49,12 @@ class Reslicing():
             if int(flags['which']) == 0:
                 nread = 0
 
-        x1, x2 = np.mgrid[1:P['dim'][0][0]+1,1:P['dim'][0][1]+1]
+        x1, x2 = np.mgrid[1:P[0]['dim'][0]+1,1:P[0]['dim'][1]+1]
         nread = 0
         tempD = np.array([1, 1, 1], ndmin=2)*int(flags['interp'])
-        d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
+        d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2)))
 
-        for i in range(1,2): # range(0,P.size)
+        for i in range(1,len(P)): # range(0,P.size)
 
             if (i>1 and int(flags['which'])==1) or int(flags['which'])==2:
                 write_vol = 1
@@ -67,16 +67,16 @@ class Reslicing():
 
             if read_vol:
 
-                v = np.zeros(P['dim'][0])
-                for x3 in range(0,P['dim'][0][2]):
+                v = np.zeros(P[0]['dim'])
+                for x3 in range(0,P[0]['dim'][2]):
                     try:
-                        tmpDivision = np.linalg.solve(P['mat'][0],P['mat'][i])
+                        tmpDivision = np.linalg.solve(P[0]['mat'],P[i]['mat'])
                     except np.linalg.LinAlgError as err:
                         # TODO: Something
                         print(err)
                         raise
-                    tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P['dim'][i][0:3],flags['wrap'])
-                    v[:,:,x3] = spm.bsplins(P['C'][i], y1, y2, y3, d)
+                    tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P[i]['dim'][0:3],flags['wrap'])
+                    v[:,:,x3] = spm.bsplins(P[i]['C'], y1, y2, y3, d)
 
                     if int(flags['mean']):
                         Integral[:, :, x3] += self.nan2zero(v[:,:,:x3])

@@ -9,14 +9,14 @@ R(1,1).dim = mainLoopData.dimTemplMotCorr;
 R(1,1).Vol = mainLoopData.imgVolTempl;
 
 matVol = mainLoopData.matVol;
-matTemplMotCorr = mainLoopData.matTemplMotCorr;
-dicomInfoVox = mainLoopData.dicomInfoVox;
-dimTemplMotCorr = mainLoopData.dimTemplMotCorr;
+%matTemplMotCorr = mainLoopData.matTemplMotCorr;
+%dicomInfoVox = mainLoopData.dicomInfoVox;
+%dimTemplMotCorr = mainLoopData.dimTemplMotCorr;
 dimVol = mainLoopData.dimVol;
 slNrImg2DdimX = mainLoopData.slNrImg2DdimX;
 slNrImg2DdimY = mainLoopData.slNrImg2DdimY;
-img2DdimX = mainLoopData.img2DdimX;
-img2DdimY = mainLoopData.img2DdimY;
+%img2DdimX = mainLoopData.img2DdimX;
+%img2DdimY = mainLoopData.img2DdimY;
 
 indVol = 6;
 

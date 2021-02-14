@@ -17,11 +17,13 @@ PYBIND11_MODULE(pyspm, m) {
            :toctree: _generate
 
            bsplins
+           bsplins_multi
            bsplinc
            conv_vol
     )pbdoc";
 
     m.def("bsplins", &spm_bsplins);
+    m.def("bsplins_multi", &spm_bsplins_multi);
     m.def("bsplinc", &spm_bsplinc);
     m.def("conv_vol", &spm_conv_vol);
 }

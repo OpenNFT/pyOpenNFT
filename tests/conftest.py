@@ -27,14 +27,18 @@ def dcm_image(data_path: Path) -> np.array:
 @pytest.fixture(scope='session')
 def main_loop_data(data_path: Path) -> dict:
     fp = str(data_path / 'mainLoopData.mat')
-    return loadmat(fp)
+    return loadmat(fp,squeeze_me=True)["mainLoopData"]
 
 
 @pytest.fixture(scope='session')
 def p_struct(data_path: Path) -> dict:
     fp = str(data_path / 'P.mat')
-    return loadmat(fp)
+    return loadmat(fp,squeeze_me=True)["P"]
 
+@pytest.fixture(scope='session')
+def rVol_struct(data_path: Path) -> dict:
+    fp = str(data_path / 'rVol.mat')
+    return loadmat(fp, squeeze_me=True)
 
 @pytest.fixture(scope='session')
 def r_struct(data_path: Path) -> dict:

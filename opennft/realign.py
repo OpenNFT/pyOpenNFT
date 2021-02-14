@@ -17,19 +17,19 @@ class Realign():
             lkp -= 1
         if indVol == indFirstVol:
 
-            skip = np.sqrt( (P["mat"][0][0:2][0:2] ** 2).sum() ) ** (-1) * flags["sep"]
-            d = P["dim"][0][0:2]
-            rng = np.random.default_rng()
+            skip = np.sqrt( np.sum(P[0]["mat"][0:3,0:3] ** 2,axis=0) ) ** (-1) * flags["sep"]
+            d = P[0]["dim"][0:3]
+            rng = np.random.default_rng(0)
             if d[2] < 3:
                 lkp = np.array([0, 1, 5])
-                x1, x2, x3 = np.mgrid[1:d[0]+0.5:skip[0], 1:d[1]+0.5:skip[1], 1:d[2]:skip[2]]
-                x1 = x1 + rng.random(x1.size) * 0.5
-                x2 = x2 + rng.random(x2.size) * 0.5
+                x1, x2, x3 = np.mgrid[1:d[0]-0.5:skip[0], 1:d[1]-0.5:skip[1], 1:d[2]:skip[2]]
+                x1 = x1 + rng.random(x1.shape) * 0.5
+                x2 = x2 + rng.random(x2.shape) * 0.5
             else:
-                x1, x2, x3 = np.mgrid[1:d[0] + 0.5:skip[0], 1:d[1] + 0.5:skip[1], 1:d[2]:skip[2]+0.5]
-                x1 = x1 + rng.random(x1.size) * 0.5
-                x2 = x2 + rng.random(x2.size) * 0.5
-                x3 = x3 + rng.random(x3.size) * 0.5
+                x1, x2, x3 = np.mgrid[1:d[0] - 0.5:skip[0], 1:d[1] - 0.5:skip[1], 1:d[2]-0.5:skip[2]]
+                x1 = x1 + rng.random(x1.shape) * 0.5
+                x2 = x2 + rng.random(x2.shape) * 0.5
+                x3 = x3 + rng.random(x3.shape) * 0.5
 
             x1 = x1.reshape([x1.size, 1])
             x2 = x2.reshape([x2.size, 1])
@@ -37,16 +37,16 @@ class Realign():
 
             wt = np.array([])
 
-            V, P["C"][0] = self.smooth_vol(P[0], flags["interp"], flags["wrap"], flags["fwhm"])
+            V, P[0]["C"] = self.smooth_vol(P[0], flags["interp"], flags["wrap"], flags["fwhm"])
             tempD = np.array([1, 1, 1], ndmin=2) * int(flags['interp'])
-            deg = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
+            deg = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2)))
 
-            G, dG1, dG2, dG3 = spm.bsplins(V, x1, x2, x3, deg)
+            G, dG1, dG2, dG3 = spm.bsplins_multi(V, x1, x2, x3, deg)
             # clear V
-            A0 = self.make_A(P["mat"][0], x1, x2, x3, dG1, dG2, dG3, wt, lkp)
+            A0 = self.make_A(P[0]["mat"], x1, x2, x3, dG1, dG2, dG3, wt, lkp)
 
             b = G
-            if not wt:
+            if wt.size>0:
                 b = b * wt
 
             # if not fNFB:
@@ -62,17 +62,18 @@ class Realign():
             thAcc = 1e-8
             nrIter = 64
 
-        V, P["C"][1] = self.smooth_vol(P[1], flags["interp"], flags["wrap"], flags["fwhm"])
+        V, P[1]["C"] = self.smooth_vol(P[1], flags["interp"], flags["wrap"], flags["fwhm"])
         d = np.array(V.shape)
         ss = np.inf
         countdown = -1
         for iter in range(1,nrIter+1):
-            y1, y2, y3 = self.coords(np.zeros((6,1)), P["mat"][0], P["mat"][1], x1, x2, x3)
-            msk = np.where( y1 >= 1 and y1 <= d[0] and y2 >= 1 and y2 <= d[1] and y3 >= 1 and y3 <= d[2] )
+            y1, y2, y3 = self.coords(np.zeros((6,1)), P[0]["mat"], P[1]["mat"], x1, x2, x3)
+            msk = np.nonzero( (y1 >= 1) & (y1 <= d[0]) & (y2 >= 1) & (y2 <= d[1]) & (y3 >= 1) & (y3 <= d[2]) )
+            msk = msk[0]
             if msk.size < 32:
                 self.error_message(P[1])
             F = spm.bsplins(V, y1[msk], y2[msk], y3[msk], deg)
-            if not wt:
+            if wt.size>0:
                 F = F * wt[msk]
 
             if fNFB:
@@ -82,7 +83,7 @@ class Realign():
             A = A0[msk,:]
             b1 = b[msk]
             sc = np.sum(b1) / np.sum(F)
-            b1 = b1 - F * sc
+            b1 = b1 - np.squeeze(F * sc)
             if not fNFB:
                 soln = np.linalg.solve((A.T @ A),(A.T @ b1))
             else:
@@ -90,7 +91,7 @@ class Realign():
 
             p = np.array([0,0,0,0,0,0,1,1,1,0,0,0])
             p[lkp] = p[lkp] + soln.T
-            P["mat"][1] = np.linalg.solve(self.spm_matrix(p),P["mat"][1])
+            P[1]["mat"] = np.linalg.solve(self.spm_matrix(p),P[1]["mat"])
 
             pss = ss
             ss = np.sum(b1 ** 2) / b1.size
@@ -107,7 +108,7 @@ class Realign():
 
     def coords(self, p, M1, M2, x1, x2, x3):
 
-        M = np.linalg.inv(M2) * np.linalg.inv(self.spm_matrix(p)) * M1
+        M = np.linalg.inv(M2) @ np.linalg.inv(self.spm_matrix(p)) @ M1
         y1 = M[0, 0] * x1 + M[0, 1] * x2 + M[0, 2] * x3 + M[0, 3]
         y2 = M[1, 0] * x1 + M[1, 1] * x2 + M[1, 2] * x3 + M[1, 3]
         y3 = M[2, 0] * x1 + M[2, 1] * x2 + M[2, 2] * x3 + M[2, 3]
@@ -116,16 +117,16 @@ class Realign():
 
     def smooth_vol(self, P, hld, wrp, fwhm):
 
-        s = np.sqrt(np.sum(P["mat"][0:2,0:2] ** 2)) ** (-1) * (fwhm / np.sqrt(8 * np.log(2)))
+        s = np.sqrt( np.sum(P["mat"][0:3,0:3] ** 2,axis=0) ) ** (-1) * (fwhm / np.sqrt(8 * np.log(2)))
 
         x = round(6 * s[0])
-        x = np.array(range(-x,x+1))
+        x = np.array(range(-x,x+1),ndmin=2)
 
         y = round(6 * s[1])
-        y = np.array(range(-y, y + 1))
+        y = np.array(range(-y, y + 1),ndmin=2)
 
         z = round(6 * s[2])
-        z = np.array(range(-z, z + 1))
+        z = np.array(range(-z, z + 1),ndmin=2)
 
         x = np.exp( -x ** 2 / (2 * s[0] ** 2) )
         y = np.exp( -y ** 2 / (2 * s[1] ** 2) )
@@ -140,36 +141,36 @@ class Realign():
         k = (z.size - 1) / 2
 
         tempD = np.array([1, 1, 1], ndmin=2) * int(hld)
-        d = np.hstack((tempD.T, np.array(wrp,ndmin=2).T))
+        d = np.hstack((tempD.T, np.array(wrp,ndmin=2)))
 
-        Coef = spm.bsplins(P["Vol"], d)
+        Coef = spm.bsplinc(P["Vol"], d)
         V = np.zeros(P["Vol"].shape)
-        V = spm.spm_conv_vol(Coef, V, x, y, z, np.array([-i, -j, -k]))
+        V = spm.conv_vol(Coef, V, x, y, z, np.array([-i, -j, -k], ndmin=2))
 
         return V, Coef
 
 
     def make_A(self, M, x1, x2, x3, dG1, dG2, dG3, wt, lkp):
 
-        p0 = np.array([0,0,0,0,0,0,1,1,1,0,0,0])
-        A = np.zeros((x1.size),lkp.size)
-        for i in range(0,lkp.size+1):
+        p0 = np.array([0,0,0,0,0,0,1,1,1,0,0,0], dtype=float)
+        A = np.zeros((x1.size,lkp.size))
+        for i in range(0,lkp.size):
             pt = p0
             pt[lkp[i]] = pt[i] + 1e-6
             y1, y2, y3 = self.coords(pt, M, M, x1, x2, x3)
-            tmp = np.sum( np.array([y1-x1, y2-x2, y3-x3]) * np.array([dG1, dG2, dG3]), 2) / (-1e-6)
-            if not wt:
+            tmp = np.sum( np.array([y1-x1, y2-x2, y3-x3]).squeeze() * np.array([dG1, dG2, dG3]), 0, keepdims=True).T / (-1e-6)
+            if wt.size>0:
                 A[:,i] = tmp * wt
             else:
-                A[:,i] = tmp
+                A[:,i] = tmp.T
 
         return A
 
-    def spm_matrix(self, P, order):
+    def spm_matrix(self, P):
 
         if P.size == 3:
             A = np.eye(4)
-            A[0:2,3] = P[:]
+            A[0:3,3] = P[:]
             return A
 
         q = np.array([0,0,0,0,0,0,1,1,1,0,0,0])

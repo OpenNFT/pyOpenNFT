@@ -12,7 +12,8 @@
 #define SPM_SIGNED_SHORT      4
 #define SPM_SIGNED_INT        8
 #define SPM_FLOAT             16
-#define SPM_DOUBLE            64
+//#define SPM_DOUBLE            64
+#define SPM_DOUBLE            8
 #define SPM_SIGNED_CHAR       (SPM_UNSIGNED_CHAR+128) 
 #define SPM_UNSIGNED_SHORT    (SPM_SIGNED_SHORT+128) 
 #define SPM_UNSIGNED_INT      (SPM_SIGNED_INT+128)
