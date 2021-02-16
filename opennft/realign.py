@@ -39,7 +39,7 @@ class Realign():
 
             V, P[0]["C"] = self.smooth_vol(P[0], flags["interp"], flags["wrap"], flags["fwhm"])
             tempD = np.array([1, 1, 1], ndmin=2) * int(flags['interp'])
-            deg = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2)))
+            deg = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
 
             G, dG1, dG2, dG3 = spm.bsplins_multi(V, x1, x2, x3, deg)
             # clear V
@@ -141,7 +141,7 @@ class Realign():
         k = (z.size - 1) / 2
 
         tempD = np.array([1, 1, 1], ndmin=2) * int(hld)
-        d = np.hstack((tempD.T, np.array(wrp,ndmin=2)))
+        d = np.hstack((tempD.T, np.array(wrp,ndmin=2).T))
 
         Coef = spm.bsplinc(P["Vol"], d)
         V = np.zeros(P["Vol"].shape)

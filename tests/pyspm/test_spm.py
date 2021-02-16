@@ -8,7 +8,7 @@ from scipy.io import savemat
 from scipy.io import loadmat
 
 
-def test_spm_rt(dcm_image: np.array, main_loop_data: dict, p_struct: dict, matlab_result: np.array, rVol_struct : dict, dcmData_struct : np.array, tmpVol_struct : np.array):
+def test_spm_rt(dcm_image: np.array, main_loop_data: dict, p_struct: dict, matlab_result: np.array, r_struct : dict, dcmData_struct : np.array, tmpVol_struct : np.array, flags_realign : dict, flags_reslice : dict):
 
     try:
 
@@ -32,27 +32,43 @@ def test_spm_rt(dcm_image: np.array, main_loop_data: dict, p_struct: dict, matla
         indVol = 6
 
         dcmData = np.array(dcm_image, dtype=float)
+        np.testing.assert_almost_equal(dcmData, dcmData_struct["dcmData"], decimal=7, err_msg="Not equal")
+
         R[1]["mat"] = matVol
         tmpVol = i2v3.img2Dvol3D().img2Dvol3D(dcmData, slNrImg2DdimX, slNrImg2DdimY, dimVol)
-        # tmpVol = np.array(tmpVol_struct["tmpVol"], dtype=float)
+        np.testing.assert_almost_equal(tmpVol, tmpVol_struct["tmpVol"], decimal=7, err_msg="Not equal")
 
         nrZeroPadVol = p_struct["nrZeroPadVol"].item()
         if p_struct["isZeroPadding"].item():
-            zeroPadVol = np.zeros((dimVol[0],dimVol[1],nrZeroPadVol))
             dimVol[2] = dimVol[2]+nrZeroPadVol*2
-            # R[1]["Vol"] = np.concatenate((zeroPadVol,tmpVol,zeroPadVol),2)
             R[1]["Vol"] = np.pad(tmpVol, ((0,0),(0,0),(nrZeroPadVol,nrZeroPadVol)), 'constant', constant_values=(0, 0))
-            # R[1]["Vol"] = np.array(rVol_struct["R"][1]["Vol"],dtype=float)
         else:
             R[1]["Vol"] = tmpVol
 
         R[1]["dim"] = dimVol
 
-        flagsSpmRealign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((3,1)), 'rtm': 0, 'PW': '', 'lkp': np.array(range(0,6))})
-        flagsSpmReslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((3,1)), 'mask': 1, 'mean': 0, 'which': 2})
+        # R = r_struct["R"]
+        # R[0]["C"] = np.array([])
+        # R[1]["C"] = np.array([])
+
+        np.testing.assert_almost_equal(R[0]["mat"], r_struct["R"][0]["mat"], decimal=7, err_msg="Not equal")
+        np.testing.assert_almost_equal(R[1]["mat"], r_struct["R"][1]["mat"], decimal=7, err_msg="Not equal")
+        np.testing.assert_almost_equal(R[0]["Vol"], r_struct["R"][0]["Vol"], decimal=7, err_msg="Not equal")
+        np.testing.assert_almost_equal(R[1]["Vol"], r_struct["R"][1]["Vol"], decimal=7, err_msg="Not equal")
+        np.testing.assert_almost_equal(R[0]["dim"], r_struct["R"][0]["dim"], decimal=7, err_msg="Not equal")
+        np.testing.assert_almost_equal(R[1]["dim"], r_struct["R"][1]["dim"], decimal=7, err_msg="Not equal")
+
+        # flagsSpmRealign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((1,3)), 'rtm': 0, 'PW': '', 'lkp': np.array(range(0,6))})
+        # flagsSpmReslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((1,3)), 'mask': 1, 'mean': 0, 'which': 2})
+
+        flagsSpmReslice = flags_reslice
+        flagsSpmRealign = flags_realign
 
         nrSkipVol = p_struct["nrSkipVol"].item()
         [R, A0, x1, x2, x3, wt, deg, b, nrIter] = ra.Realign().spm_realign(R, flagsSpmRealign, indVol, nrSkipVol + 1, A0, x1, x2, x3, wt, deg, b)
+
+        np.testing.assert_almost_equal(R[0]["C"], r_struct["R"][0]["C"], decimal=7, err_msg="Not equal")
+        np.testing.assert_almost_equal(R[1]["C"], r_struct["R"][1]["C"], decimal=7, err_msg="Not equal")
 
         if p_struct["isZeroPadding"].item():
             tmp_reslVol = rs.Reslicing().spm_reslice(R, flagsSpmReslice)
@@ -61,7 +77,7 @@ def test_spm_rt(dcm_image: np.array, main_loop_data: dict, p_struct: dict, matla
         else:
             reslVol = rs.Reslicing().spm_reslice(R, flagsSpmReslice)
 
-        reslDic = {"reslVol_python": reslVol, "label": "reslVol_python"}
+        reslDic = {"reslVol_python": reslVol}
         savemat("data/reslVol.mat", reslDic)
 
         matlab_reslVol = matlab_result["reslVol"]

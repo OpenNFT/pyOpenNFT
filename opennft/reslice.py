@@ -52,7 +52,7 @@ class Reslicing():
         x1, x2 = np.mgrid[1:P[0]['dim'][0]+1,1:P[0]['dim'][1]+1]
         nread = 0
         tempD = np.array([1, 1, 1], ndmin=2)*int(flags['interp'])
-        d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2)))
+        d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
 
         for i in range(1,len(P)): # range(0,P.size)
 

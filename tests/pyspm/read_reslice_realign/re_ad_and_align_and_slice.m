@@ -21,8 +21,13 @@ slNrImg2DdimY = mainLoopData.slNrImg2DdimY;
 indVol = 6;
 
 dcmData = double(dicomread(inpFileName));
+
+% dcmData = load('C:\pyOpenNFT\tests\data\dcmData_python.mat').dcmData_python;
+
 R(2,1).mat = matVol;
 tmpVol = img2Dvol3D(dcmData, slNrImg2DdimX, slNrImg2DdimY, dimVol);
+
+% tmpVol = load('C:\pyOpenNFT\tests\data\tmpVol_python.mat').tmpVol_python;
 
 if P.isZeroPadding
     zeroPadVol = zeros(dimVol(1),dimVol(2),P.nrZeroPadVol);
@@ -32,6 +37,13 @@ else
     R(2,1).Vol = tmpVol;
 end
 R(2,1).dim = dimVol;
+
+% R_py = load('C:\pyOpenNFT\tests\data\R_python.mat').R_python';
+
+R(1,1).mat = R_py{1}.mat;
+R(1,1).Vol = R_py{1}.Vol;
+R(2,1).mat = R_py{2}.mat;
+R(2,1).Vol = R_py{2}.Vol;
 
 flagsSpmRealign = struct('quality',.9,'fwhm',5,'sep',4,...
     'interp',4,'wrap',[0 0 0],'rtm',0,'PW','','lkp',1:6);

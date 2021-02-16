@@ -29,16 +29,12 @@ def main_loop_data(data_path: Path) -> dict:
     fp = str(data_path / 'mainLoopData.mat')
     return loadmat(fp,squeeze_me=True)["mainLoopData"]
 
-
 @pytest.fixture(scope='session')
 def p_struct(data_path: Path) -> dict:
     fp = str(data_path / 'P.mat')
     return loadmat(fp,squeeze_me=True)["P"]
 
-@pytest.fixture(scope='session')
-def rVol_struct(data_path: Path) -> dict:
-    fp = str(data_path / 'rVol.mat')
-    return loadmat(fp, squeeze_me=True)
+
 
 @pytest.fixture(scope='session')
 def dcmData_struct(data_path: Path) -> np.array:
@@ -54,6 +50,8 @@ def tmpVol_struct(data_path: Path) -> np.array:
 def r_struct(data_path: Path) -> dict:
     fp = str(data_path / 'R.mat')
     return loadmat(fp, squeeze_me=True)
+
+
 
 @pytest.fixture(scope='session')
 def matlab_result(data_path: Path) -> np.array:
@@ -85,3 +83,29 @@ def flags_reslice(data_path: Path) -> dict:
     }
 
     return flags_spm_reslice
+
+@pytest.fixture(scope='session')
+def flags_realign(data_path: Path) -> dict:
+    fp = str(data_path / 'flagsSpmRealign.mat')
+    non_squeezed_struct = loadmat(fp, squeeze_me=False)
+    quality = non_squeezed_struct["flagsSpmRealign"]["quality"][0][0][0][0]
+    fwhm = non_squeezed_struct["flagsSpmRealign"]["fwhm"][0][0][0][0]
+    sep = non_squeezed_struct["flagsSpmRealign"]["sep"][0][0][0][0]
+    interp = non_squeezed_struct["flagsSpmRealign"]["interp"][0][0][0][0]
+    wrap = non_squeezed_struct["flagsSpmRealign"]["wrap"][0][0][0]
+    rtm = non_squeezed_struct["flagsSpmRealign"]["rtm"][0][0][0][0]
+    PW = non_squeezed_struct["flagsSpmRealign"]["PW"][0][0]
+    lkp = non_squeezed_struct["flagsSpmRealign"]["lkp"][0][0][0]
+
+    flags_spm_realign = {
+        "quality": quality,
+        "fwhm": fwhm,
+        "sep": sep,
+        "interp": interp,
+        "wrap": wrap,
+        "rtm": rtm,
+        "PW": PW,
+        "lkp": lkp
+    }
+
+    return flags_spm_realign
