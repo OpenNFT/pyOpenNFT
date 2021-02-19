@@ -12,7 +12,7 @@ class Realign():
         fNFB = True
 
         lkp = flags["lkp"]
-        # TODO: matlab lkp starts from 1, here we need to check input flags
+        # TODO: matlab lkp starts from 1, check input flags
         if lkp[0] == 1:
             lkp -= 1
         if indVol == indFirstVol:
@@ -42,7 +42,7 @@ class Realign():
             deg = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
 
             G, dG1, dG2, dG3 = spm.bsplins_multi(V, x1, x2, x3, deg)
-            # clear V
+            V = []
             A0 = self.make_A(P[0]["mat"], x1, x2, x3, dG1, dG2, dG3, wt, lkp)
 
             b = G
@@ -144,6 +144,11 @@ class Realign():
         d = np.hstack((tempD.T, np.array(wrp,ndmin=2).T))
 
         Coef = spm.bsplinc(P["Vol"], d)
+        dims = P["dim"]
+
+        Coef = Coef.reshape([dims[2], dims[0], dims[1]])
+        Coef = np.swapaxes(Coef,0,2)
+
         V = np.zeros(P["Vol"].shape)
         V = spm.conv_vol(Coef, V, x, y, z, np.array([-i, -j, -k], ndmin=2))
 

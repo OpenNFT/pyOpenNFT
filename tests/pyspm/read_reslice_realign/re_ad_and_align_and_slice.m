@@ -40,10 +40,10 @@ R(2,1).dim = dimVol;
 
 % R_py = load('C:\pyOpenNFT\tests\data\R_python.mat').R_python';
 
-R(1,1).mat = R_py{1}.mat;
-R(1,1).Vol = R_py{1}.Vol;
-R(2,1).mat = R_py{2}.mat;
-R(2,1).Vol = R_py{2}.Vol;
+% R(1,1).mat = R_py{1}.mat;
+% R(1,1).Vol = R_py{1}.Vol;
+% R(2,1).mat = R_py{2}.mat;
+% R(2,1).Vol = R_py{2}.Vol;
 
 flagsSpmRealign = struct('quality',.9,'fwhm',5,'sep',4,...
     'interp',4,'wrap',[0 0 0],'rtm',0,'PW','','lkp',1:6);

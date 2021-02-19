@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 import pydicom
+import nibabel as nib
 import numpy as np
 from scipy.io import loadmat
 
@@ -17,12 +18,15 @@ def root_path() -> Path:
 def data_path(root_path) -> Path:
     return root_path / 'data'
 
+@pytest.fixture(scope='session')
+def nii_image(data_path: Path) -> nib.nifti1.Nifti1Image:
+    fp = data_path / 'fanon-0007-00006-000006-01.nii'
+    return nib.load(fp, mmap=False)
 
 @pytest.fixture(scope='session')
 def dcm_image(data_path: Path) -> np.array:
     fp = data_path / '001_000007_000006.dcm'
     return pydicom.dcmread(fp).pixel_array
-
 
 @pytest.fixture(scope='session')
 def main_loop_data(data_path: Path) -> dict:

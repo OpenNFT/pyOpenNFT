@@ -67,8 +67,7 @@ static int vol_coeffs(MAPTYPE *vol, double c[], int d[], void (*splinc[])(IMAGE_
                 double di = i+1;
                 resample(1,vol,cp,&di,&dj,&dk,0, 0.0);
 
-                /* Not sure how best to handle NaNs */
-                if (isinf(*cp)) *cp = 0.0;
+                if (isinf(*cp)) *cp = std::numeric_limits<double>::quiet_NaN();
             }
         }
     }
@@ -196,7 +195,7 @@ DoubleArray spm_bsplinc(DoubleArray v, DoubleArray splDgr)
         printf("\033[0;31m SPM ERROR: Problem with deconvolution. \033[0m");
     }
 
-    coeffs.resize(info.shape);
+    //coeffs.resize(info.shape);
     free_maps(vol, k);
 
     return coeffs;
