@@ -39,7 +39,7 @@ class Realign():
 
             V, P[0]["C"] = self.smooth_vol(P[0], flags["interp"], flags["wrap"], flags["fwhm"])
             tempD = np.array([1, 1, 1], ndmin=2) * int(flags['interp'])
-            deg = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
+            deg = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2)))
 
             G, dG1, dG2, dG3 = spm.bsplins_multi(V, x1, x2, x3, deg)
             V = []
@@ -63,6 +63,7 @@ class Realign():
             nrIter = 64
 
         V, P[1]["C"] = self.smooth_vol(P[1], flags["interp"], flags["wrap"], flags["fwhm"])
+        # V = np.swapaxes(V,0,2)
         d = np.array(V.shape)
         ss = np.inf
         countdown = -1
@@ -141,15 +142,22 @@ class Realign():
         k = (z.size - 1) / 2
 
         tempD = np.array([1, 1, 1], ndmin=2) * int(hld)
-        d = np.hstack((tempD.T, np.array(wrp,ndmin=2).T))
+        d = np.hstack((tempD.T, np.array(wrp,ndmin=2)))
 
-        Coef = spm.bsplinc(P["Vol"], d)
         dims = P["dim"]
 
-        Coef = Coef.reshape([dims[2], dims[0], dims[1]])
-        Coef = np.swapaxes(Coef,0,2)
+        # Python
+        # Coef = spm.bsplinc(np.swapaxes(P["Vol"],2,0), d)
+        # Coef = Coef.reshape(P["dim"])
 
-        V = np.zeros(P["Vol"].shape)
+        # Matlab
+        Coef = spm.bsplinc(P["Vol"], d)
+        # Coef = Coef.reshape([dims[2], dims[0], dims[1]])
+        Coef = Coef.reshape(dims)
+        # Coef = np.swapaxes(Coef, 0, 2)
+
+        V = np.zeros(Coef.shape)
+        # V = spm.conv_vol(np.swapaxes(Coef,2,0), np.swapaxes(V,2,0), x, y, z, np.array([-i, -j, -k], ndmin=2))
         V = spm.conv_vol(Coef, V, x, y, z, np.array([-i, -j, -k], ndmin=2))
 
         return V, Coef

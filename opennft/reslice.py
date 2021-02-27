@@ -36,7 +36,7 @@ class Reslicing():
                     tmp = tmp + temp_tmp
 
                 if int(flags['mask']):
-                    msk[x3] = np.argwhere(tmp != len(P))
+                    msk[x3] = np.argwhere(tmp.reshape(tmp.size,1) != len(P))[:,0]
 
                 if int(flags['mean']):
                     Count[:,:,x3] = tmp
@@ -52,7 +52,7 @@ class Reslicing():
         x1, x2 = np.mgrid[1:P[0]['dim'][0]+1,1:P[0]['dim'][1]+1]
         nread = 0
         tempD = np.array([1, 1, 1], ndmin=2)*int(flags['interp'])
-        d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2).T))
+        d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2)))
 
         for i in range(1,len(P)): # range(0,P.size)
 
@@ -76,15 +76,21 @@ class Reslicing():
                         print(err)
                         raise
                     tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P[i]['dim'][0:3],flags['wrap'])
-                    v[:,:,x3] = spm.bsplins(P[i]['C'], y1, y2, y3, d)
+                    # Coef = np.swapaxes(P[i]['C'],2,0)
+                    # outVol = spm.bsplins(Coef, y1, y2, y3, d)
+                    outVol = spm.bsplins(P[i]['C'], y1, y2, y3, d)
 
                     if int(flags['mean']):
                         Integral[:, :, x3] += self.nan2zero(v[:,:,:x3])
 
                     if int(flags['mask']):
-                        tmp = v[:, :, x3]
+                        tmp = outVol
+                        tmp = tmp.reshape(tmp.size, 1)
                         tmp[msk[x3]] = 0
-                        v[:, :, x3] = tmp
+                        tmp = tmp.reshape(outVol.shape)
+                        outVol = tmp
+
+                    v[:, :, x3] = outVol
 
                 if write_vol:
                     V0 = v
@@ -192,9 +198,12 @@ class Reslicing():
         y2 = M[1][0]*x1 + M[1][1]*x2 + (M[1][2]*x3 + M[1][3])
         y3 = M[2][0]*x1 + M[2][1]*x2 + (M[2][2]*x3 + M[2][3])
         Mask = np.array([True]*y1.size).reshape(y1.shape)
-        if wrp[0] != 0: Mask = Mask and (y1 >= (1-tiny) and y1 <= (dim[0]+tiny))
-        if wrp[1] != 0: Mask = Mask and (y1 >= (1-tiny) and y1 <= (dim[1]+tiny))
-        if wrp[2] != 0: Mask = Mask and (y1 >= (1-tiny) and y1 <= (dim[2]+tiny))
+        if wrp[0] == 0:
+            Mask = np.logical_and(np.logical_and(Mask,(y1 >= (1-tiny))),(y1 <= (dim[0]+tiny)))
+        if wrp[1] == 0:
+            Mask = np.logical_and(np.logical_and(Mask,(y2 >= (1-tiny))),(y2 <= (dim[1]+tiny)))
+        if wrp[2] == 0:
+            Mask = np.logical_and(np.logical_and(Mask,(y3 >= (1-tiny))),(y3 <= (dim[2]+tiny)))
 
         return Mask, y1, y2, y3
 

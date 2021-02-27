@@ -19,7 +19,7 @@ def data_path(root_path) -> Path:
     return root_path / 'data'
 
 @pytest.fixture(scope='session')
-def nii_image(data_path: Path) -> nib.nifti1.Nifti1Image:
+def nii_image_1(data_path: Path) -> nib.nifti1.Nifti1Image:
     fp = data_path / 'fanon-0007-00006-000006-01.nii'
     return nib.load(fp, mmap=False)
 
@@ -37,25 +37,6 @@ def main_loop_data(data_path: Path) -> dict:
 def p_struct(data_path: Path) -> dict:
     fp = str(data_path / 'P.mat')
     return loadmat(fp,squeeze_me=True)["P"]
-
-
-
-@pytest.fixture(scope='session')
-def dcmData_struct(data_path: Path) -> np.array:
-    fp = str(data_path / 'dcmData.mat')
-    return loadmat(fp, squeeze_me=True)
-
-@pytest.fixture(scope='session')
-def tmpVol_struct(data_path: Path) -> np.array:
-    fp = str(data_path / 'tmpVol.mat')
-    return loadmat(fp, squeeze_me=True)
-
-@pytest.fixture(scope='session')
-def r_struct(data_path: Path) -> dict:
-    fp = str(data_path / 'R.mat')
-    return loadmat(fp, squeeze_me=True)
-
-
 
 @pytest.fixture(scope='session')
 def matlab_result(data_path: Path) -> np.array:
