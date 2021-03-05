@@ -1,5 +1,6 @@
 import numpy as np
 import pyspm as spm
+from opennft import utils
 import sys
 
 class Realign():
@@ -63,7 +64,7 @@ class Realign():
             nrIter = 64
 
         V, P[1]["C"] = self.smooth_vol(P[1], flags["interp"], flags["wrap"], flags["fwhm"])
-        # V = np.swapaxes(V,0,2)
+
         d = np.array(V.shape)
         ss = np.inf
         countdown = -1
@@ -90,9 +91,9 @@ class Realign():
             else:
                 soln = np.linalg.solve(fixA0, (A.T @ b1))
 
-            p = np.array([0,0,0,0,0,0,1,1,1,0,0,0])
-            p[lkp] = p[lkp] + soln.T
-            P[1]["mat"] = np.linalg.solve(self.spm_matrix(p),P[1]["mat"])
+            p = np.array([0,0,0,0,0,0,1,1,1,0,0,0], dtype=float)
+            p[lkp] += soln.T
+            P[1]["mat"] = np.linalg.solve(utils.Utils().spm_matrix(p),P[1]["mat"])
 
             pss = ss
             ss = np.sum(b1 ** 2) / b1.size
@@ -109,7 +110,7 @@ class Realign():
 
     def coords(self, p, M1, M2, x1, x2, x3):
 
-        M = np.linalg.inv(M2) @ np.linalg.inv(self.spm_matrix(p)) @ M1
+        M = np.linalg.inv(M2) @ np.linalg.inv(utils.Utils().spm_matrix(p)) @ M1
         y1 = M[0, 0] * x1 + M[0, 1] * x2 + M[0, 2] * x3 + M[0, 3]
         y2 = M[1, 0] * x1 + M[1, 1] * x2 + M[1, 2] * x3 + M[1, 3]
         y3 = M[2, 0] * x1 + M[2, 1] * x2 + M[2, 2] * x3 + M[2, 3]
@@ -144,20 +145,10 @@ class Realign():
         tempD = np.array([1, 1, 1], ndmin=2) * int(hld)
         d = np.hstack((tempD.T, np.array(wrp,ndmin=2)))
 
-        dims = P["dim"]
-
-        # Python
-        # Coef = spm.bsplinc(np.swapaxes(P["Vol"],2,0), d)
-        # Coef = Coef.reshape(P["dim"])
-
-        # Matlab
         Coef = spm.bsplinc(P["Vol"], d)
-        # Coef = Coef.reshape([dims[2], dims[0], dims[1]])
-        Coef = Coef.reshape(dims)
-        # Coef = np.swapaxes(Coef, 0, 2)
+        Coef = Coef.reshape(P["dim"])
 
-        V = np.zeros(Coef.shape)
-        # V = spm.conv_vol(np.swapaxes(Coef,2,0), np.swapaxes(V,2,0), x, y, z, np.array([-i, -j, -k], ndmin=2))
+        V = np.zeros(Coef.shape, order='F')
         V = spm.conv_vol(Coef, V, x, y, z, np.array([-i, -j, -k], ndmin=2))
 
         return V, Coef
@@ -168,7 +159,7 @@ class Realign():
         p0 = np.array([0,0,0,0,0,0,1,1,1,0,0,0], dtype=float)
         A = np.zeros((x1.size,lkp.size))
         for i in range(0,lkp.size):
-            pt = p0
+            pt = p0.copy()
             pt[lkp[i]] = pt[i] + 1e-6
             y1, y2, y3 = self.coords(pt, M, M, x1, x2, x3)
             tmp = np.sum( np.array([y1-x1, y2-x2, y3-x3]).squeeze() * np.array([dG1, dG2, dG3]), 0, keepdims=True).T / (-1e-6)
@@ -176,52 +167,6 @@ class Realign():
                 A[:,i] = tmp * wt
             else:
                 A[:,i] = tmp.T
-
-        return A
-
-    def spm_matrix(self, P):
-
-        if P.size == 3:
-            A = np.eye(4)
-            A[0:3,3] = P[:]
-            return A
-
-        q = np.array([0,0,0,0,0,0,1,1,1,0,0,0])
-        P = np.append(P, q[P.size:12])
-
-        T = np.array([[1, 0, 0, P[0]],
-                      [0, 1, 0, P[1]],
-                      [0, 0, 1, P[2]],
-                      [0, 0, 0, 1]])
-
-        R1 = np.array([[1, 0, 0, 0],
-                      [0, np.cos(P[3]), np.sin(P[3]), 0],
-                      [0, -np.sin(P[3]), np.cos(P[3]), 0],
-                      [0, 0, 0, 1]])
-
-        R2 = np.array([[np.cos(P[4]), 0, np.sin(P[4]), 0],
-                      [0, 1, 0, 0],
-                      [-np.sin(P[4]), 0, np.cos(P[4]), 0],
-                      [0, 0, 0, 1]])
-
-        R3 = np.array([[np.cos(P[5]), np.sin(P[5]), 0, 0],
-                      [-np.sin(P[5]), np.cos(P[5]), 0, 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]])
-
-        R = R1@R2@R3
-
-        Z = np.array([[P[6], 0, 0, 0],
-                      [0, P[7], 0, 0],
-                      [0, 0, P[8], 0],
-                      [0, 0, 0, 1]])
-
-        S = np.array([[1, P[9], P[10], 0],
-                      [0, 1, P[11], 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]])
-
-        A = T@R@Z@S
 
         return A
 

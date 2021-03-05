@@ -8,7 +8,7 @@ import nibabel as nib
 from scipy.io import savemat
 
 
-def test_spm_rt(dcm_image: np.array, nii_image_1: nib.nifti1.Nifti1Image, p_struct: dict, matlab_result: np.array):
+def test_spm_rt(dcm_image: np.array, nii_image_1: nib.nifti1.Nifti1Image, p_struct: dict, matlab_result: np.array, xs: dict):
 
     try:
 
@@ -36,7 +36,6 @@ def test_spm_rt(dcm_image: np.array, nii_image_1: nib.nifti1.Nifti1Image, p_stru
             R[0]["Vol"] = tmpVol
 
         indVol = 6
-
         dcmData = np.array(dcm_image, dtype=float)
 
         R[1]["mat"] = nii_image_1.affine
@@ -54,6 +53,10 @@ def test_spm_rt(dcm_image: np.array, nii_image_1: nib.nifti1.Nifti1Image, p_stru
         flagsSpmRealign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((3,1)), 'rtm': 0, 'PW': '', 'lkp': np.array(range(0,6))})
         flagsSpmReslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((3,1)), 'mask': 1, 'mean': 0, 'which': 2})
 
+        # x1 = np.array(xs["x1"], order='F')
+        # x2 = np.array(xs["x2"], order='F')
+        # x3 = np.array(xs["x3"], order='F')
+
         nrSkipVol = p_struct["nrSkipVol"].item()
         [R, A0, x1, x2, x3, wt, deg, b, nrIter] = ra.Realign().spm_realign(R, flagsSpmRealign, indVol, nrSkipVol + 1, A0, x1, x2, x3, wt, deg, b)
 
@@ -69,6 +72,8 @@ def test_spm_rt(dcm_image: np.array, nii_image_1: nib.nifti1.Nifti1Image, p_stru
 
         matlab_reslVol = matlab_result["reslVol"]
         np.testing.assert_almost_equal(reslVol, matlab_reslVol, decimal=7, err_msg="Not equal")
+
+        print('\n\nFirst test MSE = {:}\n'.format(((reslVol - matlab_reslVol)**2).mean()))
 
         assert True, "Done"
     except Exception as err:

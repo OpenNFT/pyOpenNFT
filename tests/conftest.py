@@ -44,6 +44,27 @@ def matlab_result(data_path: Path) -> np.array:
     return loadmat(fp, squeeze_me=True)
 
 @pytest.fixture(scope='session')
+def r_struct(data_path: Path) -> dict:
+    fp = str(data_path / 'R.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def matlab_MCResult(data_path: Path) -> np.array:
+    fp = str(data_path / 'mc_matlab_nii.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def matlab_MCResult_dcm(data_path: Path) -> np.array:
+    fp = str(data_path / 'mc_matlab_dcm.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def xs(data_path: Path) -> dict:
+    fp = str(data_path / 'xs.mat')
+    return loadmat(fp, squeeze_me=True)
+
+# misc
+@pytest.fixture(scope='session')
 def flags_reslice(data_path: Path) -> dict:
     fp = str(data_path / 'flagsSpmReslice.mat')
     non_squeezed_struct = loadmat(fp, squeeze_me=False)
