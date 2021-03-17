@@ -174,7 +174,6 @@ DoubleArray spm_bsplins(DoubleArray C, DoubleArray y1, DoubleArray y2, DoubleArr
 
     fun(c, m0, m1, m2, n, x0, x1, x2, dd, cond, bnd, f);
 
-    func.resize(y1_info.shape);
     return func;
 }
 

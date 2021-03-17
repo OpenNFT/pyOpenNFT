@@ -1,116 +1,124 @@
 # -*- coding: utf-8 -*-
 
-from opennft import reslice as rs
-from opennft import realign as ra
-from opennft.utils import Utils as utils
-from pathlib import Path
+from opennft.realign import spm_realign
+from opennft.reslice import spm_reslice
+from opennft import utils
 import numpy as np
-import nibabel as nib
 import pydicom
 from scipy.io import savemat
 import time
 
-def test_mc_dcm(third_data_path: Path, nii_image_1: nib.nifti1.Nifti1Image, p_struct: dict, matlab_MCResult_dcm: np.array, r_struct: dict, xs: dict):
 
+# def test_bench(benchmark, third_data_path, nii_image_1, p_struct, matlab_mc_result, r_struct):
+#
+#     result = benchmark.pedantic(mc_dcm, args=(third_data_path,nii_image_1,p_struct), iterations=1, rounds=10)
+#
+#     assert result
+
+
+def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_struct):
     try:
 
-        timeStamps = np.zeros((158,))
+        time_stamps = np.zeros((158,))
         t0 = time.time()
 
-        A0 = []
+        a0 = []
         x1 = []
         x2 = []
         x3 = []
         wt = []
         deg = []
         b = []
-        R = [{'mat': None, 'dim': None, 'Vol': None} for i in range(2)]
-        dimVol = np.array([74, 74, 36])
+        r = [{'mat': np.array([]), 'dim': np.array([]), 'Vol': np.array([])} for _ in range(2)]
+        dim_vol = np.array([74, 74, 36])
 
         # R[0]["mat"] = r_struct["R"][0]["mat"]
-        R[0]["mat"] = nii_image_1.affine
-        R[0]["dim"] = dimVol.copy()
-        tmpVol = np.array(nii_image_1.get_fdata(), dtype='uint16', order='F')
+        r[0]["mat"] = nii_image_1.affine
+        r[0]["dim"] = dim_vol.copy()
+        tmp_vol = np.array(nii_image_1.get_fdata(), dtype='uint16', order='F')
 
-        slNrImg2DdimX, slNrImg2DdimY, img2DdimX, img2DdimY = utils().getMosaicDim(dimVol)
+        xdim_img_number, ydim_img_number, img2d_dimx, img2d_dimy = utils.get_mosaic_dim(dim_vol)
 
         t1 = time.time()
-        timeStamps[1] = t1-t0
+        time_stamps[1] = t1 - t0
 
-        nrZeroPadVol = p_struct["nrZeroPadVol"].item()
+        nr_zero_pad_vol = p_struct["nrZeroPadVol"].item()
         if p_struct["isZeroPadding"].item():
-            R[0]["dim"][2] = R[0]["dim"][2]+nrZeroPadVol*2
-            R[0]["Vol"] = np.pad(tmpVol, ((0,0),(0,0),(nrZeroPadVol,nrZeroPadVol)), 'constant', constant_values=(0, 0))
+            r[0]["dim"][2] = r[0]["dim"][2] + nr_zero_pad_vol * 2
+            r[0]["Vol"] = np.pad(tmp_vol, ((0, 0), (0, 0), (nr_zero_pad_vol, nr_zero_pad_vol)),
+                                 'constant', constant_values=(0, 0))
         else:
-            R[0]["Vol"] = tmpVol
+            r[0]["Vol"] = tmp_vol
 
-        motCorrParam = np.zeros((155,6))
-        sumVols = np.zeros((155,74,74,36))
-        offsetMCParam = np.zeros((6,))
+        mot_corr_param = np.zeros((155, 6))
+        sum_vols = np.zeros((155, 74, 74, 36))
+        offset_mc_param = np.zeros((6,))
 
         t2 = time.time()
-        timeStamps[2] = t2-t1
+        time_stamps[2] = t2 - t1
 
-        for indVol in range(0,155):
+        for ind_vol in range(0, 155):
 
             ti0 = time.time()
-            fileName = str(indVol+1)+'.dcm'
-            data = np.array(pydicom.dcmread(third_data_path / fileName).pixel_array, dtype='uint16', order='F')
+            file_name = str(ind_vol + 1) + '.dcm'
+            data = np.array(pydicom.dcmread(third_data_path / file_name).pixel_array, dtype='uint16', order='F')
 
-            R[1]["mat"] = R[0]["mat"]
-            R[1]["dim"] = dimVol.copy()
-            tmpVol = utils().img2Dvol3D(data, slNrImg2DdimX, slNrImg2DdimY, dimVol)
-
-            if p_struct["isZeroPadding"].item():
-                dimVol[2] = dimVol[2]+nrZeroPadVol*2
-                R[1]["Vol"] = np.pad(tmpVol, ((0,0),(0,0),(nrZeroPadVol,nrZeroPadVol)), 'constant', constant_values=(0, 0))
-            else:
-                R[1]["Vol"] = tmpVol
-
-            R[1]["Vol"] = np.array(R[1]["Vol"], dtype='uint16', order='F')
-            R[1]["dim"] = dimVol
-
-            flagsSpmRealign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((3,1)), 'rtm': 0, 'PW': '', 'lkp': np.array(range(0,6))})
-            flagsSpmReslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4, 'wrap': np.zeros((3,1)), 'mask': 1, 'mean': 0, 'which': 2})
-
-            # x1 = np.array(xs["x1"], order='F')
-            # x2 = np.array(xs["x2"], order='F')
-            # x3 = np.array(xs["x3"], order='F')
-
-            nrSkipVol = p_struct["nrSkipVol"].item()
-            [R, A0, x1, x2, x3, wt, deg, b, nrIter] = ra.Realign().spm_realign(R, flagsSpmRealign, indVol+1, 1, A0, x1, x2, x3, wt, deg, b)
-
-            tempM = np.linalg.solve(R[0]["mat"].T,R[1]["mat"].T).T
-            tmpMCParam = utils().spm_imatrix(tempM)
-            if indVol+1 == 1:
-                offsetMCParam = tmpMCParam[0:6]
-            motCorrParam[indVol,:] = tmpMCParam[0:6]-offsetMCParam
+            r[1]["mat"] = r[0]["mat"]
+            r[1]["dim"] = dim_vol.copy()
+            tmp_vol = utils.img_2d_to_3d(data, xdim_img_number, ydim_img_number, dim_vol)
 
             if p_struct["isZeroPadding"].item():
-                tmp_reslVol = rs.Reslicing().spm_reslice(R, flagsSpmReslice)
-                reslVol = tmp_reslVol[:,:, nrZeroPadVol : -1 - nrZeroPadVol +1]
-                dimVol[2] = dimVol[2] - nrZeroPadVol * 2
+                dim_vol[2] = dim_vol[2] + nr_zero_pad_vol * 2
+                r[1]["Vol"] = np.pad(tmp_vol, ((0, 0), (0, 0), (nr_zero_pad_vol, nr_zero_pad_vol)),
+                                     'constant', constant_values=(0, 0))
             else:
-                reslVol = rs.Reslicing().spm_reslice(R, flagsSpmReslice)
+                r[1]["Vol"] = tmp_vol
 
-            sumVols[indVol,:,:,:] = reslVol
+            r[1]["Vol"] = np.array(r[1]["Vol"], dtype='uint16', order='F')
+            r[1]["dim"] = dim_vol
+
+            flags_spm_realign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
+                                      'wrap': np.zeros((3, 1)), 'rtm': 0, 'PW': '', 'lkp': np.array(range(0, 6))})
+            flags_spm_reslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
+                                      'wrap': np.zeros((3, 1)), 'mask': 1, 'mean': 0, 'which': 2})
+
+            [r, a0, x1, x2, x3, wt, deg, b, _] = spm_realign(r, flags_spm_realign, ind_vol + 1,
+                                                             1, a0, x1, x2, x3, wt, deg, b)
+
+            temp_m = np.linalg.solve(r[0]["mat"].T, r[1]["mat"].T).T
+            tmp_mc_param = utils.spm_imatrix(temp_m)
+            if ind_vol + 1 == 1:
+                offset_mc_param = tmp_mc_param[0:6]
+            mot_corr_param[ind_vol, :] = tmp_mc_param[0:6] - offset_mc_param
+
+            if p_struct["isZeroPadding"].item():
+                tmp_resl_vol = spm_reslice(r, flags_spm_reslice)
+                resl_vol = tmp_resl_vol[:, :, nr_zero_pad_vol: -1 - nr_zero_pad_vol + 1]
+                dim_vol[2] = dim_vol[2] - nr_zero_pad_vol * 2
+            else:
+                resl_vol = spm_reslice(r, flags_spm_reslice)
+
+            sum_vols[ind_vol, :, :, :] = resl_vol
 
             ti1 = time.time()
-            timeStamps[indVol+3] = ti1-ti0
+            time_stamps[ind_vol + 3] = ti1 - ti0
 
         # reslDic = {"mc_python": motCorrParam}
         # savemat("data/mc_python_dcm.mat", reslDic)
-        #
-        # reslDic = {"sumVols": sumVols}
-        # savemat("data/sumVols_python_dcm.mat", reslDic)
 
-        # print('\n')
-        # for i in range(0,6):
-        #     print('Third test MSE for {:} coordinate = {:}'.format(i+1, ((motCorrParam[:,i] - matlab_MCResult_dcm["mc_series_matlab"][:,i])**2).mean()))
+        resl_dic = {"sumVols": sum_vols}
+        savemat("C:/pyOpenNFT/tests/data/sumVols_python_dcm.mat", resl_dic)
 
-        reslDic = {"python_times": timeStamps}
-        savemat("python_times_dcm.mat", reslDic)
+        resl_dic = {"python_times": time_stamps}
+        savemat("C:/pyOpenNFT/tests/data/python_times_dcm.mat", resl_dic)
 
+        print('\n')
+        for i in range(0, 6):
+            print('Third test MSE for {:} coordinate = {:}'.
+                  format(i + 1, ((mot_corr_param[:, i] - matlab_mc_result_dcm["mc_matlab"][:, i]) ** 2).mean()))
+
+        # return True
         assert True, "Done"
     except Exception as err:
+        # return False
         assert False, f"Error occurred: {repr(err)}"

@@ -1,211 +1,115 @@
-
 import numpy as np
 import pyspm as spm
-import sys
 
-class Reslicing():
 
-    def __init__(self, parent=None):
-        super()
+def spm_reslice(r, flags):
 
-    def spm_reslice(self, P, flags):
+    msk = []
+    count = []
+    integral = []
+    v0 = []
+    r0_dim = np.array(r[0]['dim'], dtype='int16')
+    r0_mat = np.array(r[0]['mat'], dtype='int16')
 
-        if int(flags['mask']) or int(flags['mean']):
-            temp_x1 = np.transpose(np.array(range(1,P[0]['dim'][0]+1), ndmin=2))
-            x1 = np.tile(temp_x1,(1,P[0]['dim'][1]))
-            temp_x2 = np.transpose(np.array(range(1,P[0]['dim'][1]+1), ndmin=2))
-            x2 = np.transpose(np.tile(temp_x2,(1,P[0]['dim'][1])))
+    if int(flags['mask']) or int(flags['mean']):
 
-            if int(flags['mean']):
-                Count = np.zeros((int(P[0]['dim'][0]),int(P[0]['dim'][1]),int(P[0]['dim'][2])))
-                Integral = np.zeros((int(P[0]['dim'][0]),int(P[0]['dim'][1]),int(P[0]['dim'][2])))
+        temp_x1 = np.transpose(np.array(range(1, r0_dim[0] + 1), ndmin=2))
+        x1 = np.tile(temp_x1, (1, r0_dim[1]))
+        temp_x2 = np.transpose(np.array(range(1, r0_dim[1] + 1), ndmin=2))
+        x2 = np.transpose(np.tile(temp_x2, (1, r0_dim[1])))
+
+        if int(flags['mean']):
+            count = np.zeros(r0_dim)
+            integral = np.zeros(r0_dim)
+
+        if int(flags['mask']):
+            msk = [[] for _ in range(r0_dim[2])]  # [None]*P['dim'][0][2]
+
+        for x3 in range(0, r0_dim[2]):
+            tmp = np.zeros((r0_dim[0], r0_dim[1]))
+            for i in range(0, len(r)):
+                ri_dim = r[i]['dim'][0:3]
+                ri_mat = r[i]['mat']
+
+                try:
+                    tmp_division = np.linalg.solve(r0_mat, ri_mat)
+                except np.linalg.LinAlgError as err:
+                    # TODO: Something
+                    print(err)
+                    raise
+
+                temp_tmp, y1, y2, y3 = get_mask(np.linalg.inv(tmp_division), x1, x2, x3 + 1, ri_dim, flags['wrap'])
+                tmp += temp_tmp
 
             if int(flags['mask']):
-                msk = [[] for i in range(P[0]['dim'][2])] #[None]*P['dim'][0][2]
+                msk[x3] = np.argwhere(tmp.reshape(tmp.size, 1) != len(r))[:, 0]
 
-            for x3 in range(0,P[0]['dim'][2]):
-                tmp = np.zeros((P[0]['dim'][0],P[0]['dim'][1]))
-                for i in range(0,len(P)):
-                    try:
-                        tmpDivision = np.linalg.solve(P[0]['mat'], P[i]['mat'])
-                    except np.linalg.LinAlgError as err:
-                        # TODO: Something
-                        print(err)
-                        raise
-                    temp_tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P[i]['dim'][0:3],flags['wrap'])
-                    tmp = tmp + temp_tmp
+            if int(flags['mean']):
+                count[:, :, x3] = tmp
 
-                if int(flags['mask']):
-                    msk[x3] = np.argwhere(tmp.reshape(tmp.size,1) != len(P))[:,0]
+    x1, x2 = np.mgrid[1:r0_dim[0] + 1, 1:r0_dim[1] + 1]
+
+    temp_d = np.array([1, 1, 1]) * int(flags['interp'])
+    d = np.hstack((temp_d.T, np.squeeze(flags['wrap'])))
+
+    for i in range(1, len(r)):  # range(0,P.size)
+
+        ri_dim = r[i]['dim'][0:3]
+        if (i > 1 and int(flags['which']) == 1) or int(flags['which']) == 2:
+            write_vol = 1
+        else:
+            write_vol = 0
+        if write_vol or int(flags['mean']):
+            read_vol = 1
+        else:
+            read_vol = 0
+
+        if read_vol:
+
+            v = np.zeros(r0_dim)
+            for x3 in range(0, r0_dim[2]):
+                try:
+                    tmp_division = np.linalg.solve(r[0]['mat'], r[i]['mat'])
+                except np.linalg.LinAlgError as err:
+                    # TODO: Something
+                    print(err)
+                    raise
+                tmp, y1, y2, y3 = get_mask(np.linalg.inv(tmp_division), x1, x2, x3 + 1, ri_dim, flags['wrap'])
+
+                out_vol = spm.bsplins(r[i]['C'], y1, y2, y3, d)
 
                 if int(flags['mean']):
-                    Count[:,:,x3] = tmp
+                    integral[:, :, x3] += nan_to_zero(v[:, :, :x3])
 
-        nread = len(P)
-        if not int(flags['mean']):
-            if int(flags['which']) == 1:
-                nread = nread - 1
+                if int(flags['mask']):
+                    tmp = out_vol
+                    tmp[msk[x3]] = 0
+                    out_vol = tmp
 
-            if int(flags['which']) == 0:
-                nread = 0
+                v[:, :, x3] = out_vol.reshape(y1.shape)
 
-        x1, x2 = np.mgrid[1:P[0]['dim'][0]+1,1:P[0]['dim'][1]+1]
-        nread = 0
-        tempD = np.array([1, 1, 1], ndmin=2)*int(flags['interp'])
-        d = np.hstack((tempD.T, np.array(flags['wrap'],ndmin=2)))
+            if write_vol:
+                v0 = v
 
-        for i in range(1,len(P)): # range(0,P.size)
-
-            if (i>1 and int(flags['which'])==1) or int(flags['which'])==2:
-                write_vol = 1
-            else:
-                write_vol=0
-            if write_vol or int(flags['mean']):
-                read_vol = 1
-            else:
-                read_vol = 0
-
-            if read_vol:
-
-                v = np.zeros(P[0]['dim'])
-                for x3 in range(0,P[0]['dim'][2]):
-                    try:
-                        tmpDivision = np.linalg.solve(P[0]['mat'],P[i]['mat'])
-                    except np.linalg.LinAlgError as err:
-                        # TODO: Something
-                        print(err)
-                        raise
-                    tmp, y1, y2, y3 = self.getmask(np.linalg.inv(tmpDivision),x1,x2,x3+1,P[i]['dim'][0:3],flags['wrap'])
-                    # Coef = np.swapaxes(P[i]['C'],2,0)
-                    # outVol = spm.bsplins(Coef, y1, y2, y3, d)
-                    outVol = spm.bsplins(P[i]['C'], y1, y2, y3, d)
-
-                    if int(flags['mean']):
-                        Integral[:, :, x3] += self.nan2zero(v[:,:,:x3])
-
-                    if int(flags['mask']):
-                        tmp = outVol
-                        tmp = tmp.reshape(tmp.size, 1)
-                        tmp[msk[x3]] = 0
-                        tmp = tmp.reshape(outVol.shape)
-                        outVol = tmp
-
-                    v[:, :, x3] = outVol
-
-                if write_vol:
-                    V0 = v
-
-                nread = nread + 1
-
-        return V0
+    return v0
 
 
-    def kspace3d(self, v, M):
+def get_mask(m, x1, x2, x3, dim, wrp):
 
-        S0, S1, S2, S3 = self.shear_decomp(M)
+    tiny = 5e-2  # From spm_vol_utils.cpp
+    y1 = m[0][0] * x1 + m[0][1] * x2 + (m[0][2] * x3 + m[0][3])
+    y2 = m[1][0] * x1 + m[1][1] * x2 + (m[1][2] * x3 + m[1][3])
+    y3 = m[2][0] * x1 + m[2][1] * x2 + (m[2][2] * x3 + m[2][3])
+    mask = np.array([True] * y1.size).reshape(y1.shape)
+    if wrp[0] == 0:
+        mask = np.logical_and(np.logical_and(mask, (y1 >= (1 - tiny))), (y1 <= (dim[0] + tiny)))
+    if wrp[1] == 0:
+        mask = np.logical_and(np.logical_and(mask, (y2 >= (1 - tiny))), (y2 <= (dim[1] + tiny)))
+    if wrp[2] == 0:
+        mask = np.logical_and(np.logical_and(mask, (y3 >= (1 - tiny))), (y3 <= (dim[2] + tiny)))
 
-        d = np.append(np.asarray(v.shape),[1, 1, 1]).astype(int)
-        g = (2 ** np.ceil(np.log2(d))).astype(int)
-        if (g != d).any():
-            tmp = v
-            v = np.zeros(g)
-            v[1:d[0], 1:[1], 1:d[3]] = tmp
+    return mask, y1, y2, y3
 
-        # XY-shear
-        tmp1_1 = np.append(np.array(range(0,int((g[2]-1)/2)+1)), 0)
-        tmp1_2 = np.append(tmp1_1, np.array(range(int((-g[2]/2))+1,0)))
-        tmp1 = -1j * 2*np.pi * tmp1_2 / g[2]
-        for j in range(1,g[1]+1):
-            tempT = np.exp(np.transpose(j*S3[2][1] + S3[2][0]*np.array(range(1,g[0]+1)) + S3[2,3])*tmp1)
-            t = tempT.reshape(g[0], 1, g[2])
-            v[:,j-1,:] = np.real(np.fft.ifftn(np.fft.fftn(v[:,j-1,:], axis=2)*t,axis=2))
 
-        # XZ-shear
-        tmp1_1 = np.append(np.array(range(0, int((g[1] - 1) / 2) + 1)), 0)
-        tmp1_2 = np.append(tmp1_1, np.array(range(int((-g[1] / 2)) + 1, 0)))
-        tmp1 = -1j * 2 * np.pi * tmp1_2 / g[1]
-        for k in range(1, g[2]+1):
-            t = np.exp(np.transpose(k * S2[2][1] + S2[2][0] * np.array(range(1, g[0] + 1)) + S2[2, 3]) * tmp1)
-            v[:, :, k-1] = np.real(np.fft.ifftn(np.fft.fftn(v[:, :, k-1], axis=1) * t, axis=1))
-
-        # YZ-shear
-        tmp1_1 = np.append(np.array(range(0, int((g[2] - 1) / 2) + 1)), 0)
-        tmp1_2 = np.append(tmp1_1, np.array(range(int((-g[2] / 2)) + 1, 0)))
-        tmp1 = -1j * 2 * np.pi * tmp1_2 / g[2]
-        for k in range(1, g[2]+1):
-            t = np.exp(tmp1.T*(k * S1[0][2] + S1[0][1] * np.array(range(1, g[1] + 1)) + S1[0, 3]))
-            v[:, :, k-1] = np.real(np.fft.ifftn(np.fft.fftn(v[:, :, k-1], axis=0) * t, axis=0))
-
-        # XY-shear
-        tmp1_1 = np.append(np.array(range(0,int((g[2]-1)/2)+1)), 0)
-        tmp1_2 = np.append(tmp1_1, np.array(range(int((-g[2]/2))+1,0)))
-        tmp1 = -1j * 2*np.pi * tmp1_2 / g[2]
-        for j in range(1,g[1]+1):
-            tempT = np.exp(np.transpose(j*S0[2][1] + S0[2][0]*np.array(range(1,g[0]+1)) + S0[2,3])*tmp1)
-            t = tempT.reshape(g[0], 1, g[2])
-            v[:,j-1,:] = np.real(np.fft.ifftn(np.fft.fftn(v[:,j-1,:], axis=2)*t,axis=2))
-
-        if (g != d).any():
-            v = v[1:d[0], 1:d[1], 1:d[2]]
-
-        return v
-
-    def shear_decomp(self, A):
-
-        A0 = A[0:3][0:3]
-        if (np.abs(np.linalg.svd(A0)-1) > 1e-7).any():
-            # TODO: error message class needed
-            # error('Can''t decompose matrix')
-            o=1
-
-        t = A0[1][2]
-        if t==0:
-            t=sys.float_info.epsilon
-
-        tmp = np.array([[A0[0][1], A0[0][2]],[A0[1][1], A0[1][2]]]).T
-        a0 = np.linalg.pinv(tmp)@np.array([(A0[2][1]-(A0[1][1]-1)/t), (A0[2][2]-1)], ndmin=2).T
-        S0 = np.array([[1, 0, 0], [0, 1, 0], [a0[0], a0[1], 1]])
-        A1 = S0 / A0
-
-        tmp = np.array([[A0[1][1], A0[1][2]],[A0[2][1], A0[2][2]]]).T
-        a1 = tmp@np.array([A1[0][1], A1[0][2]], ndmin=2).T
-        S1 = [[1, a1[0], a1[1]],[0, 1, 0],[0, 0, 1]]
-        A2 = S1 / A1
-
-        tmp = np.array([[A0[0][0], A0[0][2]],[A0[0][2], A0[2][2]]]).T
-        a2 = tmp@np.array([A2[1][0], A2[1][2]], ndmin=2).T
-        S2 = [[1, 0, 0], [a2[0], 1, a2[1]], [0, 0, 1]]
-        A3 = S2 / A2
-
-        tmp = np.array([[A0[0][0], A0[0][1]],[A0[0][1], A0[1][1]]]).T
-        a3 = tmp@np.array([A3[2][0], A2[2][1]], ndmin=2).T
-        S3 = [[1, 0, 0],[0, 1, 0],[a3[0], a3[1], 1]]
-
-        s3 = A[2][3] - a0[0]*A[0][3] - a0[1]*A[1][3]
-        s1 = A[0][3] - a1[0]*A[1][3]
-        s2 = A[1][3]
-        S0 = np.vstack((np.hstack((S0, np.array([0, 0, s3], ndmin=2).T)),np.array([0, 0, 0, 1], ndmin=2)))
-        S1 = np.vstack((np.hstack((S1, np.array([s1, 0, 0], ndmin=2).T)),np.array([0, 0, 0, 1], ndmin=2)))
-        S2 = np.vstack((np.hstack((S2, np.array([0, s2, 0], ndmin=2).T)),np.array([0, 0, 0, 1], ndmin=2)))
-        S3 = np.vstack((np.hstack((S3, np.array([0, 0, 0], ndmin=2).T)),np.array([0, 0, 0, 1], ndmin=2)))
-
-        return {'S0' : S0, 'S1' : S1, 'S2': S2, 'S3': S3}
-
-    def getmask(self, M, x1, x2, x3, dim, wrp):
-
-        tiny = 5e-2 # From spm_vol_utils.c
-        y1 = M[0][0]*x1 + M[0][1]*x2 + (M[0][2]*x3 + M[0][3])
-        y2 = M[1][0]*x1 + M[1][1]*x2 + (M[1][2]*x3 + M[1][3])
-        y3 = M[2][0]*x1 + M[2][1]*x2 + (M[2][2]*x3 + M[2][3])
-        Mask = np.array([True]*y1.size).reshape(y1.shape)
-        if wrp[0] == 0:
-            Mask = np.logical_and(np.logical_and(Mask,(y1 >= (1-tiny))),(y1 <= (dim[0]+tiny)))
-        if wrp[1] == 0:
-            Mask = np.logical_and(np.logical_and(Mask,(y2 >= (1-tiny))),(y2 <= (dim[1]+tiny)))
-        if wrp[2] == 0:
-            Mask = np.logical_and(np.logical_and(Mask,(y3 >= (1-tiny))),(y3 <= (dim[2]+tiny)))
-
-        return Mask, y1, y2, y3
-
-    def nan2zero(self, vi):
-        return np.nan_to_num(vi, copy=True, nan=0, posinf=0, neginf=0)
+def nan_to_zero(vi):
+    return np.nan_to_num(vi, copy=True, nan=0, posinf=0, neginf=0)

@@ -1,115 +1,117 @@
 import numpy as np
 
-class Utils():
 
-    def __init__(self, parent=None):
-        super()
+def img_2d_to_3d(img2d, xdim_img_number, ydim_img_number, dim3d):
 
-    def img2Dvol3D(self, img2D, slNrImg2DdimX, slNrImg2DdimY, dim3D):
-
-        sl = 0
-        vol3D = np.zeros(dim3D)
-        for sy in range(0,slNrImg2DdimY):
-            for sx in range(0, slNrImg2DdimX):
-                if sl>dim3D[2]:
-                    break
-                else:
-                    vol3D[:,:,sl] = img2D[sy * dim3D[0] : (sy+1) * dim3D[0],
-                                          sx * dim3D[0] : (sx+1) * dim3D[0]]
-                vol3D[:,:,sl] = np.rot90(vol3D[:,:,sl],3)
-                sl = sl+1
-
-        return vol3D
-
-    def getMosaicDim(self, dim3D):
-
-        slNrImg2DdimX = round(np.sqrt(dim3D[2]))
-        tmpDim = dim3D[2] - slNrImg2DdimX ** 2
-
-        if tmpDim == 0:
-            slNrImg2DdimY = slNrImg2DdimX
-        else:
-            if tmpDim > 0:
-                slNrImg2DdimY = slNrImg2DdimX
-                slNrImg2DdimX = slNrImg2DdimX + 1
+    sl = 0
+    vol3d = np.zeros(dim3d)
+    for sy in range(0, ydim_img_number):
+        for sx in range(0, xdim_img_number):
+            if sl > dim3d[2]:
+                break
             else:
-                slNrImg2DdimX = slNrImg2DdimX
-                slNrImg2DdimY = slNrImg2DdimX
+                vol3d[:, :, sl] = img2d[sy * dim3d[0]: (sy + 1) * dim3d[0], sx * dim3d[0]: (sx + 1) * dim3d[0]]
+            vol3d[:, :, sl] = np.rot90(vol3d[:, :, sl], 3)
+            sl += 1
 
-        img2DdimX = slNrImg2DdimX * dim3D[0]
-        img2DdimY = slNrImg2DdimY * dim3D[0]
+    return vol3d
 
-        return slNrImg2DdimX, slNrImg2DdimY, img2DdimX, img2DdimY
 
-    def spm_matrix(self, P):
+def get_mosaic_dim(dim3d):
 
-        if P.size == 3:
-            A = np.eye(4)
-            A[0:3,3] = P[:]
-            return A
+    xdim_img_number = round(np.sqrt(dim3d[2]))
+    tmp_dim = dim3d[2] - xdim_img_number ** 2
 
-        q = np.array([0,0,0,0,0,0,1,1,1,0,0,0])
-        P = np.append(P, q[P.size:12])
-
-        T = np.array([[1, 0, 0, P[0]],
-                      [0, 1, 0, P[1]],
-                      [0, 0, 1, P[2]],
-                      [0, 0, 0, 1]])
-
-        R1 = np.array([[1, 0, 0, 0],
-                      [0, np.cos(P[3]), np.sin(P[3]), 0],
-                      [0, -np.sin(P[3]), np.cos(P[3]), 0],
-                      [0, 0, 0, 1]])
-
-        R2 = np.array([[np.cos(P[4]), 0, np.sin(P[4]), 0],
-                      [0, 1, 0, 0],
-                      [-np.sin(P[4]), 0, np.cos(P[4]), 0],
-                      [0, 0, 0, 1]])
-
-        R3 = np.array([[np.cos(P[5]), np.sin(P[5]), 0, 0],
-                      [-np.sin(P[5]), np.cos(P[5]), 0, 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]])
-
-        R = R1@R2@R3
-
-        Z = np.array([[P[6], 0, 0, 0],
-                      [0, P[7], 0, 0],
-                      [0, 0, P[8], 0],
-                      [0, 0, 0, 1]])
-
-        S = np.array([[1, P[9], P[10], 0],
-                      [0, 1, P[11], 0],
-                      [0, 0, 1, 0],
-                      [0, 0, 0, 1]])
-
-        A = T@R@Z@S
-
-        return A
-
-    def spm_imatrix(self, M):
-
-        R = M[0:3, 0:3]
-        C = np.linalg.cholesky(R.T@R)
-        P = np.append(np.append(np.append(M[0:3,3].T,np.zeros(3,)),np.diag(C).T),np.zeros(3,))
-        if np.linalg.det(R)<0:
-            P[6]=-P[6]
-
-        C = np.linalg.solve(np.diag(np.diag(C)),C)
-        P[9:12] = C.flatten()[[3, 6, 7]]
-        R0 = self.spm_matrix(np.append(np.zeros(6,), P[6:12]))
-        R0 = R0[0:3,0:3]
-        R1 = np.linalg.solve(R0.T,R.T).T
-
-        rang = lambda x: np.minimum(np.maximum(x,-1),1)
-
-        P[4] = np.arcsin(rang(R1[0,2]))
-        if (np.abs(P[4])-np.pi/2)**2 < 1e-9:
-            P[3] = 0
-            P[5] = np.arctan2(-rang(R1[1,0]), rang( -R1[2,0]/R1[0,2] ))
+    if tmp_dim == 0:
+        ydim_img_number = xdim_img_number
+    else:
+        if tmp_dim > 0:
+            ydim_img_number = xdim_img_number
+            xdim_img_number += 1
         else:
-            c = np.cos(P[4])
-            P[3] = np.arctan2(rang(R1[1,2]/c), rang(R1[2,2]/c))
-            P[5] = np.arctan2(rang(R1[0,1]/c), rang(R1[0,0]/c))
+            xdim_img_number = xdim_img_number
+            ydim_img_number = xdim_img_number
 
-        return P
+    img2d_dimx = xdim_img_number * dim3d[0]
+    img2d_dimy = ydim_img_number * dim3d[0]
+
+    return xdim_img_number, ydim_img_number, img2d_dimx, img2d_dimy
+
+
+def spm_matrix(p):
+
+    if p.size == 3:
+        a = np.eye(4)
+        a[0:3, 3] = p[:]
+        return a
+
+    q = np.array([0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0])
+    p = np.append(p, q[p.size:12])
+
+    t = np.array([[1, 0, 0, p[0]],
+                  [0, 1, 0, p[1]],
+                  [0, 0, 1, p[2]],
+                  [0, 0, 0, 1]])
+
+    r1 = np.array([[1, 0, 0, 0],
+                   [0, np.cos(p[3]), np.sin(p[3]), 0],
+                   [0, -np.sin(p[3]), np.cos(p[3]), 0],
+                   [0, 0, 0, 1]])
+
+    r2 = np.array([[np.cos(p[4]), 0, np.sin(p[4]), 0],
+                   [0, 1, 0, 0],
+                   [-np.sin(p[4]), 0, np.cos(p[4]), 0],
+                   [0, 0, 0, 1]])
+
+    r3 = np.array([[np.cos(p[5]), np.sin(p[5]), 0, 0],
+                   [-np.sin(p[5]), np.cos(p[5]), 0, 0],
+                   [0, 0, 1, 0],
+                   [0, 0, 0, 1]])
+
+    r = r1 @ r2 @ r3
+
+    z = np.array([[p[6], 0, 0, 0],
+                  [0, p[7], 0, 0],
+                  [0, 0, p[8], 0],
+                  [0, 0, 0, 1]])
+
+    s = np.array([[1, p[9], p[10], 0],
+                  [0, 1, p[11], 0],
+                  [0, 0, 1, 0],
+                  [0, 0, 0, 1]])
+
+    a = t @ r @ z @ s
+
+    return a
+
+
+def spm_imatrix(m):
+
+    r = m[0:3, 0:3]
+    c = np.linalg.cholesky(r.T @ r)
+
+    p = np.append(m[0:3, 3].T, np.zeros(3, ))
+    p = np.append(p, np.diag(c).T)
+    p = np.append(p, np.zeros(3, ))
+
+    if np.linalg.det(r) < 0:
+        p[6] = -p[6]
+
+    c = np.linalg.solve(np.diag(np.diag(c)), c)
+    p[9:12] = c.flatten()[[3, 6, 7]]
+    r0 = spm_matrix(np.append(np.zeros(6, ), p[6:12]))
+    r0 = r0[0:3, 0:3]
+    r1 = np.linalg.solve(r0.T, r.T).T
+
+    def rang(x): return np.minimum(np.maximum(x, -1), 1)
+
+    p[4] = np.arcsin(rang(r1[0, 2]))
+    if (np.abs(p[4]) - np.pi / 2) ** 2 < 1e-9:
+        p[3] = 0
+        p[5] = np.arctan2(-rang(r1[1, 0]), rang(-r1[2, 0] / r1[0, 2]))
+    else:
+        c = np.cos(p[4])
+        p[3] = np.arctan2(rang(r1[1, 2] / c), rang(r1[2, 2] / c))
+        p[5] = np.arctan2(rang(r1[0, 1] / c), rang(r1[0, 0] / c))
+
+    return p

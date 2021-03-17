@@ -8,22 +8,27 @@ import nibabel as nib
 import numpy as np
 from scipy.io import loadmat
 
+
 # main paths
 @pytest.fixture(scope='session')
 def root_path() -> Path:
     return Path(__file__).parent
 
+
 @pytest.fixture(scope='session')
 def data_path(root_path) -> Path:
     return root_path / 'data'
+
 
 @pytest.fixture(scope='session')
 def second_data_path(data_path: Path) -> Path:
     return data_path / 'second test'
 
+
 @pytest.fixture(scope='session')
 def third_data_path(data_path: Path) -> Path:
     return data_path / 'third test'
+
 
 # epi template
 @pytest.fixture(scope='session')
@@ -31,47 +36,56 @@ def nii_image_1(data_path: Path) -> nib.nifti1.Nifti1Image:
     fp = data_path / 'fanon-0007-00006-000006-01.nii'
     return nib.load(fp, mmap=False)
 
+
 # first test dcm
 @pytest.fixture(scope='session')
 def dcm_image(data_path: Path) -> np.array:
     fp = data_path / '001_000007_000006.dcm'
     return pydicom.dcmread(fp).pixel_array
 
+
 # matlab resuls and settings
 @pytest.fixture(scope='session')
 def main_loop_data(data_path: Path) -> dict:
     fp = str(data_path / 'mainLoopData.mat')
-    return loadmat(fp,squeeze_me=True)["mainLoopData"]
+    return loadmat(fp, squeeze_me=True)["mainLoopData"]
+
 
 @pytest.fixture(scope='session')
 def p_struct(data_path: Path) -> dict:
     fp = str(data_path / 'P.mat')
-    return loadmat(fp,squeeze_me=True)["P"]
+    return loadmat(fp, squeeze_me=True)["P"]
+
 
 @pytest.fixture(scope='session')
 def matlab_result(data_path: Path) -> np.array:
     fp = str(data_path / 'reslVol_matlab.mat')
     return loadmat(fp, squeeze_me=True)
 
+
 @pytest.fixture(scope='session')
 def r_struct(data_path: Path) -> dict:
     fp = str(data_path / 'R.mat')
     return loadmat(fp, squeeze_me=True)
 
+
 @pytest.fixture(scope='session')
-def matlab_MCResult(data_path: Path) -> np.array:
+def matlab_mc_result(data_path: Path) -> np.array:
     fp = str(data_path / 'mc_matlab_nii.mat')
     return loadmat(fp, squeeze_me=True)
 
+
 @pytest.fixture(scope='session')
-def matlab_MCResult_dcm(data_path: Path) -> np.array:
+def matlab_mc_result_dcm(data_path: Path) -> np.array:
     fp = str(data_path / 'mc_matlab_dcm.mat')
     return loadmat(fp, squeeze_me=True)
+
 
 @pytest.fixture(scope='session')
 def xs(data_path: Path) -> dict:
     fp = str(data_path / 'xs.mat')
     return loadmat(fp, squeeze_me=True)
+
 
 # misc
 @pytest.fixture(scope='session')
@@ -100,6 +114,7 @@ def flags_reslice(data_path: Path) -> dict:
 
     return flags_spm_reslice
 
+
 @pytest.fixture(scope='session')
 def flags_realign(data_path: Path) -> dict:
     fp = str(data_path / 'flagsSpmRealign.mat')
@@ -110,7 +125,7 @@ def flags_realign(data_path: Path) -> dict:
     interp = non_squeezed_struct["flagsSpmRealign"]["interp"][0][0][0][0]
     wrap = non_squeezed_struct["flagsSpmRealign"]["wrap"][0][0][0]
     rtm = non_squeezed_struct["flagsSpmRealign"]["rtm"][0][0][0][0]
-    PW = non_squeezed_struct["flagsSpmRealign"]["PW"][0][0]
+    pw = non_squeezed_struct["flagsSpmRealign"]["PW"][0][0]
     lkp = non_squeezed_struct["flagsSpmRealign"]["lkp"][0][0][0]
 
     flags_spm_realign = {
@@ -120,7 +135,7 @@ def flags_realign(data_path: Path) -> dict:
         "interp": interp,
         "wrap": wrap,
         "rtm": rtm,
-        "PW": PW,
+        "PW": pw,
         "lkp": lkp
     }
 
