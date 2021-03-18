@@ -1,14 +1,12 @@
-# -*- coding: utf-8 -*-
-
-from opennft.realign import spm_realign
-from opennft.reslice import spm_reslice
-from opennft import utils
 import numpy as np
 import nibabel as nib
+from opennft import utils
 from scipy.io import savemat
+from opennft.realign import spm_realign
+from opennft.reslice import spm_reslice
 
 
-def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_struct):
+def test_mc_nii(data_path, second_data_path, nii_image_1, p_struct, matlab_mc_result, r_struct):
 
     try:
 
@@ -16,7 +14,6 @@ def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_str
         x1 = []
         x2 = []
         x3 = []
-        wt = []
         deg = []
         b = []
         r = [{'mat': np.array([]), 'dim': np.array([]), 'Vol': np.array([])} for _ in range(2)]
@@ -24,7 +21,7 @@ def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_str
 
         r[0]["mat"] = nii_image_1.affine
         r[0]["dim"] = dim_vol.copy()
-        tmp_vol = np.array(nii_image_1.get_fdata(), dtype='uint16', order='F')
+        tmp_vol = np.array(nii_image_1.get_fdata(), order='F')
 
         xdim_img_number, ydim_img_number, img2d_dimx, img2d_dimy = utils.get_mosaic_dim(dim_vol)
 
@@ -47,7 +44,7 @@ def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_str
 
             r[1]["mat"] = r[0]["mat"]
             r[1]["dim"] = dim_vol.copy()
-            tmp_vol = utils.img_2d_to_3d(np.array(data.get_fdata(), dtype='uint16', order='F').squeeze().T,
+            tmp_vol = utils.img_2d_to_3d(np.array(data.get_fdata(), order='F').squeeze().T,
                                          xdim_img_number, ydim_img_number, dim_vol)
 
             if p_struct["isZeroPadding"].item():
@@ -57,7 +54,7 @@ def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_str
             else:
                 r[1]["Vol"] = tmp_vol
 
-            r[1]["Vol"] = np.array(r[1]["Vol"], dtype='uint16', order='F')
+            r[1]["Vol"] = np.array(r[1]["Vol"], order='F')
             r[1]["dim"] = dim_vol
 
             flags_spm_realign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
@@ -65,8 +62,8 @@ def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_str
             flags_spm_reslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
                                       'wrap': np.zeros((3, 1)), 'mask': 1, 'mean': 0, 'which': 2})
 
-            [r, a0, x1, x2, x3, wt, deg, b, _] = spm_realign(r, flags_spm_realign, ind_vol + 1,
-                                                             1, a0, x1, x2, x3, wt, deg, b)
+            [r, a0, x1, x2, x3, deg, b, _] = spm_realign(r, flags_spm_realign, ind_vol + 1,
+                                                             1, a0, x1, x2, x3, deg, b)
 
             temp_m = np.linalg.solve(r[0]["mat"].T, r[1]["mat"].T).T
             tmp_mc_param = utils.spm_imatrix(temp_m)
@@ -84,10 +81,10 @@ def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_str
             sum_vols[ind_vol, :, :, :] = resl_vol
 
         resl_dic = {"mc_python": mot_corr_param}
-        savemat("C:/pyOpenNFT/tests/data/mc_python_nii.mat", resl_dic)
+        savemat(data_path / "mc_python_nii.mat", resl_dic)
 
         resl_dic = {"sumVols": sum_vols}
-        savemat("C:/pyOpenNFT/tests/data/sumVols_python_nii.mat", resl_dic)
+        savemat(data_path / "sumVols_python_nii.mat", resl_dic)
 
         print('\n')
         for i in range(0, 6):

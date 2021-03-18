@@ -1,22 +1,13 @@
-# -*- coding: utf-8 -*-
-
+import time
+import pydicom
+import numpy as np
+from opennft import utils
 from opennft.realign import spm_realign
 from opennft.reslice import spm_reslice
-from opennft import utils
-import numpy as np
-import pydicom
 from scipy.io import savemat
-import time
 
 
-# def test_bench(benchmark, third_data_path, nii_image_1, p_struct, matlab_mc_result, r_struct):
-#
-#     result = benchmark.pedantic(mc_dcm, args=(third_data_path,nii_image_1,p_struct), iterations=1, rounds=10)
-#
-#     assert result
-
-
-def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_struct):
+def test_mc_dcm(data_path, third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_struct):
     try:
 
         time_stamps = np.zeros((158,))
@@ -26,16 +17,14 @@ def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_
         x1 = []
         x2 = []
         x3 = []
-        wt = []
         deg = []
         b = []
         r = [{'mat': np.array([]), 'dim': np.array([]), 'Vol': np.array([])} for _ in range(2)]
         dim_vol = np.array([74, 74, 36])
 
-        # R[0]["mat"] = r_struct["R"][0]["mat"]
         r[0]["mat"] = nii_image_1.affine
         r[0]["dim"] = dim_vol.copy()
-        tmp_vol = np.array(nii_image_1.get_fdata(), dtype='uint16', order='F')
+        tmp_vol = np.array(nii_image_1.get_fdata(), order='F')
 
         xdim_img_number, ydim_img_number, img2d_dimx, img2d_dimy = utils.get_mosaic_dim(dim_vol)
 
@@ -61,7 +50,7 @@ def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_
 
             ti0 = time.time()
             file_name = str(ind_vol + 1) + '.dcm'
-            data = np.array(pydicom.dcmread(third_data_path / file_name).pixel_array, dtype='uint16', order='F')
+            data = np.array(pydicom.dcmread(third_data_path / file_name).pixel_array, order='F')
 
             r[1]["mat"] = r[0]["mat"]
             r[1]["dim"] = dim_vol.copy()
@@ -74,7 +63,7 @@ def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_
             else:
                 r[1]["Vol"] = tmp_vol
 
-            r[1]["Vol"] = np.array(r[1]["Vol"], dtype='uint16', order='F')
+            r[1]["Vol"] = np.array(r[1]["Vol"], order='F')
             r[1]["dim"] = dim_vol
 
             flags_spm_realign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
@@ -82,8 +71,8 @@ def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_
             flags_spm_reslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
                                       'wrap': np.zeros((3, 1)), 'mask': 1, 'mean': 0, 'which': 2})
 
-            [r, a0, x1, x2, x3, wt, deg, b, _] = spm_realign(r, flags_spm_realign, ind_vol + 1,
-                                                             1, a0, x1, x2, x3, wt, deg, b)
+            [r, a0, x1, x2, x3, deg, b, _] = spm_realign(r, flags_spm_realign, ind_vol + 1,
+                                                             1, a0, x1, x2, x3, deg, b)
 
             temp_m = np.linalg.solve(r[0]["mat"].T, r[1]["mat"].T).T
             tmp_mc_param = utils.spm_imatrix(temp_m)
@@ -103,22 +92,20 @@ def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_
             ti1 = time.time()
             time_stamps[ind_vol + 3] = ti1 - ti0
 
-        # reslDic = {"mc_python": motCorrParam}
-        # savemat("data/mc_python_dcm.mat", reslDic)
+        reslDic = {"mc_python": mot_corr_param}
+        savemat(data_path / "mc_python_dcm.mat", reslDic)
 
         resl_dic = {"sumVols": sum_vols}
-        savemat("C:/pyOpenNFT/tests/data/sumVols_python_dcm.mat", resl_dic)
+        savemat(data_path / "sumVols_python_dcm.mat", resl_dic)
 
         resl_dic = {"python_times": time_stamps}
-        savemat("C:/pyOpenNFT/tests/data/python_times_dcm.mat", resl_dic)
+        savemat(data_path / "python_times_dcm.mat", resl_dic)
 
         print('\n')
         for i in range(0, 6):
             print('Third test MSE for {:} coordinate = {:}'.
                   format(i + 1, ((mot_corr_param[:, i] - matlab_mc_result_dcm["mc_series_matlab"][:, i]) ** 2).mean()))
 
-        # return True
         assert True, "Done"
     except Exception as err:
-        # return False
         assert False, f"Error occurred: {repr(err)}"

@@ -32,7 +32,7 @@ templateFileName = 'C:\pyOpenNFT\tests\data\fanon-0007-00006-000006-01.nii';
     % timeStamps_matlab(3) = toc;tic
 
     for i=1:155
-        fileName = strcat(strcat('C:\pyOpenNFT\tests\data\third test\',int2str(i)),'.dcm');
+        fileName = strcat(strcat('C:\pyOpenNFT\tests\data\third_test\',int2str(i)),'.dcm');
         tmpVol  = dicomread(fileName);
         R(2,1).dim     = dimVol;
         tmpVol = img2Dvol3D(tmpVol, slNrImg2DdimX, slNrImg2DdimY, R(2,1).dim);

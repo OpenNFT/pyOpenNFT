@@ -22,12 +22,12 @@ def data_path(root_path) -> Path:
 
 @pytest.fixture(scope='session')
 def second_data_path(data_path: Path) -> Path:
-    return data_path / 'second test'
+    return data_path / 'second_test'
 
 
 @pytest.fixture(scope='session')
 def third_data_path(data_path: Path) -> Path:
-    return data_path / 'third test'
+    return data_path / 'third_test'
 
 
 # epi template

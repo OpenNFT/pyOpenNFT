@@ -26,7 +26,7 @@ A0=[];x1=[];x2=[];x3=[];wt=[];deg=[];b=[];
 sumVols = zeros(155,74,74,36);
 
 for i=1:155
-    tmpVol = niftiread(strcat(strcat('C:\pyOpenNFT\tests\data\second test\',int2str(i)),'.nii'));
+    tmpVol = niftiread(strcat(strcat('C:\pyOpenNFT\tests\data\second_test\',int2str(i)),'.nii'));
     R(2,1).dim     = dimVol;
     tmpVol = img2Dvol3D(tmpVol', slNrImg2DdimX, slNrImg2DdimY, R(2,1).dim);
     indVol = i;
