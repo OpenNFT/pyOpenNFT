@@ -99,7 +99,6 @@
 
 import numpy as np
 import pyspm as spm
-from loguru import logger
 from opennft.errors import SpmError
 
 
@@ -135,7 +134,6 @@ def spm_reslice(r, flags):
                 try:
                     tmp_division = np.linalg.solve(r0_mat, ri_mat)
                 except np.linalg.LinAlgError as err:
-                    logger.error(err)
                     raise SpmError("R0 and R1 division error in reslice") from err
 
                 temp_tmp, y1, y2, y3 = get_mask(np.linalg.inv(tmp_division), x1, x2, x3 + 1, ri_dim, flags['wrap'])
@@ -175,7 +173,6 @@ def spm_reslice(r, flags):
                 try:
                     tmp_division = np.linalg.solve(r0_mat, ri_mat)
                 except np.linalg.LinAlgError as err:
-                    logger.error(err)
                     raise SpmError("R0 and R1 division error in reslice") from err
 
                 tmp, y1, y2, y3 = get_mask(np.linalg.inv(tmp_division), x1, x2, x3 + 1, ri_dim, flags['wrap'])
