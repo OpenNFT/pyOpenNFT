@@ -88,6 +88,7 @@ def spm_realign(r, flags, ind_vol, ind_first_vol, a0, x1, x2, x3, wt, deg, b):
         v, r[0]["C"] = smooth_vol(r[0], flags["interp"], flags["wrap"], flags["fwhm"])
         temp_d = np.array([1, 1, 1]) * int(flags['interp'])
         deg = np.hstack((temp_d.T, np.squeeze(flags['wrap'])))
+        deg = np.array(deg, ndmin=2).T
 
         g, d_g1, d_g2, d_g3 = spm.bsplins_multi(v, x1, x2, x3, deg)
         a0 = make_a(r[0]["mat"], x1, x2, x3, d_g1, d_g2, d_g3, wt, lkp)
@@ -125,6 +126,10 @@ def spm_realign(r, flags, ind_vol, ind_first_vol, a0, x1, x2, x3, wt, deg, b):
         if wt.size > 0:
             f = f * wt[msk]
 
+        if f_nfb:
+            if iteration == 1:
+                fix_a0 = a0.T @ a0
+
         a = a0[msk, :]
         b1 = b[msk]
         sc = np.sum(b1) / np.sum(f)
@@ -132,13 +137,11 @@ def spm_realign(r, flags, ind_vol, ind_first_vol, a0, x1, x2, x3, wt, deg, b):
         if not f_nfb:
             soln = np.linalg.solve((a.T @ a), (a.T @ b1))
         else:
-            if iteration == 1:
-                fix_a0 = a0.T @ a0
             soln = np.linalg.solve(fix_a0, (a.T @ b1))
 
         p = np.array([0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0], dtype=float)
         p[lkp] += soln.T
-        r[1]["mat"] = np.linalg.solve(utils.Utils().spm_matrix(p), r[1]["mat"])
+        r[1]["mat"] = np.linalg.solve(utils.spm_matrix(p), r[1]["mat"])
 
         pss = ss
         ss = np.sum(b1 ** 2) / b1.size
@@ -156,7 +159,7 @@ def spm_realign(r, flags, ind_vol, ind_first_vol, a0, x1, x2, x3, wt, deg, b):
 
 def coords(p, m1, m2, x1, x2, x3):
 
-    m = np.linalg.inv(m2) @ np.linalg.inv(utils.Utils().spm_matrix(p)) @ m1
+    m = np.linalg.inv(m2) @ np.linalg.inv(utils.spm_matrix(p)) @ m1
     y1 = m[0, 0] * x1 + m[0, 1] * x2 + m[0, 2] * x3 + m[0, 3]
     y2 = m[1, 0] * x1 + m[1, 1] * x2 + m[1, 2] * x3 + m[1, 3]
     y3 = m[2, 0] * x1 + m[2, 1] * x2 + m[2, 2] * x3 + m[2, 3]

@@ -51,6 +51,7 @@ def spm_reslice(r, flags):
 
     temp_d = np.array([1, 1, 1]) * int(flags['interp'])
     d = np.hstack((temp_d.T, np.squeeze(flags['wrap'])))
+    d = np.array(d, ndmin=2).T
 
     for i in range(1, len(r)):  # range(0,P.size)
 

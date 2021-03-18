@@ -6,8 +6,8 @@ inpFileName = "C:\pyOpenNFT\tests\data\001_000007_000006.dcm";
 templateFileName = 'C:\pyOpenNFT\tests\data\fanon-0007-00006-000006-01.nii';
 niiFileName = 'C:\pyOpenNFT\tests\data\structScan_PSC.nii';
 
-nii1FileName = 'C:\pyOpenNFT\tests\data\first_test\6.nii';
-nii2FileName = 'C:\pyOpenNFT\tests\data\first_test\7.nii';
+% nii1FileName = 'C:\pyOpenNFT\tests\data\first_test\6.nii';
+% nii2FileName = 'C:\pyOpenNFT\tests\data\first_test\7.nii';
 
 infoVolTempl = spm_vol(templateFileName);
 tmp_imgVolTempl  = spm_read_vols(infoVolTempl);
@@ -29,10 +29,10 @@ end
 A0=[];x1=[];x2=[];x3=[];wt=[];deg=[];b=[];
 R(1,1).mat = matTemplMotCorr;
 
-volTempl = spm_vol(nii2FileName);
-tmpVol  = spm_read_vols(volTempl);
-R(2,1).dim     = dimVol;
-tmpVol = img2Dvol3D(tmpVol, slNrImg2DdimX, slNrImg2DdimY, R(2,1).dim);
+% volTempl = spm_vol(nii2FileName);
+% tmpVol  = spm_read_vols(volTempl);
+% R(2,1).dim     = dimVol;
+% tmpVol = img2Dvol3D(tmpVol, slNrImg2DdimX, slNrImg2DdimY, R(2,1).dim);
 
 indVol = 6;
 
@@ -42,8 +42,8 @@ tmpVol = img2Dvol3D(dcmData, slNrImg2DdimX, slNrImg2DdimY, dimVol);
 % niftiwrite(tmpVol,'C:\pyOpenNFT\tests\data\dcmVol.nii')
 % volTempl = spm_vol('C:\pyOpenNFT\tests\data\dcmVol.nii');
 % tmpVol  = spm_read_vols(volTempl);
-% R(2,1).dim     = volTempl.dim;
-% R(2,1).mat     = matTemplMotCorr;
+R(2,1).dim     = dimVol;
+R(2,1).mat     = matTemplMotCorr;
 % dimVol = R(2,1).dim;
 
 if P.isZeroPadding

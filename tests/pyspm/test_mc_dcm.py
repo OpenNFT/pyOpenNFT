@@ -115,7 +115,7 @@ def test_mc_dcm(third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_
         print('\n')
         for i in range(0, 6):
             print('Third test MSE for {:} coordinate = {:}'.
-                  format(i + 1, ((mot_corr_param[:, i] - matlab_mc_result_dcm["mc_matlab"][:, i]) ** 2).mean()))
+                  format(i + 1, ((mot_corr_param[:, i] - matlab_mc_result_dcm["mc_series_matlab"][:, i]) ** 2).mean()))
 
         # return True
         assert True, "Done"

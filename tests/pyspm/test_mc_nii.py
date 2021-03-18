@@ -84,10 +84,10 @@ def test_mc_nii(second_data_path, nii_image_1, p_struct, matlab_mc_result, r_str
             sum_vols[ind_vol, :, :, :] = resl_vol
 
         resl_dic = {"mc_python": mot_corr_param}
-        savemat("data/mc_python_nii.mat", resl_dic)
+        savemat("C:/pyOpenNFT/tests/data/mc_python_nii.mat", resl_dic)
 
         resl_dic = {"sumVols": sum_vols}
-        savemat("data/sumVols_python_nii.mat", resl_dic)
+        savemat("C:/pyOpenNFT/tests/data/sumVols_python_nii.mat", resl_dic)
 
         print('\n')
         for i in range(0, 6):
