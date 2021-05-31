@@ -62,6 +62,15 @@ def matlab_result(data_path: Path) -> np.array:
     fp = str(data_path / 'reslVol_matlab.mat')
     return loadmat(fp, squeeze_me=True)
 
+@pytest.fixture(scope='session')
+def smoothed_matlab(data_path: Path) -> np.array:
+    fp = str(data_path / 'smoothed_matlab.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def resl_vol(data_path: Path) -> np.array:
+    fp = str(data_path / 'reslVol.mat')
+    return loadmat(fp, squeeze_me=True)
 
 @pytest.fixture(scope='session')
 def r_struct(data_path: Path) -> dict:

@@ -30,6 +30,17 @@ templateFileName = 'C:\pyOpenNFT\tests\data\fanon-0007-00006-000006-01.nii';
     sumVols = zeros(155,74,74,36);
 
     % timeStamps_matlab(3) = toc;tic
+    
+    S.Q = 0;
+    S.P = S.Q;
+    S.x = 0;
+    fPositDerivSpike = 0;
+    fNegatDerivSpike = 0;
+    S(1:6) = S;
+    fPositDerivSpike(1:6) = fPositDerivSpike;
+    fNegatDerivSpike(1:6) = fNegatDerivSpike;
+    
+    mcKalman = zeros(155,6);
 
     for i=1:155
         fileName = strcat(strcat('C:\pyOpenNFT\tests\data\third_test\',int2str(i)),'.dcm');
@@ -62,6 +73,25 @@ templateFileName = 'C:\pyOpenNFT\tests\data\fanon-0007-00006-000006-01.nii';
         end
         P.motCorrParam(i,:) = tmpMCParam(1:6)-P.offsetMCParam;
         %P.motCorrParam(indVolNorm,:) = tmpMCParam(1:6);
+        
+        for indPar=1:6
+            
+            tmpStd = std(P.motCorrParam(1:indVol, indPar));
+            
+            S(indPar).Q = .25*tmpStd^2;
+            S(indPar).R = tmpStd^2;
+            kalmThreshold = .9*tmpStd;
+            
+            [mcKalman(i,indPar), ...
+            S(indPar), fPositDerivSpike(indPar), ...
+            fNegatDerivSpike(indPar)] = modifKalman(kalmThreshold, ...
+            P.motCorrParam(i,indPar), ...
+            S(indPar), fPositDerivSpike(indPar), fNegatDerivSpike(indPar));
+        end
+        
+        filteredMCParam = mcKalman(i,:)+P.offsetMCParam;
+        filteredMCParam = cat(2,filteredMCParam,tmpMCParam(7:end));
+        R(2,1).mat = spm_matrix(filteredMCParam)*R(1,1).mat;
 
         %% reslice
         if P.isZeroPadding
