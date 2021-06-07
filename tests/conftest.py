@@ -91,8 +91,29 @@ def matlab_mc_result_dcm(data_path: Path) -> np.array:
 
 
 @pytest.fixture(scope='session')
+def check_data(data_path: Path) -> dict:
+    fp = str(data_path / 'check_data.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def orth_matlab(data_path: Path) -> dict:
+    fp = str(data_path / 'orth_matlab.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def str_param(data_path: Path) -> dict:
+    fp = str(data_path / 'strParam.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
 def xs(data_path: Path) -> dict:
     fp = str(data_path / 'xs.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def smoothed_python(data_path: Path) -> np.array:
+    fp = str(data_path / 'smoothed_python.mat')
     return loadmat(fp, squeeze_me=True)
 
 
