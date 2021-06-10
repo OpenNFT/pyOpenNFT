@@ -37,6 +37,13 @@ def nii_image_1(data_path: Path) -> nib.nifti1.Nifti1Image:
     return nib.load(fp, mmap=False)
 
 
+# structural
+@pytest.fixture(scope='session')
+def struct_image(data_path: Path) -> nib.nifti1.Nifti1Image:
+    fp = data_path / 'structScan_PSC.nii'
+    return nib.load(fp, mmap=False)
+
+
 # first test dcm
 @pytest.fixture(scope='session')
 def dcm_image(data_path: Path) -> np.array:
@@ -98,6 +105,11 @@ def check_data(data_path: Path) -> dict:
 @pytest.fixture(scope='session')
 def orth_matlab(data_path: Path) -> dict:
     fp = str(data_path / 'orth_matlab.mat')
+    return loadmat(fp, squeeze_me=True)
+
+@pytest.fixture(scope='session')
+def orth_matlab_struct(data_path: Path) -> dict:
+    fp = str(data_path / 'orth_matlab_struct.mat')
     return loadmat(fp, squeeze_me=True)
 
 @pytest.fixture(scope='session')

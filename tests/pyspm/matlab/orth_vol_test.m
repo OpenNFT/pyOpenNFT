@@ -1,12 +1,15 @@
 clear; clc;
 
 templateFileName = 'C:\pyOpenNFT\tests\data\fanon-0007-00006-000006-01.nii';
+strctFileName = 'C:\pyOpenNFT\tests\data\structScan_PSC.nii';
 infoVolTempl = niftiinfo(templateFileName);
+structVolTempl = niftiinfo(strctFileName);
 mat     = infoVolTempl.Transform.T';
+mat1     = structVolTempl.Transform.T';
 dim     = infoVolTempl.ImageSize;
-vol     = double(niftiread(templateFileName));
+vol     = double(niftiread(strctFileName));
 
-prepareOrthView(mat, dim);
+prepareOrthView(mat, mat1, dim);
 
 % update orth view
 global strParam;
@@ -51,7 +54,7 @@ end;
 coordParam.TM0 = TM0; coordParam.CM0 = CM0; coordParam.SM0 = SM0; 
 coordParam.TD  = TD;  coordParam.CD  = CD;  coordParam.SD = SD;
 
-M    = strParam.Space \ strParam.premul * mat;
+M    = strParam.Space \ strParam.premul * mat1;
 imgt =        spm_slice_vol(vol, inv(coordParam.TM0*M), coordParam.TD, [0 NaN])';
 imgc =        spm_slice_vol(vol, inv(coordParam.CM0*M), coordParam.CD, [0 NaN])';
 imgs = fliplr(spm_slice_vol(vol, inv(coordParam.SM0*M), coordParam.SD, [0 NaN])');
@@ -88,10 +91,10 @@ imgt = uint8(imgt / max(imgt(:)) * 255);
 imgc = uint8(double(imgc) / max(imgc(:)) * 255);
 imgs = uint8(double(imgs) / max(imgs(:)) * 255);
 
-% figure;
-% subplot(2,2,1);
-% imshow(imgc);
-% subplot(2,2,2);
-% imshow(imgs);
-% subplot(2,2,3);
-% imshow(imgt);
+figure;
+subplot(2,2,1);
+imshow(imgc);
+subplot(2,2,2);
+imshow(imgs);
+subplot(2,2,3);
+imshow(imgt);

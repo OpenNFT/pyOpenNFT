@@ -2,7 +2,7 @@ import numpy as np
 from opennft import utils
 
 
-def prepare_orth_view(mat, dim):
+def prepare_orth_view(mat, matR, dim):
     # set structure for Display and draw a first overlay
     str_param = {'n': 0, 'bb': [], 'space': np.eye(4, 4), 'centre': np.zeros((1, 3)), 'mode': 1,
                  'area': np.array([0, 0, 1, 1]), 'premul': np.eye(4, 4), 'hld': 1, 'mode_displ': np.zeros((1, 3))}
@@ -15,7 +15,7 @@ def prepare_orth_view(mat, dim):
         str_param['max_bb'] = max_bb(mat, dim, str_param['space'], str_param['premul'])
         str_param['bb'] = str_param['max_bb']
 
-    str_param['space'], str_param['bb'] = resolution(mat, str_param['space'], str_param['bb'])
+    str_param['space'], str_param['bb'] = resolution(matR, str_param['space'], str_param['bb'])
 
     # Draw at initial location, center of bounding box
     temp = np.vstack((str_param['max_bb'].T, [1, 1]))

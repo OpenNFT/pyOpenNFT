@@ -1,4 +1,4 @@
-function prepareOrthView(mat, dim)
+function prepareOrthView(mat, mat1, dim)
 % set structure for Display and draw a first overlay
 global strParam
 strParam = struct('n', 0, 'bb',[],'Space',eye(4),'centre',[0 0 0],'mode',1,...
@@ -7,10 +7,10 @@ strParam.Space = spm_matrix([0 0 0  0 pi -pi/2])*strParam.Space;
 
 % get bounding box and resolution
 if isempty(strParam.bb) 
-     strParam.maxBB = maxbb(mat, dim); 
+     strParam.maxBB = maxbb(mat, dim); %mat, dim
      strParam.bb = strParam.maxBB;    
 end
-resolution(mat);
+resolution(mat1);
 
 % Draw at initial location, center of bounding box
 mmcentre     = mean(strParam.Space*[strParam.maxBB';1 1],2)';
@@ -20,12 +20,13 @@ strParam.modeDispl = [0 0 1];
 
 return;
 
-function bb = maxbb(mat, dim)
+function bb = maxbb(mat, dim)  
 global strParam
 mn = [Inf Inf Inf];
 mx = -mn;
 premul = strParam.Space \ strParam.premul;
 
+% bb = spm_get_bbox(fileName, 'fv', premul);
 d = dim;
 corners = [
     1    1    1    1
