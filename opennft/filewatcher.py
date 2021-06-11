@@ -4,6 +4,8 @@ import glob
 import queue
 import re
 from loguru import logger
+from pathlib import Path
+import time
 
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
@@ -48,7 +50,7 @@ class FileWatcher():
         except queue.Empty:
             fname = None
 
-        return fname
+        return Path(fname)
 
     def get_search_string(self, file_name_template, path, ext):
         file_series_part = re.findall(r"\{#:(\d+)\}", file_name_template)
@@ -119,6 +121,7 @@ class FileWatcher():
         self.first_filename = first_filename
         self.files_queue = queue.Queue()
         self.recorder = event_recorder
+        self.online = online
 
         #path = os.path.join(self.P['WatchFolder'], self.P['FirstFileName'])
         path = os.path.join(watch_folder, first_filename)
@@ -142,7 +145,7 @@ class FileWatcher():
         if online:
             path = os.path.dirname(path)
             logger.info('Online watching for {} in {}', self.search_string, path)
-            event_handler = FileWatcher(self.searchString, self.files_queue, self.recorder)
+            event_handler = NewFileEventHandler(self.search_string, self.files_queue, self.recorder)
 
             self.fs_observer = Observer()
             self.fs_observer.schedule(event_handler, path, recursive=True)
@@ -200,12 +203,37 @@ class FileWatcher():
     # --------------------------------------------------------------------------
 
 
-if __name__ == '__main__':
+def test_offline(data_path):
+    fw = FileWatcher()
+    fw.start_watching(False, data_path / 'dcm', "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
+    print(next(fw))
+
+
+def test_online(data_path):
+    import shutil
 
     fw = FileWatcher()
-    fw.start_watching(False, "D:/__EPFL/_RT/rtData/NF_PSC/NF_Run_1", "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
-    #print(fw.next_file())
-    print(next(fw))
+    fw.start_watching(True, data_path / 'online', "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
+    src = data_path / 'dcm' / "001_000007_000001.dcm"
+    dst = data_path / 'online' / "001_000007_000001.dcm"
+    shutil.copy(src, dst)
+    fn = next(fw)
+    i = 0
+    while fn is None:
+        time.sleep(1)
+        fn = next(fw)
+        i += 1
+        if i > 100:
+            break
+    if fn is not None:
+        print(fn)
+    else:
+        print('Failed...')
+
+
+if __name__ == '__main__':
+    data_path = Path(__file__).parent.parent / 'tests' / 'data' / 'fw_test'
+    test_online(data_path)
 
 
 
