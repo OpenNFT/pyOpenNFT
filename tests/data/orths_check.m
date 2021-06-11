@@ -70,8 +70,16 @@ imshowpair(imgt_struct, imgt_p_struct, 'diff');
 
 figure;
 subplot(2,2,1);
-ha = imshow(imgc_p_struct); hold on; hb = imshow(imgc_p); hb.AlphaData = 0.1;
+ha = imshow(imgc_struct); hold on; hb = imshow(imgc); hb.AlphaData = 0.6;
 subplot(2,2,2);
-ha = imshow(imgs_p_struct); hold on; hb = imshow(imgs_p); hb.AlphaData = 0.1;
+ha = imshow(imgs_struct); hold on; hb = imshow(imgs); hb.AlphaData = 0.6;
 subplot(2,2,3);
-ha = imshow(imgt_p_struct); hold on; hb = imshow(imgt_p); hb.AlphaData = 0.1;
+ha = imshow(imgt_struct); hold on; hb = imshow(imgt); hb.AlphaData = 0.6;
+
+figure;
+subplot(2,2,1);
+ha = imshow(imgc_p_struct); hold on; hb = imshow(imgc_p); hb.AlphaData = 0.6;
+subplot(2,2,2);
+ha = imshow(imgs_p_struct); hold on; hb = imshow(imgs_p); hb.AlphaData = 0.6;
+subplot(2,2,3);
+ha = imshow(imgt_p_struct); hold on; hb = imshow(imgt_p); hb.AlphaData = 0.6;
