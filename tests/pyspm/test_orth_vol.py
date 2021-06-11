@@ -11,7 +11,7 @@ def test_orth_vol(data_path, nii_image_1, struct_image, orth_matlab, orth_matlab
     dim = np. array(nii_image_1.shape)
     vol = np.array(nii_image_1.get_fdata(), order='F')
 
-    str_param1 = pov.prepare_orth_view(mat, mat, dim)
+    str_param1 = pov.prepare_orth_view(mat, dim)
 
     imgt, imgc, imgs = uov.update_orth_view(str_param1, vol, mat)
 

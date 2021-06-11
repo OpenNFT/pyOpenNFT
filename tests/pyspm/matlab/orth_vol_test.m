@@ -1,7 +1,8 @@
 clear; clc;
 
-templateFileName = 'C:\pyOpenNFT\tests\data\fanon-0007-00006-000006-01.nii';
-strctFileName = 'C:\pyOpenNFT\tests\data\structScan_PSC.nii';
+dataPath = 'C:\pyOpenNFT\tests\data\';
+templateFileName = dataPath + "fanon-0007-00006-000006-01.nii";
+strctFileName = dataPath + "structScan_PSC.nii";
 infoVolTempl = niftiinfo(templateFileName);
 structVolTempl = niftiinfo(strctFileName);
 mat     = infoVolTempl.Transform.T';
@@ -9,8 +10,6 @@ dim     = infoVolTempl.ImageSize;
 vol     = double(niftiread(templateFileName));
 
 mat(:,4) = mat(:,4) - sum(mat(:,1:3),2);
-tst = spm_vol(templateFileName);
-
 prepareOrthView(mat, dim);
 
 [imgt, imgc, imgs] = updateOrthView(vol, mat);
