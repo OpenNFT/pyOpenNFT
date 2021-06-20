@@ -1,8 +1,11 @@
 clear; clc;
 
-reslVol = load('C:\pyOpenNFT\tests\data\reslVol.mat').reslVol_python;
+currDir  = pwd;
+idcs   = strfind(currDir,'\');
+dataPath = currDir(1:idcs(end-1));
+dataPath = dataPath + "\data\";
 
-dataPath = 'C:\pyOpenNFT\tests\data\';
+reslVol = load(dataPath+"reslVol.mat").reslVol_python;
 templateFileName = dataPath + "fanon-0007-00006-000006-01.nii";
 
 infoVolTempl = niftiinfo(templateFileName);

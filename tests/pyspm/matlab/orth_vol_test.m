@@ -1,6 +1,10 @@
 clear; clc;
 
-dataPath = 'C:\pyOpenNFT\tests\data\';
+currDir  = pwd;
+idcs   = strfind(currDir,'\');
+dataPath = currDir(1:idcs(end-1));
+dataPath = dataPath + "\data\";
+
 templateFileName = dataPath + "fanon-0007-00006-000006-01.nii";
 strctFileName = dataPath + "structScan_PSC.nii";
 infoVolTempl = niftiinfo(templateFileName);
