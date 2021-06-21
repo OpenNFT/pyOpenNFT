@@ -7,7 +7,10 @@ from scipy.io import savemat
 def test_orth_vol(data_path, nii_image_1, struct_image, orth_matlab, orth_matlab_struct):
 
     mat = nii_image_1.affine
-    mat[:,3] = mat[:,3] - np.sum(mat[:,0:3],axis=1)
+    # mat: a 12-parameter affine transform (from sform0)
+    #      Note that the mapping is from voxels (where the first
+    #      is considered to be at [1,1,1], to millimetres
+    mat = mat @ np.hstack((np.eye(4,3), np.array([-1, -1, -1, 1],ndmin=2).T))
 
     dim = np. array(nii_image_1.shape)
     vol = np.array(nii_image_1.get_fdata(), order='F')

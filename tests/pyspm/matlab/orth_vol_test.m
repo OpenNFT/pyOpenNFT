@@ -13,7 +13,10 @@ mat     = infoVolTempl.Transform.T';
 dim     = infoVolTempl.ImageSize;
 vol     = double(niftiread(templateFileName));
 
-mat(:,4) = mat(:,4) - sum(mat(:,1:3),2);
+% mat: a 12-parameter affine transform (from sform0)
+%      Note that the mapping is from voxels (where the first
+%      is considered to be at [1,1,1], to millimetres
+mat = mat * [eye(4,3) [-1 -1 -1 1]'];
 prepareOrthView(mat, dim);
 
 [imgt, imgc, imgs] = updateOrthView(vol, mat);
