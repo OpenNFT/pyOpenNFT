@@ -50,8 +50,13 @@ def update_orth_view(str_param, vol, mat):
     imgt, imgc, imgs = get_orth_vol(coord_param, vol, m)
 
     imgt = np.nan_to_num(imgt)
+    imgt[imgt<0] = 0
+
     imgc = np.nan_to_num(imgc)
+    imgc[imgc<0] = 0
+
     imgs = np.nan_to_num(imgs)
+    imgs[imgs<0] = 0
 
     imgt = ((imgt / np.max(imgt)) * 255).astype(np.uint8)
     imgc = ((imgc / np.max(imgc)) * 255).astype(np.uint8)
