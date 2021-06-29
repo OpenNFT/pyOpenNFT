@@ -126,37 +126,8 @@ class FileWatcher():
         # self.call_timer.start()
     # --------------------------------------------------------------------------
 
-def test_offline(data_path):
-    fw = FileWatcher()
-    fw.start_watching(False, data_path / 'dcm', "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
-    print(next(fw))
-
-
-def test_online(data_path):
-    import shutil
-
-    fw = FileWatcher()
-    fw.start_watching(True, data_path / 'online', "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
-    src = data_path / 'dcm' / "001_000007_000001.dcm"
-    dst = data_path / 'online' / "001_000007_000001.dcm"
-    shutil.copy(src, dst)
-    fn = next(fw)
-    i = 0
-    while fn is None:
-        time.sleep(1)
-        fn = next(fw)
-        i += 1
-        if i > 100:
-            break
-    if fn is not None:
-        print(fn)
-    else:
-        print('Failed...')
-
 
 if __name__ == '__main__':
-    data_path = Path(__file__).parent.parent / 'tests' / 'data' / 'fw_test'
-    test_online(data_path)
-
+    pass
 
 
