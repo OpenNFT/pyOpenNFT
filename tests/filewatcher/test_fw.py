@@ -29,10 +29,7 @@ def test_online(data_path):
             break
     if fn is not None:
         print(fn)
-        if fn.parts[-1] == '001_000007_000001.dcm':
-            assert True, "Done"
-        else:
-            assert False, "Error obtaining the next file"
+        assert fn.parts[-1] == '001_000007_000001.dcm', "Error obtaining the next file"
     else:
         assert False, "Error obtaining the next file"
 
@@ -45,7 +42,4 @@ def test_offline(data_path):
     fn = next(fw)
     print(fn)
     print(fn.parts[-1])
-    if fn.parts[-1] == '001_000007_000001.dcm':
-        assert True, "Done"
-    else:
-        assert False, "Error obtaining the next file"
+    assert fn.parts[-1] == '001_000007_000001.dcm', "Error obtaining the next file"
