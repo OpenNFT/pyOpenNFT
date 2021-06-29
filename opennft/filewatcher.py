@@ -3,10 +3,8 @@ import fnmatch
 import glob
 import queue
 import re
-from loguru import logger
 from pathlib import Path
-import time
-
+from loguru import logger
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
