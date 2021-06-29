@@ -1,10 +1,10 @@
-﻿from opennft.filewatcher import FileWatcher
+﻿import time
+import shutil
 from pathlib import Path
-import time
+from opennft.filewatcher import FileWatcher
 
 
 def test_online(data_path):
-    import shutil
     path = data_path / 'fw_test'
     path_online = path / 'online'
 
