@@ -45,7 +45,7 @@ def smooth1(input_vol, kernel):
 
 
 def spm_smoothkern(fwhm, x, t=1):
-    eps = sys.float_info.epsilon
+    eps = np.finfo(float).eps
     s = (fwhm / (8 * np.log(2)) ** .5) ** 2 + eps
 
     if t == 0:
