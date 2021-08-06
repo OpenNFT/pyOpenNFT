@@ -1,5 +1,6 @@
 import time
 import pydicom
+import pytest
 import numpy as np
 from opennft import utils
 from opennft.realign import spm_realign
@@ -7,6 +8,7 @@ from opennft.reslice import spm_reslice
 from scipy.io import savemat
 
 
+@pytest.mark.second
 def test_mc_dcm(data_path, third_data_path, nii_image_1, p_struct, matlab_mc_result_dcm, r_struct):
     try:
 
@@ -72,7 +74,7 @@ def test_mc_dcm(data_path, third_data_path, nii_image_1, p_struct, matlab_mc_res
                                       'wrap': np.zeros((3, 1)), 'mask': 1, 'mean': 0, 'which': 2})
 
             [r, a0, x1, x2, x3, deg, b, _] = spm_realign(r, flags_spm_realign, ind_vol + 1,
-                                                             1, a0, x1, x2, x3, deg, b)
+                                                         1, a0, x1, x2, x3, deg, b)
 
             temp_m = np.linalg.solve(r[0]["mat"].T, r[1]["mat"].T).T
             tmp_mc_param = utils.spm_imatrix(temp_m)
@@ -92,8 +94,8 @@ def test_mc_dcm(data_path, third_data_path, nii_image_1, p_struct, matlab_mc_res
             ti1 = time.time()
             time_stamps[ind_vol + 3] = ti1 - ti0
 
-        reslDic = {"mc_python": mot_corr_param}
-        savemat(data_path / "mc_python_dcm.mat", reslDic)
+        resl_dic = {"mc_python": mot_corr_param}
+        savemat(data_path / "mc_python_dcm.mat", resl_dic)
 
         resl_dic = {"sumVols": sum_vols}
         savemat(data_path / "sumVols_python_dcm.mat", resl_dic)
