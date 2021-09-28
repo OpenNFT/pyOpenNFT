@@ -1,5 +1,5 @@
 import numpy as np
-from opennft.smoothing import spm_smooth
+from rtspm import spm_smooth
 from scipy.io import savemat
 
 

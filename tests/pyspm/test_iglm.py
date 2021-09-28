@@ -2,10 +2,8 @@ import pytest
 import numpy as np
 from scipy.io import savemat
 
-from opennft.smoothing import spm_smooth
-from opennft.utils import ar_regr
-from opennft.utils import vol_3d_to_2d
-from opennft.utils import zscore
+from rtspm import spm_smooth
+from opennft.utils import ar_regr, vol_3d_to_2d, zscore
 from opennft.iglm_vol import iglm_vol
 
 

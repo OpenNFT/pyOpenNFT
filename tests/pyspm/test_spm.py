@@ -2,8 +2,7 @@ import pytest
 import numpy as np
 from opennft import utils
 from scipy.io import savemat
-from opennft.realign import spm_realign
-from opennft.reslice import spm_reslice
+from rtspm import spm_realign, spm_reslice
 
 
 @pytest.mark.first

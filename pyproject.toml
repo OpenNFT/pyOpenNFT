@@ -45,6 +45,7 @@ watchdog = "^2.1.2"
 pooch = "^1.4.0"
 pytest-dependency = "^0.5.1"
 pytest-ordering = "^0.6"
+python-rtspm = "^0.1.4"
 
 [tool.poetry.dev-dependencies]
 pybind11 = "^2.6.1"
