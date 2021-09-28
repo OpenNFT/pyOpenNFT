@@ -1,3 +1,4 @@
+import pytest
 import numpy as np
 from opennft import utils
 from scipy.io import savemat
@@ -5,8 +6,8 @@ from opennft.realign import spm_realign
 from opennft.reslice import spm_reslice
 
 
+@pytest.mark.first
 def test_spm_rt(data_path, dcm_image, nii_image_1, p_struct, matlab_result):
-
     try:
 
         a0 = []
@@ -26,7 +27,7 @@ def test_spm_rt(data_path, dcm_image, nii_image_1, p_struct, matlab_result):
 
         nr_zero_pad_vol = p_struct["nrZeroPadVol"].item()
         if p_struct["isZeroPadding"].item():
-            r[0]["dim"][2] = r[0]["dim"][2]+nr_zero_pad_vol*2
+            r[0]["dim"][2] = r[0]["dim"][2] + nr_zero_pad_vol * 2
             r[0]["Vol"] = np.pad(tmp_vol, ((0, 0), (0, 0), (nr_zero_pad_vol, nr_zero_pad_vol)),
                                  'constant', constant_values=(0, 0))
         else:
@@ -39,7 +40,7 @@ def test_spm_rt(data_path, dcm_image, nii_image_1, p_struct, matlab_result):
         tmp_vol = utils.img_2d_to_3d(dcm_data, xdim_img_number, ydim_img_number, dim_vol)
 
         if p_struct["isZeroPadding"].item():
-            dim_vol[2] = dim_vol[2]+nr_zero_pad_vol*2
+            dim_vol[2] = dim_vol[2] + nr_zero_pad_vol * 2
             r[1]["Vol"] = np.pad(tmp_vol, ((0, 0), (0, 0), (nr_zero_pad_vol, nr_zero_pad_vol)), 'constant',
                                  constant_values=(0, 0))
         else:
@@ -55,7 +56,7 @@ def test_spm_rt(data_path, dcm_image, nii_image_1, p_struct, matlab_result):
 
         nr_skip_vol = p_struct["nrSkipVol"].item()
         [r, _, _, _, _, _, _, _] = spm_realign(r, flags_spm_realign, ind_vol, nr_skip_vol + 1,
-                                                  a0, x1, x2, x3, deg, b)
+                                               a0, x1, x2, x3, deg, b)
 
         if p_struct["isZeroPadding"].item():
             tmp_resl_vol = spm_reslice(r, flags_spm_reslice)
@@ -70,7 +71,7 @@ def test_spm_rt(data_path, dcm_image, nii_image_1, p_struct, matlab_result):
         matlab_resl_vol = matlab_result["reslVol"]
         # np.testing.assert_almost_equal(resl_vol, matlab_resl_vol, decimal=7, err_msg="Not equal")
 
-        print('\n\nFirst test MSE = {:}\n'.format(((resl_vol - matlab_resl_vol)**2).mean()))
+        print('\n\nFirst test MSE = {:}\n'.format(((resl_vol - matlab_resl_vol) ** 2).mean()))
 
         assert True, "Done"
     except Exception as err:

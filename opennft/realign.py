@@ -42,7 +42,7 @@
 #
 #         graphics - display coregistration outputs
 #                    default: ~spm('CmdLine')
-#__________________________________________________________________________
+# __________________________________________________________________________
 #
 # If no output argument, then an updated voxel to world matrix is written
 # to the headers of the images (a .mat file is created for 4D images).
@@ -50,7 +50,7 @@
 # plots of translation and rotation.
 # A set of realignment parameters are saved for each session, named:
 # rp_*.txt.
-#__________________________________________________________________________
+# __________________________________________________________________________
 #
 # Voxel to world mapping:
 #
@@ -73,14 +73,14 @@
 # These matrices allow several realignment or coregistration steps to be
 # combined into a single operation (without the necessity of resampling the
 # images several times).
-#__________________________________________________________________________
+# __________________________________________________________________________
 #
 # Reference:
 #
 # Friston KJ, Ashburner J, Frith CD, Poline J-B, Heather JD & Frackowiak
 # RSJ (1995) Spatial registration and normalization of images Hum. Brain
 # Map. 2:165-189
-#__________________________________________________________________________
+# __________________________________________________________________________
 # Copyright (C) 1994-2013 Wellcome Trust Centre for Neuroimaging
 #
 # John Ashburner
@@ -89,11 +89,11 @@
 # SVNid = '$Rev: 6070 $';
 #
 # P  - a vector of volumes (see spm_vol)
-#--------------------------------------------------------------------------
+# --------------------------------------------------------------------------
 # P(i).mat is modified to reflect the modified position of the image i.
 # The scaling (and offset) parameters are also set to contain the
 # optimum scaling required to match the images.
-#__________________________________________________________________________
+# __________________________________________________________________________
 #
 # Adopted for OpenNFT by Yury Koush and John Ashburner.
 # Copyright (C) 2016-2019 OpenNFT.org
@@ -129,7 +129,6 @@ MASK_THRESHOLD = 32
 
 
 def spm_realign(r, flags, ind_vol, ind_first_vol, a0, x1, x2, x3, deg, b):
-
     f_nfb = True
 
     lkp = flags["lkp"]
@@ -146,7 +145,9 @@ def spm_realign(r, flags, ind_vol, ind_first_vol, a0, x1, x2, x3, deg, b):
         # Note: Python random number generation process differs from matlab
         # This is why the result is not identical to Matlab SPM
         rng = np.random.default_rng(0)
-        def add_noise(x, k=0.5): return x + rng.random(x.shape) * k
+
+        def add_noise(x, k=0.5):
+            return x + rng.random(x.shape) * k
 
         if d[2] < 3:
             lkp = np.array([0, 1, 5])
@@ -239,7 +240,6 @@ def spm_realign(r, flags, ind_vol, ind_first_vol, a0, x1, x2, x3, deg, b):
 
 
 def coords(p, m1, m2, x1, x2, x3):
-
     m = np.linalg.inv(m2) @ np.linalg.inv(utils.spm_matrix(p)) @ m1
     y1 = m[0, 0] * x1 + m[0, 1] * x2 + m[0, 2] * x3 + m[0, 3]
     y2 = m[1, 0] * x1 + m[1, 1] * x2 + m[1, 2] * x3 + m[1, 3]
@@ -249,7 +249,6 @@ def coords(p, m1, m2, x1, x2, x3):
 
 
 def smooth_vol(r, hld, wrp, fwhm):
-
     s = np.sqrt(np.sum(r["mat"][:3, :3] ** 2, axis=0)) ** (-1) * (fwhm / np.sqrt(8 * np.log(2)))
 
     x = round(6 * s[0])
@@ -286,7 +285,6 @@ def smooth_vol(r, hld, wrp, fwhm):
 
 
 def make_a(m, x1, x2, x3, dg1, dg2, dg3, lkp):
-
     # Matrix of rate of change of weighted difference w.r.t.parameter changes
     p0 = np.array([0, 0, 0, 0, 0, 0, 1, 1, 1, 0, 0, 0], dtype=float)
     a = np.zeros((x1.size, lkp.size))

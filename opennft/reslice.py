@@ -42,7 +42,7 @@
 #
 #         prefix - prefix for resliced images [default: 'r']
 #
-#__________________________________________________________________________
+# __________________________________________________________________________
 #
 # The spatially realigned images are written to the original subdirectory
 # with the same (prefixed) filename. They are all aligned with the first.
@@ -54,16 +54,16 @@
 # Outputs:
 # The routine uses information in their headers and writes the realigned
 # image files to the same subdirectory with a prefix.
-#__________________________________________________________________________
+# __________________________________________________________________________
 # Copyright (C) 1999-2011 Wellcome Trust Centre for Neuroimaging
 #
 # John Ashburner
 # $Id: spm_reslice.m 5929 2014-03-27 14:47:40Z guillaume $
-#__________________________________________________________________________
+# __________________________________________________________________________
 # Adopted for OpenNFT by Yury Koush and John Ashburner.
 # Copyright (C) 2016-2019 OpenNFT.org
 #
-#__________________________________________________________________________
+# __________________________________________________________________________
 #
 # The headers of the images contain a 4x4 affine transformation matrix 'M',
 # usually affected by the `realignment' and `coregistration' modules.
@@ -83,7 +83,7 @@
 # Several spatial transformations (realignment, coregistration,
 # normalisation) can be combined into a single operation (without the
 # necessity of resampling the images several times).
-#__________________________________________________________________________
+# __________________________________________________________________________
 #
 # Refs:
 #
@@ -95,7 +95,7 @@
 #
 # R. W. Cox and A. Jesmanowicz (1999)  Real-Time 3D Image Registration
 # for Functional MRI. Mag. Res. Med. 42(6):1014-1018
-#__________________________________________________________________________
+# __________________________________________________________________________
 
 import numpy as np
 import pyspm as spm
@@ -103,7 +103,6 @@ from opennft.errors import SpmError
 
 
 def spm_reslice(r, flags):
-
     msk = []
     count = []
     integral = []
@@ -196,7 +195,6 @@ def spm_reslice(r, flags):
 
 
 def get_mask(m, x1, x2, x3, dim, wrp):
-
     tiny = 5e-2  # From spm_vol_utils.cpp
     y1 = m[0][0] * x1 + m[0][1] * x2 + (m[0][2] * x3 + m[0][3])
     y2 = m[1][0] * x1 + m[1][1] * x2 + (m[1][2] * x3 + m[1][3])

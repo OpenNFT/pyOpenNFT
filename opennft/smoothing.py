@@ -1,4 +1,3 @@
-import sys
 import numpy as np
 import pyspm as spm
 from scipy.special import erf
@@ -39,13 +38,14 @@ def smooth1(input_vol, kernel):
     k = (z.size - 1) / 2
 
     smoothed_vol = np.zeros(input_vol.shape, order='F')
+    input_vol = np.array(input_vol, order='F')
     smoothed_vol = spm.conv_vol(input_vol, smoothed_vol, x, y, z, np.array([-i, -j, -k], ndmin=2))
 
     return smoothed_vol
 
 
 def spm_smoothkern(fwhm, x, t=1):
-    eps = sys.float_info.epsilon
+    eps = np.finfo(float).eps
     s = (fwhm / (8 * np.log(2)) ** .5) ** 2 + eps
 
     if t == 0:
@@ -59,8 +59,8 @@ def spm_smoothkern(fwhm, x, t=1):
         w1 = 0.5 * (2 / s) ** .5
         w2 = -0.5 / s
         w3 = (s / 2 / np.pi) ** .5
-        krn = 0.5 * (erf(w1 * (x + 1)) * (x + 1) + erf(w1 * (x - 1)) * (x - 1) - 2 * erf(w1 * x) * x) + \
-              w3 * (np.exp(w2 * (x + 1) ** 2) + np.exp(w2 * (x - 1) ** 2) - 2 * np.exp(w2 * x ** 2))
+        krn = 0.5 * (erf(w1 * (x + 1)) * (x + 1) + erf(w1 * (x - 1)) * (x - 1) - 2 * erf(w1 * x) * x) \
+              + w3 * (np.exp(w2 * (x + 1) ** 2) + np.exp(w2 * (x - 1) ** 2) - 2 * np.exp(w2 * x ** 2))
 
         krn[krn < 0] = 0
 

@@ -37,6 +37,13 @@ def nii_image_1(data_path: Path) -> nib.nifti1.Nifti1Image:
     return nib.load(fp, mmap=False)
 
 
+# structural
+@pytest.fixture(scope='session')
+def struct_image(data_path: Path) -> nib.nifti1.Nifti1Image:
+    fp = data_path / 'structScan_PSC.nii'
+    return nib.load(fp, mmap=False)
+
+
 # first test dcm
 @pytest.fixture(scope='session')
 def dcm_image(data_path: Path) -> np.array:
@@ -62,15 +69,18 @@ def matlab_result(data_path: Path) -> np.array:
     fp = str(data_path / 'reslVol_matlab.mat')
     return loadmat(fp, squeeze_me=True)
 
+
 @pytest.fixture(scope='session')
 def smoothed_matlab(data_path: Path) -> np.array:
     fp = str(data_path / 'smoothed_matlab.mat')
     return loadmat(fp, squeeze_me=True)
 
+
 @pytest.fixture(scope='session')
 def resl_vol(data_path: Path) -> np.array:
     fp = str(data_path / 'reslVol.mat')
     return loadmat(fp, squeeze_me=True)
+
 
 @pytest.fixture(scope='session')
 def r_struct(data_path: Path) -> dict:
@@ -91,8 +101,62 @@ def matlab_mc_result_dcm(data_path: Path) -> np.array:
 
 
 @pytest.fixture(scope='session')
+def check_data(data_path: Path) -> dict:
+    fp = str(data_path / 'check_data.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def orth_matlab(data_path: Path) -> dict:
+    fp = str(data_path / 'orth_matlab.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def orth_matlab_struct(data_path: Path) -> dict:
+    fp = str(data_path / 'orth_matlab_struct.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def str_param(data_path: Path) -> dict:
+    fp = str(data_path / 'strParam.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
 def xs(data_path: Path) -> dict:
     fp = str(data_path / 'xs.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def smoothed_python(data_path: Path) -> np.array:
+    fp = str(data_path / 'smoothed_python.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def sum_vols(data_path: Path) -> np.array:
+    fp = str(data_path / 'sumVols_python_dcm.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def mc_param(data_path: Path) -> np.array:
+    fp = str(data_path / 'mc_python_dcm.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def prepr_data(data_path: Path) -> dict:
+    fp = str(data_path / 'prepr_data.mat')
+    return loadmat(fp, squeeze_me=True)
+
+
+@pytest.fixture(scope='session')
+def stat_map_2d_matlab(data_path: Path) -> dict:
+    fp = str(data_path / 'stat_map_2d_matlab.mat')
     return loadmat(fp, squeeze_me=True)
 
 

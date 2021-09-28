@@ -42,6 +42,9 @@ pydicom = ">=2.1.2"
 nibabel = "^3.2.1"
 loguru = "^0.5.3"
 watchdog = "^2.1.2"
+pooch = "^1.4.0"
+pytest-dependency = "^0.5.1"
+pytest-ordering = "^0.6"
 
 [tool.poetry.dev-dependencies]
 pybind11 = "^2.6.1"

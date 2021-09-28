@@ -1,8 +1,8 @@
 import numpy as np
+from scipy.special import betainc
 
 
 def img_2d_to_3d(img2d, xdim_img_number, ydim_img_number, dim3d):
-
     sl = 0
     vol3d = np.zeros(dim3d)
     for sy in range(0, ydim_img_number):
@@ -17,8 +17,22 @@ def img_2d_to_3d(img2d, xdim_img_number, ydim_img_number, dim3d):
     return vol3d
 
 
-def get_mosaic_dim(dim3d):
+def vol_3d_to_2d(vol3d, sl_nr_img2d_dimx, sl_nr_img2d_dimy, xdim_img_number, ydim_img_number, dim3d):
+    sl = 0
+    img_2d = np.zeros((ydim_img_number, xdim_img_number))
 
+    for sy in range(0, sl_nr_img2d_dimy):
+        for sx in range(0, sl_nr_img2d_dimx):
+            if sl > dim3d[2]:
+                break
+            else:
+                img_2d[sy * dim3d[1]:(sy + 1) * dim3d[1], sx * dim3d[0]:(sx + 1) * dim3d[0]] = np.rot90(vol3d[:, :, sl])
+            sl += 1
+
+    return img_2d
+
+
+def get_mosaic_dim(dim3d):
     xdim_img_number = round(np.sqrt(dim3d[2]))
     tmp_dim = dim3d[2] - xdim_img_number ** 2
 
@@ -39,7 +53,6 @@ def get_mosaic_dim(dim3d):
 
 
 def spm_matrix(p):
-
     if p.size == 3:
         a = np.eye(4)
         a[0:3, 3] = p[:]
@@ -86,7 +99,6 @@ def spm_matrix(p):
 
 
 def spm_imatrix(m):
-
     r = m[0:3, 0:3]
     c = np.linalg.cholesky(r.T @ r)
 
@@ -103,7 +115,8 @@ def spm_imatrix(m):
     r0 = r0[0:3, 0:3]
     r1 = np.linalg.solve(r0.T, r.T).T
 
-    def rang(x): return np.minimum(np.maximum(x, -1), 1)
+    def rang(x):
+        return np.minimum(np.maximum(x, -1), 1)
 
     p[4] = np.arcsin(rang(r1[0, 2]))
     if (np.abs(p[4]) - np.pi / 2) ** 2 < 1e-9:
@@ -115,3 +128,127 @@ def spm_imatrix(m):
         p[5] = np.arctan2(rang(r1[0, 1] / c), rang(r1[0, 0] / c))
 
     return p
+
+
+def ar_regr(a, input):
+    output = np.zeros(input.shape)
+
+    for col in range(0, input.shape[1]):
+        for t in range(0, input.shape[0]):
+            if t == 0:
+                output[t, col] = (1 - a) * input[t, col]
+            else:
+                output[t, col] = input[t, col] - a * output[t - 1, col]
+
+    return output
+
+
+def spm_inv_t_cdf(f, v):
+    ad = np.array([2, 2])
+    rd = np.max(ad)
+    az = np.array([[1, 1],
+                   [1, 1]])
+    rs = np.max(az)
+    xa = np.prod(az, 1) > 1
+
+    x = np.zeros(rs)
+
+    md = 0 <= f <= 1 and v > 0
+
+    x[md and f == 0] = -np.inf
+    x[md and f == 1] = +np.inf
+
+    ml = (md and v == 1)
+    if xa[0]:
+        mlf = ml
+    else:
+        mlf = 1
+
+    x[ml] = np.tan(np.pi * (f - 0.5))
+
+    q = np.nonzero(md and f != 0.5 and 1 > f > 0 != v)[0]
+    if q.size == 0:
+        return x
+
+    xqpos = f > 0.5
+    bq = spm_inv_b_cdf(2 * (xqpos - (xqpos * 2 - 1) * f), v / 2, 0.5)
+    x[q] = (xqpos * 2 - 1) * np.sqrt(v / bq - v)
+
+    return x
+
+
+def spm_inv_b_cdf(f, v, w, tol=1e-8):
+    max_it = 1e4
+
+    ad = np.array([2, 2, 2])
+    rd = np.max(ad)
+    az = np.array([[1, 1],
+                   [1, 1],
+                   [1, 1]])
+    rs = np.max(az)
+    xa = np.prod(az, 1) > 1
+
+    x = np.zeros(rs)
+
+    md = 0 <= f <= 1 and v > 0 and w > 0
+
+    x[md and f == 1] = 1
+
+    q = np.nonzero(md and 0 < f < 1)[0]
+    if q.size == 0:
+        return x
+
+    if xa[0]:
+        fq = f
+        fq = fq.flatten()
+    else:
+        fq = f * np.ones((np.max(q.shape), 1))
+
+    if xa[1]:
+        vq = v
+        vq = vq.flatten()
+    else:
+        vq = v * np.ones((np.max(q.shape), 1))
+
+    if xa[2]:
+        wq = w
+        wq = wq.flatten()
+    else:
+        wq = w * np.ones((np.max(q.shape), 1))
+
+    a = np.zeros((np.max(q.shape), 1))
+    fa = a - fq
+    b = np.ones((np.max(q.shape), 1))
+    fb = b - fq
+    i = 0
+    xq = a + 0.5
+    qq = np.array(range(0, (np.max(q.shape))))
+
+    while qq.size > 0 and i < max_it:
+        fxqq = betainc(vq[qq], wq[qq], xq[qq]) - fq[qq]
+        mqq = fa[qq] * fxqq > 0
+
+        a[qq[mqq[0]]] = xq[qq[mqq[0]]]
+        fa[qq[mqq[0]]] = fxqq[mqq[0]]
+        b[qq[not mqq]] = xq[qq[not mqq]]
+        fb[qq[not mqq]] = fxqq[not mqq]
+        xq[qq] = a[qq] + (b[qq] - a[qq]) / 2
+        qq = qq[((b[qq] - a[qq]) > tol)[0]]
+
+        i += 1
+
+    x[q] = xq
+
+    return x
+
+
+def zscore(x):
+    dim = np.nonzero(np.array(x.shape) != 1)[0][0]
+
+    mu = np.mean(x, axis=dim)
+    sigma = np.std(x, ddof=1, axis=dim)
+    sigma[sigma == 0] = 1
+    z = (x - mu) / sigma
+
+    return z
+
