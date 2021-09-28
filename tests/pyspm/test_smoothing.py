@@ -1,5 +1,5 @@
 import numpy as np
-from rtspm.spm_smoothing import spm_smooth
+from rtspm import spm_smooth
 from scipy.io import savemat
 
 

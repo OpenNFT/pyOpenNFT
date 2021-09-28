@@ -381,7 +381,7 @@ pytest = "*"
 
 [[package]]
 name = "python-rtspm"
-version = "0.1.4"
+version = "0.1.6"
 description = "Python adaptation of SPM functions for real-time fMRI analysis"
 category = "main"
 optional = false
@@ -853,8 +853,8 @@ pytest-ordering = [
     {file = "pytest_ordering-0.6-py3-none-any.whl", hash = "sha256:3f314a178dbeb6777509548727dc69edf22d6d9a2867bf2d310ab85c403380b6"},
 ]
 python-rtspm = [
-    {file = "python-rtspm-0.1.4.tar.gz", hash = "sha256:a2ec38293050a461727fca623a877e4ae6a2cf9b3911e789dc296bdae96acf2f"},
-    {file = "python_rtspm-0.1.4-cp38-cp38-win_amd64.whl", hash = "sha256:331596df6e18fdc31afe30a7907a421f3163a27bb6e08d61b9481f7a24ec4b4e"},
+    {file = "python-rtspm-0.1.6.tar.gz", hash = "sha256:682b8610f1aadc88f5eb679fb217941d7a3e31766f06513e69984ad4f10b8a9f"},
+    {file = "python_rtspm-0.1.6-cp38-cp38-win_amd64.whl", hash = "sha256:449a79f4988c908aec28a21a5796d0980c5cd32b8d1139f75530520e31f52f13"},
 ]
 pytz = [
     {file = "pytz-2021.1-py2.py3-none-any.whl", hash = "sha256:eb10ce3e7736052ed3623d49975ce333bcd712c7bb19a58b9e2089d4057d0798"},

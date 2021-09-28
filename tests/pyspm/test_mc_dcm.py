@@ -4,9 +4,7 @@ import pytest
 import numpy as np
 from opennft import utils
 from scipy.io import savemat
-from rtspm.spm_realign import spm_realign
-from rtspm.spm_reslice import spm_reslice
-from rtspm.spm_imatrix import spm_imatrix
+from rtspm import spm_realign, spm_reslice, spm_imatrix
 
 
 @pytest.mark.second
