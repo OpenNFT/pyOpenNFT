@@ -3,8 +3,9 @@ import numpy as np
 import nibabel as nib
 from opennft import utils
 from scipy.io import savemat
-from opennft.realign import spm_realign
-from opennft.reslice import spm_reslice
+from rtspm.spm_realign import spm_realign
+from rtspm.spm_reslice import spm_reslice
+from rtspm.spm_imatrix import spm_imatrix
 
 
 @pytest.mark.skip(reson="no need to test this")
@@ -67,7 +68,7 @@ def test_mc_nii(data_path, second_data_path, nii_image_1, p_struct, matlab_mc_re
                                                          1, a0, x1, x2, x3, deg, b)
 
             temp_m = np.linalg.solve(r[0]["mat"].T, r[1]["mat"].T).T
-            tmp_mc_param = utils.spm_imatrix(temp_m)
+            tmp_mc_param = spm_imatrix(temp_m)
             if ind_vol + 1 == 1:
                 offset_mc_param = tmp_mc_param[0:6]
             mot_corr_param[ind_vol, :] = tmp_mc_param[0:6] - offset_mc_param

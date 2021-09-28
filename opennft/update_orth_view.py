@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import linalg
 
-import pyspm as spm
+import rtspm as spm
 
 
 def update_orth_view(str_param, vol, mat):

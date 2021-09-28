@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import linalg
 
-from opennft.utils import spm_inv_t_cdf
+from rtspm.spm_inv_t_cdf import spm_inv_t_cdf
 
 
 def iglm_vol(cn, dn, sigma2n, tn, yn, n, nr_bas_fct, contr, bas_fct, p_val, rec_th, t_th, spm_mask_th):
