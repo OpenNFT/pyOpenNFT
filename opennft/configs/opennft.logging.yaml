@@ -1,0 +1,13 @@
+# OpenNFT default logging configuration file
+---
+
+logging:
+  handlers:
+    - sink: "sys.stdout"
+      format: "<g>{time:YYYY-MM-DD hh:mm:ss}</g> | <level>{level:9}</level> | <level>{message}</level>"
+      colorize: true
+      level: "INFO"
+
+loggers:
+  # Enable or disable loggers
+  opennft: true
