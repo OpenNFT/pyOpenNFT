@@ -1,8 +1,7 @@
 import numpy as np
 from scipy import linalg
 
-import rtspm as spm
-
+from rtspm import spm_slice_vol as slice_vol
 
 def update_orth_view(str_param, vol, mat):
     bb = str_param['bb']
@@ -70,17 +69,17 @@ def get_orth_vol(coord_param, vol, m):
 
     mat_t = np.array(linalg.inv(coord_param['tm0'] @ m), order='F')
     imgt = np.zeros((coord_param['td'][0], coord_param['td'][1]), order='F')
-    spm.slice_vol(vol, imgt, mat_t, temp)
+    slice_vol(vol, imgt, mat_t, temp)
     imgt = imgt.T
 
     mat_c = np.array(linalg.inv(coord_param['cm0'] @ m), order='F')
     imgc = np.zeros((coord_param['cd'][0], coord_param['cd'][1]), order='F')
-    spm.slice_vol(vol, imgc, mat_c, temp)
+    slice_vol(vol, imgc, mat_c, temp)
     imgc = imgc.T
 
     mat_s = np.array(linalg.inv(coord_param['sm0'] @ m), order='F')
     imgs = np.zeros((coord_param['sd'][0], coord_param['sd'][1]), order='F')
-    spm.slice_vol(vol, imgs, mat_s, temp)
+    slice_vol(vol, imgs, mat_s, temp)
     imgs = np.fliplr(imgs.T)
 
     return imgt, imgc, imgs

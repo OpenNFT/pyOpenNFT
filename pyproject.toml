@@ -31,10 +31,10 @@ packages = [
     { include = "opennft" },
 ]
 
-build = "buildext.py"
-
 [tool.poetry.dependencies]
 python = ">=3.6.1,<4"
+appdirs = "^1.4.4"
+omegaconf = "^2.1.1"
 importlib-metadata = ">=3.4.0"
 numpy = ">=1.19.2"
 scipy = ">=1.5.4"
@@ -45,13 +45,15 @@ watchdog = "^2.1.2"
 pooch = "^1.4.0"
 pytest-dependency = "^0.5.1"
 pytest-ordering = "^0.6"
-python-rtspm = "^0.1.4"
+python-rtspm = "^0.2.0"
 
 [tool.poetry.dev-dependencies]
 pybind11 = "^2.6.1"
 pytest = "^6.1.1"
 Sphinx = "^3.2.1"
 pytest-benchmark = "^3.2.3"
+pytest-dependency = "^0.5.1"
+pytest-ordering = "^0.6"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
