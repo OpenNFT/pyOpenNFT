@@ -1,5 +1,5 @@
 import numpy as np
-from rtspm import spm_matrix, spm_imatrix
+from rtspm import spm_imatrix, spm_matrix
 
 
 def prepare_orth_view(mat, dim):
@@ -8,7 +8,7 @@ def prepare_orth_view(mat, dim):
                  'area': np.array([0, 0, 1, 1]), 'premul': np.eye(4, 4), 'hld': 1, 'mode_displ': np.zeros((1, 3))}
 
     temp = np.array([0, 0, 0, 0, np.pi, -np.pi / 2])
-    str_param['space'] = spm_matrix.spm_matrix(temp) @ str_param['space']
+    str_param['space'] = spm_matrix(temp) @ str_param['space']
 
     # get bounding box and resolution
     if len(str_param['bb']) == 0:
