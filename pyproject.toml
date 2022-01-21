@@ -50,10 +50,10 @@ python-rtspm = "^0.2.0"
 [tool.poetry.dev-dependencies]
 pybind11 = "^2.6.1"
 pytest = "^6.1.1"
-Sphinx = "^3.2.1"
 pytest-benchmark = "^3.2.3"
 pytest-dependency = "^0.5.1"
 pytest-ordering = "^0.6"
+Sphinx = "^3.2.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
