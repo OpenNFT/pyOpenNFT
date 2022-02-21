@@ -3,5 +3,6 @@
 **Install**  
 
 1. Clone project from GitHub in pycharm
-2. I'v installed poetry by `pip install poetry` 
-2. In pycharm terminal run `poetry install`
+2. Install poetry in powershell by
+`(Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | py -3 -`
+4. In pycharm terminal run `poetry install`
