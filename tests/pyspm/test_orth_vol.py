@@ -1,7 +1,8 @@
 import numpy as np
+from scipy.io import savemat
+
 from opennft import prepare_orth_view as pov
 from opennft import update_orth_view as uov
-from scipy.io import savemat
 
 
 def test_orth_vol(data_path, nii_image_1, struct_image, orth_matlab, orth_matlab_struct):

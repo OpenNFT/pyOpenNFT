@@ -1,10 +1,12 @@
 import time
-import pydicom
+
 import pytest
 import numpy as np
-from opennft import utils
+import pydicom
+from rtspm import spm_imatrix, spm_realign, spm_reslice
 from scipy.io import savemat
-from rtspm import spm_realign, spm_reslice, spm_imatrix
+
+from opennft import utils
 
 
 @pytest.mark.second

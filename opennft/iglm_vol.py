@@ -1,7 +1,6 @@
 import numpy as np
-from scipy import linalg
-
 from rtspm import spm_inv_t_cdf
+from scipy import linalg
 
 
 def iglm_vol(cn, dn, sigma2n, tn, yn, n, nr_bas_fct, contr, bas_fct, p_val, rec_th, t_th, spm_mask_th):

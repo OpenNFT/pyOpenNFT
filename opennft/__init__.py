@@ -4,6 +4,7 @@ import logging
 
 from opennft.version import __version__
 
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 

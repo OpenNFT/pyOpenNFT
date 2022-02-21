@@ -1,10 +1,10 @@
 import pytest
 import numpy as np
+from rtspm import spm_smooth
 from scipy.io import savemat
 
-from rtspm import spm_smooth
-from opennft.utils import ar_regr, vol_3d_to_2d, zscore
 from opennft.iglm_vol import iglm_vol
+from opennft.utils import ar_regr, vol_3d_to_2d, zscore
 
 
 @pytest.mark.fourth

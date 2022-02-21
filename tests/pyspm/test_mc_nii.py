@@ -1,9 +1,10 @@
 import pytest
-import numpy as np
 import nibabel as nib
-from opennft import utils
+import numpy as np
+from rtspm import spm_imatrix, spm_realign, spm_reslice
 from scipy.io import savemat
-from rtspm import spm_realign, spm_reslice, spm_imatrix
+
+from opennft import utils
 
 
 @pytest.mark.skip(reson="no need to test this")

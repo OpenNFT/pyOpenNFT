@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from importlib.metadata import version, PackageNotFoundError
+from importlib.metadata import PackageNotFoundError, version
+
 
 try:
     __version__ = version('pyopennft')

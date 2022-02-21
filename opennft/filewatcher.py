@@ -1,12 +1,13 @@
-﻿import os
-import fnmatch
+﻿import fnmatch
 import glob
+import os
+from pathlib import Path
 import queue
 import re
-from pathlib import Path
+
 from loguru import logger
-from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 
 class NewFileEventHandler(FileSystemEventHandler):

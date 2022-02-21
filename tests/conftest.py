@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import pytest
-import pydicom
 import nibabel as nib
 import numpy as np
+import pydicom
 from scipy.io import loadmat
 
 

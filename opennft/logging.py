@@ -2,8 +2,8 @@
 
 import sys
 
-from omegaconf import DictConfig, OmegaConf
 from loguru import logger
+from omegaconf import DictConfig, OmegaConf
 
 from .errors import OpenNftError
 
