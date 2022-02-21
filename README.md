@@ -8,3 +8,6 @@
 4. In pycharm terminal run   
 `poetry env use /path/to/Python39/python.exe`  
 Python39 is preferable, because we have prebuilt wheels for it.  
+5. In pycharm terminal run   
+`poetry install`    
+
