@@ -10,7 +10,7 @@ from omegaconf import DictConfig, OmegaConf
 
 from .constants import APP_NAME, ENVVAR_PREFIX
 from .errors import OpenNftError
-from .logging import configure_logger
+from .log import configure_logger
 
 
 ROOT_PATH = Path(__file__).parent

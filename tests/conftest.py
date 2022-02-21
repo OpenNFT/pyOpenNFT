@@ -21,6 +21,11 @@ def data_path(root_path) -> Path:
 
 
 @pytest.fixture(scope='session')
+def configs_path(data_path: Path) -> Path:
+    return data_path / 'configs'
+
+
+@pytest.fixture(scope='session')
 def second_data_path(data_path: Path) -> Path:
     return data_path / 'second_test'
 
