@@ -1,6 +1,6 @@
 # pyOpenNFT
 
-**Install**  
+**Install and quick start**  
 
 1. Clone project from GitHub in pycharm
 2. Install poetry in powershell by  
@@ -10,4 +10,6 @@
 Python39 is preferable, because we have prebuilt wheels for it.  
 5. In pycharm terminal run   
 `poetry install`    
-
+  
+6. Add poetry interpreter in project settings in pycharm   
+7. Run tets  
