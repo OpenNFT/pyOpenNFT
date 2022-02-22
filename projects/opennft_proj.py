@@ -17,10 +17,20 @@ def main():
     fw = FileWatcher()
     fw.start_watching(False, path, "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
 
+    # volume clas creation
+    # volume = Volume()
+    # ... and initialization
+    # volume.set_mc_template(path/to/template)
+
+    iter_number = 0
     for volume_filename in fw:
         # main loop iteration
 
         logger.info(f"Got scan file: {volume_filename}")
+
+        if iter_number == 0:
+            logger.info(f"First volume initialization")
+            # do some first volume setup with volume object
 
         # possible procedure way
         # volume = load_volume(volume_filename)
@@ -33,7 +43,7 @@ def main():
         # volume.realign_volume()
         # volume.reslice_volume()
         # volume.smooth_volume()
-
+        iter_number += 1
 
 # --------------------------------------------------------------------------
 if __name__ == '__main__':
