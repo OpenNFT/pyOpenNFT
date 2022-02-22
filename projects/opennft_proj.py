@@ -21,11 +21,18 @@ def main():
         # main loop iteration
 
         logger.info(f"Got scan file: {volume_filename}")
+
+        # possible procedure way
         # volume = load_volume(volume_filename)
         # volume = realign_volume(volume)
         # volume = reslice_volume(volume)
         # volume = smooth_volume(volume)
 
+        # better class-based way
+        # volume.load_volume(volume_filename)
+        # volume.realign_volume()
+        # volume.reslice_volume()
+        # volume.smooth_volume()
 
 
 # --------------------------------------------------------------------------
