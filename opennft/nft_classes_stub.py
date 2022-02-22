@@ -1,0 +1,113 @@
+# -*- coding: utf-8 -*-
+from pathlib import Path
+from loguru import logger
+
+
+# Классы "процессы"
+
+# --------------------------------------------------------------------------
+class Config():
+    """All config-related magick is here
+    """
+    pass
+
+
+# --------------------------------------------------------------------------
+class NftSession():
+    """Session contains data like P structure
+    """
+
+    # --------------------------------------------------------------------------
+    def __init__(self, config: Config):
+        pass
+
+
+# --------------------------------------------------------------------------
+class NftIteration():
+    """Iteration contains data like main_loop_data
+    """
+
+    # --------------------------------------------------------------------------
+    def __init__(self):
+
+        self.iter_number = 0
+        self.mr_vol = MrVol()
+
+        # вот такая у меня мысль с набором хендлеров
+        self.handlers = {}
+        self.handlers['load_scan'] = {}
+        self.handlers['process_scan'] = {}
+        self.handlers['compute_signals'] = {}
+        self.handlers['compute_feedback'] = {}
+
+        self.handlers_data = {}
+        self.handlers_data['load_scan'] = {}
+        self.handlers_data['process_scan'] = {}
+        self.handlers_data['compute_signals'] = {}
+        self.handlers_data['compute_feedback'] = {}
+
+        self.set_basic_handlers()
+
+    # --------------------------------------------------------------------------
+    def set_basic_handlers(self):
+        self.handlers['load_scan']['load_mr_vol'] = MrVol.load_vol
+
+        self.handlers_data['load_scan']['load_mr_vol'] = None
+
+    # --------------------------------------------------------------------------
+    def dispatch_handlers(self):
+        self.iter_number += 1
+
+        self.handlers['load_scan']['load_mr_vol'](*self.handlers_data['load_scan']['load_mr_vol'])
+
+
+# Классы объекты
+# --------------------------------------------------------------------------
+class MrVol():
+    # Префикс модальности позмолит нам потом добавить eeg, nirs и тд
+    """Contains volume
+    """
+
+    # --------------------------------------------------------------------------
+    def __init__(self):
+        pass
+
+    # --------------------------------------------------------------------------
+    def load_vol(self, file_name):
+        logger.info(f"{file_name}")
+        pass
+
+
+# --------------------------------------------------------------------------
+class MrROI():
+    """Contains single ROI
+    """
+    pass
+
+
+# --------------------------------------------------------------------------
+class MrReferenceVol():
+    """Contains registration reference volume for motion correction
+        aka mc_template
+    """
+    pass
+
+
+# --------------------------------------------------------------------------
+class MrSignal():
+    """Contains signal (time series) extracted from Vol
+    """
+    pass
+
+
+class Drawer():
+    """Draws data with GUI
+    """
+    pass
+
+
+# --------------------------------------------------------------------------
+class MrFeedback():
+    """All feedback magic is here. Or not?
+    """
+    pass
