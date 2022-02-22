@@ -21,7 +21,7 @@ def main():
         # main loop iteration
 
         logger.info(f"Got scan file: {volume_filename}")
-        # volume = load_volume()
+        # volume = load_volume(volume_filename)
         # volume = realign_volume(volume)
         # volume = reslice_volume(volume)
         # volume = smooth_volume(volume)
