@@ -1,7 +1,7 @@
 import numpy as np
+from rtspm import spm_slice_vol as slice_vol
 from scipy import linalg
 
-from rtspm import spm_slice_vol as slice_vol
 
 def update_orth_view(str_param, vol, mat):
     bb = str_param['bb']

@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 
 from typing import NamedTuple, Optional
-from pathlib import Path
 import os
+from pathlib import Path
 
 import appdirs
-from omegaconf import DictConfig, OmegaConf
 from loguru import logger
+from omegaconf import DictConfig, OmegaConf
 
 from .constants import APP_NAME, ENVVAR_PREFIX
 from .errors import OpenNftError
-from .logging import configure_logger
+from .log import configure_logger
 
 
 ROOT_PATH = Path(__file__).parent

@@ -1,6 +1,7 @@
-﻿import time
+﻿from pathlib import Path
 import shutil
-from pathlib import Path
+import time
+
 from opennft.filewatcher import FileWatcher
 
 

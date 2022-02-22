@@ -2,11 +2,20 @@
 
 import logging
 
+from opennft.errors import OpenNftError
+from opennft.log import logger
+from opennft.nftconfig import LegacyNftConfig, LegacyNftConfigLoader, NftConfigError
 from opennft.version import __version__
 
-logger = logging.getLogger(__name__)
-logger.addHandler(logging.NullHandler())
+
+logging.getLogger(__name__).addHandler(logging.NullHandler())
+
 
 __all__ = [
-    '__version__'
+    'LegacyNftConfig',
+    'LegacyNftConfigLoader',
+    'NftConfigError',
+    'OpenNftError',
+    'logger',
+    '__version__',
 ]

@@ -3,9 +3,9 @@
 from pathlib import Path
 
 import pytest
-import pydicom
 import nibabel as nib
 import numpy as np
+import pydicom
 from scipy.io import loadmat
 
 
@@ -18,6 +18,11 @@ def root_path() -> Path:
 @pytest.fixture(scope='session')
 def data_path(root_path) -> Path:
     return root_path / 'data'
+
+
+@pytest.fixture(scope='session')
+def configs_path(data_path: Path) -> Path:
+    return data_path / 'configs'
 
 
 @pytest.fixture(scope='session')
