@@ -17,10 +17,15 @@ def main():
     fw = FileWatcher()
     fw.start_watching(False, path, "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
 
-    for scan_filename in fw:
+    for volume_filename in fw:
         # main loop iteration
 
-        logger.info(f"Got scan file: {scan_filename}")
+        logger.info(f"Got scan file: {volume_filename}")
+        # volume = load_volume()
+        # volume = realign_volume(volume)
+        # volume = reslice_volume(volume)
+        # volume = smooth_volume(volume)
+
 
 
 # --------------------------------------------------------------------------
