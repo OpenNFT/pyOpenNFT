@@ -46,13 +46,13 @@ class FileWatcher():
 
     def __next__(self) -> Path:
         # TODO find all files_queue in old version!!!
-        fname = None
+        filename = None
         try:
-            fname = self.files_queue.get_nowait()
+            filename = self.files_queue.get_nowait()
         except queue.Empty:
-            fname = None
+            raise StopIteration
 
-        return Path(fname)
+        return Path(filename)
     # --------------------------------------------------------------------------
 
     def get_search_string(self, file_name_template, path, ext) -> str:
@@ -108,7 +108,7 @@ class FileWatcher():
             self.fs_observer.start()
         else:       
             path = os.path.join(os.path.dirname(path), self.search_string)
-            logger.info('Offline searching for {}', path)
+            logger.info(f"Offline searching for {path}")
             files = sorted(glob.glob(path))
         
             if not files:
