@@ -27,6 +27,7 @@ class NftSession():
 
     # --------------------------------------------------------------------------
     def __init__(self, config: Config):
+        reference_vol = None # mc_template
         pass
 
 
@@ -36,10 +37,11 @@ class NftIteration():
     """
 
     # --------------------------------------------------------------------------
-    def __init__(self):
+    def __init__(self, session):
 
         self.iter_number = 0
         self.mr_vol = MrVol()
+        self.session = session
 
         # вот такая у меня мысль с набором хендлеров
         # возможные косяки -
@@ -62,6 +64,7 @@ class NftIteration():
 
         self.set_basic_handlers()
 
+
     # --------------------------------------------------------------------------
     def set_basic_handlers(self):
         self.handlers['load_scan']['load_mr_vol'] = MrVol.load_vol
@@ -72,7 +75,20 @@ class NftIteration():
     def dispatch_handlers(self):
         self.iter_number += 1
 
+        # понятное дело что надо сделать цикл по всем хендлерам
         self.handlers['load_scan']['load_mr_vol'](*self.handlers_data['load_scan']['load_mr_vol'])
+
+    # или без выпендрежа с хендлерами
+    # --------------------------------------------------------------------------
+    def load_vol(self, file_name):
+        # возможно стоит сделать по задел под мультимодальность
+        self.mr_vol.load_vol(file_name)
+
+    # --------------------------------------------------------------------------
+    def process_vol(self):
+        self.mr_vol.coregister(self)
+        #self.mr_vol.interpolate(self)
+        #self.mr_vol.smooth(self)
 
 
 # Классы объекты
@@ -91,6 +107,10 @@ class MrVol():
         logger.info(f"{file_name}")
         pass
 
+    # --------------------------------------------------------------------------
+    def coregister(self, iteration):
+        # get reference vol from iteration.session.reference_vol
+        logger.info(f"coregister to reference vol")
 
 # --------------------------------------------------------------------------
 class MrROI():
