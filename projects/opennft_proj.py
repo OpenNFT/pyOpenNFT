@@ -7,6 +7,8 @@ from loguru import logger
 from opennft.filewatcher import FileWatcher
 import opennft.nft_classes_stub as nft
 
+import opennft.nftsession as nftsession
+import opennft.mrvol as mrvol
 
 # --------------------------------------------------------------------------
 def main():
@@ -17,11 +19,11 @@ def main():
     path = path / 'fw_test' / 'dcm'
 
     config = nft.Config()
-    session = nft.NftSession(config)
+    session = nftsession.NftSession(config)
     # setup ROIs for session
     # setup mr_reference for session
 
-    iteration = nft.NftIteration(session)
+    iteration = nftsession.NftIteration(session)
 
     fw = FileWatcher()
     fw.start_watching(False, path, "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
@@ -35,10 +37,12 @@ def main():
             logger.info(f"First volume initialization")
             # do some first volume setup
 
-        iteration.handlers_data['load_scan']['load_mr_vol'] = [iteration.mr_vol, vol_filename]
-        iteration.dispatch_handlers()
+        # iteration.handlers_data['load_scan']['load_mr_vol'] = [iteration.mr_vol, vol_filename]
+        # iteration.dispatch_handlers()
 
         # or without handlers:
+        iteration.mr_vol.load_vol(vol_filename)
+
         iteration.process_vol()
 
 
