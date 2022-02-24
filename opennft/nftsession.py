@@ -13,7 +13,9 @@ class NftSession():
 
     # --------------------------------------------------------------------------
     def __init__(self, config):
-        reference_vol = None # mc_template
+
+        self.config = config
+        self.reference_vol = None # mc_template
         pass
 
 
