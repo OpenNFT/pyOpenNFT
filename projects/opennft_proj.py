@@ -28,7 +28,6 @@ def main():
     path = Path(config.watch_dir)
     path = path / 'fw_test' / 'dcm'
 
-    config = nft.Config()
     session = nftsession.NftSession(config)
     # setup ROIs for session
     # setup mr_reference for session
@@ -51,8 +50,7 @@ def main():
         # iteration.dispatch_handlers()
 
         # or without handlers:
-        iteration.mr_vol.load_vol(vol_filename)
-
+        iteration.load_vol(vol_filename)
         iteration.process_vol()
 
 
