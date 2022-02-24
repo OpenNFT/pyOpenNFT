@@ -16,12 +16,11 @@ from opennft import LegacyNftConfigLoader
 def main():
     # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
 
-    # hardcode config for test
-    # filename = 'config.ini'
-    filename = 'C:/work/pyOpenNFT/projects/config.ini'
+    config_path = Path().resolve()
+    config_path /= 'config.ini'
 
     loader = LegacyNftConfigLoader()
-    loader.load(filename)
+    loader.load(config_path)
 
     config = loader.config  # LegacyNftConfig instance
     simulation_protocol = loader.simulation_protocol  # simulation protocol dictionary from JSON
