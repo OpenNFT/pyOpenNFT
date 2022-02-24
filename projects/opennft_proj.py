@@ -9,13 +9,24 @@ import opennft.nft_classes_stub as nft
 
 import opennft.nftsession as nftsession
 import opennft.mrvol as mrvol
+from opennft import LegacyNftConfigLoader
+
 
 # --------------------------------------------------------------------------
 def main():
     # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
 
     # hardcode config for test
-    path = Path('C:/work/pyOpenNFT/tests/data')
+    # filename = 'config.ini'
+    filename = 'C:/work/pyOpenNFT/projects/config.ini'
+
+    loader = LegacyNftConfigLoader()
+    loader.load(filename)
+
+    config = loader.config  # LegacyNftConfig instance
+    simulation_protocol = loader.simulation_protocol  # simulation protocol dictionary from JSON
+
+    path = Path(config.watch_dir)
     path = path / 'fw_test' / 'dcm'
 
     config = nft.Config()
