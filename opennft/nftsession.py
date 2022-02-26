@@ -74,6 +74,6 @@ class NftIteration():
 
     # --------------------------------------------------------------------------
     def process_vol(self):
-        self.mr_vol.coregister(self)
-        #self.mr_vol.interpolate(self)
-        #self.mr_vol.smooth(self)
+        self.mr_vol.realign(self)
+        self.mr_vol.reslice(self)
+        self.mr_vol.smooth(self)

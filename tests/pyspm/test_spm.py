@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from rtspm import spm_realign, spm_reslice
+from rtspm import spm_realign_rt, spm_reslice_rt
 from scipy.io import savemat
 
 from opennft import utils
@@ -55,15 +55,15 @@ def test_spm_rt(data_path, dcm_image, nii_image_1, p_struct, matlab_result):
                                   'mask': 1, 'mean': 0, 'which': 2})
 
         nr_skip_vol = p_struct["nrSkipVol"].item()
-        [r, _, _, _, _, _, _, _] = spm_realign(r, flags_spm_realign, ind_vol, nr_skip_vol + 1,
+        [r, _, _, _, _, _, _, _] = spm_realign_rt(r, flags_spm_realign, ind_vol, nr_skip_vol + 1,
                                                a0, x1, x2, x3, deg, b)
 
         if p_struct["isZeroPadding"].item():
-            tmp_resl_vol = spm_reslice(r, flags_spm_reslice)
+            tmp_resl_vol = spm_reslice_rt(r, flags_spm_reslice)
             resl_vol = tmp_resl_vol[:, :, nr_zero_pad_vol: -1 - nr_zero_pad_vol + 1]
             dim_vol[2] = dim_vol[2] - nr_zero_pad_vol * 2
         else:
-            resl_vol = spm_reslice(r, flags_spm_reslice)
+            resl_vol = spm_reslice_rt(r, flags_spm_reslice)
 
         resl_dic = {"reslVol_python": resl_vol}
         savemat(data_path / "reslVol.mat", resl_dic)

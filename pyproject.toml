@@ -45,7 +45,7 @@ pooch = "^1.4.0"
 PyYAML = "^6.0"
 toml = "^0.10.2"
 pydantic = "^1.9.0"
-python-rtspm = "^0.2.0"
+python-rtspm = "^0.2.1"
 
 [tool.poetry.dev-dependencies]
 pybind11 = "^2.6.1"
