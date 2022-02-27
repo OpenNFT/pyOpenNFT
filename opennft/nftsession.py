@@ -15,8 +15,13 @@ class NftSession():
     def __init__(self, config):
 
         self.config = config
-        self.reference_vol = None # mc_template
-        pass
+        self.reference_vol = MrVol() # mc_template
+
+    def setup(self):
+
+        mc_templ_path = self.config.mc_template_file
+        self.reference_vol.load_vol(mc_templ_path,"nii")
+
 
 
 # --------------------------------------------------------------------------
@@ -30,6 +35,14 @@ class NftIteration():
         self.iter_number = 0
         self.mr_vol = MrVol()
         self.session = session
+
+        # realigment parameters
+        self.a0 = []
+        self.x1 = []
+        self.x2 = []
+        self.x3 = []
+        self.deg = []
+        self.b = []
 
         # вот такая у меня мысль с набором хендлеров
         # возможные косяки -
@@ -68,12 +81,13 @@ class NftIteration():
 
     # или без выпендрежа с хендлерами
     # --------------------------------------------------------------------------
-    def load_vol(self, file_name):
+    def load_vol(self, file_name, im_type):
         # возможно стоит сделать по задел под мультимодальность
-        self.mr_vol.load_vol(file_name)
+        self.mr_vol.load_vol(file_name, im_type)
 
     # --------------------------------------------------------------------------
     def process_vol(self):
-        self.mr_vol.realign(self)
-        self.mr_vol.reslice(self)
-        self.mr_vol.smooth(self)
+        r, self.a0, self.x1, self.x2, self.x3, self.deg, self.b = self.mr_vol.realign(self, self.a0, self.x1, self.x2,
+                                                                                      self.x3, self.deg, self.b)
+        self.mr_vol.reslice(r)
+        self.mr_vol.smooth()

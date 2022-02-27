@@ -42,14 +42,8 @@ class MrVol():
             self.volume = np.array(pydicom.dcmread(file_path).pixel_array, order='F')
 
     # --------------------------------------------------------------------------
-    def realign(self, iteration):
+    def realign(self, iteration, a0, x1, x2, x3, deg, b):
 
-        a0 = []
-        x1 = []
-        x2 = []
-        x3 = []
-        deg = []
-        b = []
         r = [{'mat': np.array([]), 'dim': np.array([]), 'Vol': np.array([])} for _ in range(2)]
 
         # на будущее
@@ -65,8 +59,8 @@ class MrVol():
         r[0]["dim"] = iteration.session.reference_vol.dim
 
         r[1]["Vol"] = self.volume
-        r[1]["mat"] = self.mat
-        r[1]["dim"] = self.dim
+        r[1]["mat"] = r[0]["mat"]
+        r[1]["dim"] = r[0]["dim"]
 
         ind_vol = iteration.iter_number
 
@@ -80,25 +74,17 @@ class MrVol():
         self.mat = r[1]["mat"]
         self.dim = r[1]["dim"]
 
-    def reslice(self, iteration):
+        return r, a0, x1, x2, x3, deg, b
+
+    def reslice(self, r):
 
         flags_spm_reslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
                                   'wrap': np.zeros((3, 1)), 'mask': 1, 'mean': 0, 'which': 2})
 
-        r = [{'mat': np.array([]), 'dim': np.array([]), 'Vol': np.array([])} for _ in range(2)]
-
-        r[0]["Vol"] = iteration.session.reference_vol.volume
-        r[0]["mat"] = iteration.session.reference_vol.mat
-        r[0]["dim"] = iteration.session.reference_vol.dim
-
-        r[1]["Vol"] = self.volume
-        r[1]["mat"] = self.mat
-        r[1]["dim"] = self.dim
-
         # перезаписывать или хранить?
         self.volume = spm_reslice_rt(r, flags_spm_reslice)
 
-    def smooth(self, iteration):
+    def smooth(self):
 
         mat = self.mat
         dicom_info_vox = (np.sum(mat[0:3, 0:3] ** 2, axis=0)) ** .5

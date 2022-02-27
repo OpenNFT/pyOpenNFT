@@ -29,6 +29,7 @@ def main():
     path = path / 'fw_test' / 'dcm'
 
     session = nftsession.NftSession(config)
+    session.setup()
     # setup ROIs for session
     # setup mr_reference for session
 
@@ -50,8 +51,10 @@ def main():
         # iteration.dispatch_handlers()
 
         # or without handlers:
-        iteration.load_vol(vol_filename)
+        iteration.load_vol(vol_filename, "dcm")
         iteration.process_vol()
+
+        iteration.iter_number += 1
 
 
 # --------------------------------------------------------------------------
