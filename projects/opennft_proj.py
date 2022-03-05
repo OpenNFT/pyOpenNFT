@@ -25,8 +25,6 @@ def main():
     config = loader.config  # LegacyNftConfig instance
     simulation_protocol = loader.simulation_protocol  # simulation protocol dictionary from JSON
 
-    #path = path / 'fw_test' / 'dcm'
-
     session = nftsession.NftSession(config)
     session.setup()
     # setup ROIs for session
@@ -47,10 +45,6 @@ def main():
             logger.info(f"First volume initialization")
             # do some first volume setup
 
-        # iteration.handlers_data['load_scan']['load_mr_vol'] = [iteration.mr_vol, vol_filename]
-        # iteration.dispatch_handlers()
-
-        # or without handlers:
         iteration.load_vol(vol_filename, "dcm")
         iteration.process_vol()
 
