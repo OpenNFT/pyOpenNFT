@@ -25,8 +25,7 @@ def main():
     config = loader.config  # LegacyNftConfig instance
     simulation_protocol = loader.simulation_protocol  # simulation protocol dictionary from JSON
 
-    path = Path(config.watch_dir)
-    path = path / 'fw_test' / 'dcm'
+    #path = path / 'fw_test' / 'dcm'
 
     session = nftsession.NftSession(config)
     session.setup()
@@ -36,7 +35,8 @@ def main():
     iteration = nftsession.NftIteration(session)
 
     fw = FileWatcher()
-    fw.start_watching(False, path, "001_000007_000001.dcm", "001_000007_000001.dcm", file_ext="dcm")
+    fw_path = Path(config.watch_dir)
+    fw.start_watching(False, fw_path, config.first_file_name, config.first_file_name, file_ext="dcm")
 
     for vol_filename in fw:
         # main loop iteration
