@@ -19,13 +19,13 @@ class MrVol():
         self.volume = []
         self.mat = []
         self.dim = []
-        self.type = []
+        self.vol_type = ""
 
     # --------------------------------------------------------------------------
-    def load_vol(self, file_path, im_type):
+    def load_vol(self, file_path, vol_type):
 
-        self.type = im_type
-        if im_type == "nii":
+        self.vol_type = vol_type
+        if vol_type == "nii":
             image = nibabel.load(file_path, mmap=False)
             self.volume = np.array(image.get_fdata(), order='F')
             self.dim = np.array(image.shape)
@@ -38,7 +38,7 @@ class MrVol():
 
             self.mat = mat
 
-        elif im_type == "dcm":
+        elif vol_type == "dcm":
             self.volume = np.array(pydicom.dcmread(file_path).pixel_array, order='F')
 
     # --------------------------------------------------------------------------
