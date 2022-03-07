@@ -4,7 +4,9 @@ from pathlib import Path
 from loguru import logger
 
 from opennft.mrvol import MrVol
+from opennft.mrroi import MrROI
 import opennft.nft_classes_stub as nft
+
 
 # --------------------------------------------------------------------------
 class NftSession():
@@ -15,13 +17,24 @@ class NftSession():
     def __init__(self, config):
 
         self.config = config
-        self.reference_vol = MrVol() # mc_template
+        self.reference_vol = MrVol()  # mc_template
+        self.nr_rois = 0
+        self.rois = []
 
     def setup(self):
 
         mc_templ_path = self.config.mc_template_file
-        self.reference_vol.load_vol(mc_templ_path,"nii")
+        self.reference_vol.load_vol(mc_templ_path, "nii")
+        self.select_rois()
 
+    def select_rois(self):
+
+        for roi_file in Path(self.config.roi_files_dir).iterdir():
+            if roi_file.is_file():
+                self.nr_rois += 1
+                new_roi = MrROI()
+                new_roi.load_roi(roi_file.absolute())
+                self.rois.append(new_roi)
 
 
 # --------------------------------------------------------------------------
@@ -31,7 +44,6 @@ class NftIteration():
 
     # --------------------------------------------------------------------------
     def __init__(self, session):
-
         self.iter_number = 0
         self.mr_vol = MrVol()
         self.session = session
@@ -64,7 +76,6 @@ class NftIteration():
         self.handlers_data['compute_feedback'] = {}
 
         self.set_basic_handlers()
-
 
     # --------------------------------------------------------------------------
     def set_basic_handlers(self):
