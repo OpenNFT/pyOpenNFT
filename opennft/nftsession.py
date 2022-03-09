@@ -2,9 +2,11 @@
 
 from pathlib import Path
 from loguru import logger
+from scipy.io import savemat
 
 from opennft.mrvol import MrVol
 from opennft.mrroi import MrROI
+from opennft.mrtimeseries import MrTimeSeries
 import opennft.nft_classes_stub as nft
 
 
@@ -36,6 +38,11 @@ class NftSession():
                 new_roi.load_roi(roi_file.absolute())
                 self.rois.append(new_roi)
 
+        if self.config.type == "SVM":
+            for weight_file, ind_roi in zip(Path(self.config.weights_file_name).iterdir(), range(self.nr_rois)):
+                self.rois[ind_roi].load_weights(weight_file)
+
+
 
 # --------------------------------------------------------------------------
 class NftIteration():
@@ -46,6 +53,7 @@ class NftIteration():
     def __init__(self, session):
         self.iter_number = 0
         self.mr_vol = MrVol()
+        self.mr_time_series = MrTimeSeries(session.nr_rois)
         self.session = session
 
         # realigment parameters
@@ -102,3 +110,10 @@ class NftIteration():
                                                                                       self.x3, self.deg, self.b)
         self.mr_vol.reslice(r)
         self.mr_vol.smooth()
+
+    def process_time_series(self):
+        self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
+
+    def save_time_series(self):
+
+        savemat("py_time_series.mat", {"raw_time_series": self.mr_time_series.raw_time_series[0]})

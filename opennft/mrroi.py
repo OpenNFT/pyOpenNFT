@@ -18,6 +18,7 @@ class MrROI():
         self.dim = []
         self.voxel_index = []
         self.name = []
+        self.weights = []
 
     def load_roi(self, file_path):
         image = nibabel.load(file_path, mmap=False)
@@ -36,5 +37,11 @@ class MrROI():
         self.voxel_index = np.nonzero(self.volume == 1)
 
         self.name = PurePath(file_path).parts[-1].split('.')[0]
+
+    def load_weights(self, weigths_path):
+        weight_image = nibabel.load(weigths_path, mmap=False)
+        self.weights = np.array(weight_image.get_fdata(), order='F')
+
+
 
 

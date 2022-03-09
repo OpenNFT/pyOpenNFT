@@ -47,9 +47,10 @@ def main():
 
         iteration.load_vol(vol_filename, "dcm")
         iteration.process_vol()
-
+        iteration.process_time_series()
         iteration.iter_number += 1
 
+    iteration.save_time_series()
 
 # --------------------------------------------------------------------------
 if __name__ == '__main__':
