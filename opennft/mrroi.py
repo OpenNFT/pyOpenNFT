@@ -31,10 +31,10 @@ class MrROI():
         #      is considered to be at [1,1,1], to millimetres
         self.mat = mat @ np.hstack((np.eye(4, 3), np.array([-1, -1, -1, 1], ndmin=2).T))
 
+        self.voxel_index = np.argwhere(self.volume != 0)
+
         self.volume[np.nonzero(self.volume < 0.5)] = 0
         self.volume[np.nonzero(self.volume >= 0.5)] = 1
-
-        self.voxel_index = np.nonzero(self.volume == 1)
 
         self.name = PurePath(file_path).parts[-1].split('.')[0]
 

@@ -62,7 +62,7 @@ class MrVol():
         r[1]["mat"] = r[0]["mat"]
         r[1]["dim"] = r[0]["dim"]
 
-        ind_vol = iteration.iter_number
+        ind_vol = iteration.iter_number - iteration.session.config.skip_vol_nr
 
         flags_spm_realign = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
                                   'wrap': np.zeros((3, 1)), 'rtm': 0, 'PW': '', 'lkp': np.array(range(0, 6))})

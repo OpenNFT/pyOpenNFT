@@ -108,6 +108,7 @@ class NftIteration():
     def process_vol(self):
         r, self.a0, self.x1, self.x2, self.x3, self.deg, self.b = self.mr_vol.realign(self, self.a0, self.x1, self.x2,
                                                                                       self.x3, self.deg, self.b)
+        self.mr_time_series.motion_correction_parameters(r[0]["mat"], r[1]["mat"])
         self.mr_vol.reslice(r)
         self.mr_vol.smooth()
 
@@ -115,5 +116,11 @@ class NftIteration():
         self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
 
     def save_time_series(self):
-
-        savemat("py_time_series.mat", {"raw_time_series": self.mr_time_series.raw_time_series[0]})
+        savemat("py_time_series.mat", {"raw_time_series": self.mr_time_series.raw_time_series[0],
+                                       "x": self.mr_time_series.mc_params[0,:],
+                                       "y": self.mr_time_series.mc_params[1,:],
+                                       "z": self.mr_time_series.mc_params[2,:],
+                                       "pitch": self.mr_time_series.mc_params[3,:],
+                                       "roll": self.mr_time_series.mc_params[4,:],
+                                       "yaw": self.mr_time_series.mc_params[5,:],
+                                       })
