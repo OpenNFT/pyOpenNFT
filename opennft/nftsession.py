@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import numpy as np
 
 from pathlib import Path
 from loguru import logger
@@ -7,6 +8,7 @@ from scipy.io import savemat
 from opennft.mrvol import MrVol
 from opennft.mrroi import MrROI
 from opennft.mrtimeseries import MrTimeSeries
+from opennft.utils import get_mosaic_dim, img_2d_to_3d
 import opennft.nft_classes_stub as nft
 
 
@@ -22,11 +24,16 @@ class NftSession():
         self.reference_vol = MrVol()  # mc_template
         self.nr_rois = 0
         self.rois = []
+        self.xdim_img_number = 0
+        self.ydim_img_number = 0
+        self.img2d_dimx = 0
+        self.img2d_dimy = 0
 
     def setup(self):
 
         mc_templ_path = self.config.mc_template_file
         self.reference_vol.load_vol(mc_templ_path, "nii")
+        self.xdim_img_number, self.ydim_img_number,  self.img2d_dimx,  self.img2d_dimy = get_mosaic_dim(self.reference_vol.dim)
         self.select_rois()
 
     def select_rois(self):
@@ -103,6 +110,8 @@ class NftIteration():
     def load_vol(self, file_name, im_type):
         # возможно стоит сделать по задел под мультимодальность
         self.mr_vol.load_vol(file_name, im_type)
+        self.mr_vol.volume = np.array(img_2d_to_3d(self.mr_vol.volume, self.session.xdim_img_number,
+                                          self.session.ydim_img_number, self.session.reference_vol.dim), order='F')
 
     # --------------------------------------------------------------------------
     def process_vol(self):
@@ -115,6 +124,7 @@ class NftIteration():
     def process_time_series(self):
         self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
 
+    # test function
     def save_time_series(self):
         savemat("py_time_series.mat", {"raw_time_series": self.mr_time_series.raw_time_series[0],
                                        "x": self.mr_time_series.mc_params[0,:],
