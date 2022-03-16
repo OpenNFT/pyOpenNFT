@@ -47,14 +47,19 @@ def main():
 
         iteration.load_vol(vol_filename, "dcm")
         if iteration.iter_number < session.config.skip_vol_nr:
-            logger.info(f"Volume skipped")
+            logger.info(f"Scan file skipped")
             iteration.iter_number += 1
             continue
 
+        time_start = time.time()
         iteration.process_vol()
         iteration.process_time_series()
 
         iteration.iter_number += 1
+        elapsed_time = time.time() - time_start
+
+        logger.info('{} {:.4f} {}', "Elapsed time: ", elapsed_time, 's')
+
 
     iteration.save_time_series()
 
