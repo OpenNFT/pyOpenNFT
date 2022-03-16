@@ -94,7 +94,7 @@ class NftIteration():
     # test function
     def save_time_series(self):
 
-        if not self.mr_time_series.mc_params:
+        if len(self.mr_time_series.mc_params) == 0:
             logger.info(f"Empty data, nothing to save")
             return
 
