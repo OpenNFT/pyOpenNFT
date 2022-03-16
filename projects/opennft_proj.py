@@ -47,8 +47,10 @@ def main():
 
         iteration.load_vol(vol_filename, "dcm")
         if iteration.iter_number < session.config.skip_vol_nr:
-            break
-        
+            logger.info(f"Volume skipped")
+            iteration.iter_number += 1
+            continue
+
         iteration.process_vol()
         iteration.process_time_series()
 
