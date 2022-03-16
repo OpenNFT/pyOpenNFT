@@ -46,9 +46,12 @@ def main():
             # do some first volume setup
 
         iteration.load_vol(vol_filename, "dcm")
-        if iteration.iter_number >= session.config.skip_vol_nr:
-            iteration.process_vol()
-            iteration.process_time_series()
+        if iteration.iter_number < session.config.skip_vol_nr:
+            break
+        
+        iteration.process_vol()
+        iteration.process_time_series()
+
         iteration.iter_number += 1
 
     iteration.save_time_series()

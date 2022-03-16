@@ -24,16 +24,16 @@ class NftSession():
         self.reference_vol = MrVol()  # mc_template
         self.nr_rois = 0
         self.rois = []
-        self.xdim_img_number = 0
-        self.ydim_img_number = 0
-        self.img2d_dimx = 0
-        self.img2d_dimy = 0
+        self.xdim_img_count = 0 # please, comment the variables
+        self.ydim_img_count = 0 # please, comment the variables
+        self.img2d_dimx = 0     # please, comment the variables
+        self.img2d_dimy = 0     # please, comment the variables
 
     def setup(self):
 
         mc_templ_path = self.config.mc_template_file
         self.reference_vol.load_vol(mc_templ_path, "nii")
-        self.xdim_img_number, self.ydim_img_number,  self.img2d_dimx,  self.img2d_dimy = get_mosaic_dim(self.reference_vol.dim)
+        self.xdim_img_count, self.ydim_img_count,  self.img2d_dimx,  self.img2d_dimy = get_mosaic_dim(self.reference_vol.dim)
         self.select_rois()
 
     def select_rois(self):
@@ -110,8 +110,8 @@ class NftIteration():
     def load_vol(self, file_name, im_type):
         # возможно стоит сделать по задел под мультимодальность
         self.mr_vol.load_vol(file_name, im_type)
-        self.mr_vol.volume = np.array(img_2d_to_3d(self.mr_vol.volume, self.session.xdim_img_number,
-                                          self.session.ydim_img_number, self.session.reference_vol.dim), order='F')
+        self.mr_vol.volume = np.array(img_2d_to_3d(self.mr_vol.volume, self.session.xdim_img_count,
+                                          self.session.ydim_img_count, self.session.reference_vol.dim), order='F')
 
     # --------------------------------------------------------------------------
     def process_vol(self):
