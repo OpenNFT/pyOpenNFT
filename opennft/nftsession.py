@@ -126,6 +126,11 @@ class NftIteration():
 
     # test function
     def save_time_series(self):
+
+        if not self.mr_time_series.mc_params:
+            logger.info(f"Empty data, nothing to save")
+            return
+
         savemat("py_time_series.mat", {"raw_time_series": self.mr_time_series.raw_time_series[0],
                                        "x": self.mr_time_series.mc_params[0,:],
                                        "y": self.mr_time_series.mc_params[1,:],
