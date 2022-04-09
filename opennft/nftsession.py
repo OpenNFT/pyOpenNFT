@@ -9,7 +9,6 @@ from opennft.mrvol import MrVol
 from opennft.mrroi import MrROI
 from opennft.mrtimeseries import MrTimeSeries
 from opennft.utils import get_mosaic_dim, img_2d_to_3d
-import opennft.nft_classes_stub as nft
 
 
 # --------------------------------------------------------------------------
@@ -24,10 +23,10 @@ class NftSession():
         self.reference_vol = MrVol()  # mc_template
         self.nr_rois = 0
         self.rois = []
-        self.xdim_img_count = 0 # please, comment the variables
-        self.ydim_img_count = 0 # please, comment the variables
-        self.img2d_dimx = 0     # please, comment the variables
-        self.img2d_dimy = 0     # please, comment the variables
+        self.xdim_img_count = 0 # number of image in mosaic per horizontal
+        self.ydim_img_count = 0 # number of image in mosaic per vertical
+        self.img2d_dimx = 0     # mosaic image size X
+        self.img2d_dimy = 0     # mosaic image size Y
 
     def setup(self):
 
