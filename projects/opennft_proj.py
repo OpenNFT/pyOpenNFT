@@ -5,11 +5,10 @@ from pathlib import Path
 from loguru import logger
 
 from opennft.filewatcher import FileWatcher
-import opennft.nft_classes_stub as nft
+from opennft.nfbcalc import Nfb
+from opennft import LegacyNftConfigLoader
 
 import opennft.nftsession as nftsession
-import opennft.mrvol as mrvol
-from opennft import LegacyNftConfigLoader
 
 
 # --------------------------------------------------------------------------
@@ -27,10 +26,12 @@ def main():
 
     session = nftsession.NftSession(config)
     session.setup()
+    session.set_protocol(simulation_protocol)
     # setup ROIs for session
     # setup mr_reference for session
 
     iteration = nftsession.NftIteration(session)
+    nfb_calc = Nfb(session, iteration)
 
     fw = FileWatcher()
     fw_path = Path(config.watch_dir)
@@ -45,7 +46,14 @@ def main():
             logger.info(f"First volume initialization")
             # do some first volume setup
 
+        if iteration.pre_iter < iteration.iter_number:
+            # pre-acquisition routine
+            nfb_calc.main_loop_entry()
+
         iteration.load_vol(vol_filename, "dcm")
+
+        iteration.pre_iter = iteration.iter_number
+
         if iteration.iter_number < session.config.skip_vol_nr:
             logger.info(f"Scan file skipped")
             iteration.iter_number += 1
@@ -59,7 +67,6 @@ def main():
         elapsed_time = time.time() - time_start
 
         logger.info('{} {:.4f} {}', "Elapsed time: ", elapsed_time, 's')
-
 
     iteration.save_time_series()
 

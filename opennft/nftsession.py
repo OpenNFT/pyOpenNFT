@@ -21,12 +21,14 @@ class NftSession():
 
         self.config = config
         self.reference_vol = MrVol()  # mc_template
+        self.vect_end_cond = np.ones((self.config.volumes_nr - self.config.skip_vol_nr, 1))
+        self.first_nf_inds = []
         self.nr_rois = 0
         self.rois = []
-        self.xdim_img_count = 0 # number of image in mosaic per horizontal
-        self.ydim_img_count = 0 # number of image in mosaic per vertical
-        self.img2d_dimx = 0     # mosaic image size X
-        self.img2d_dimy = 0     # mosaic image size Y
+        self.xdim_img_count = 0  # number of image in mosaic per horizontal
+        self.ydim_img_count = 0  # number of image in mosaic per vertical
+        self.img2d_dimx = 0      # mosaic image size X
+        self.img2d_dimy = 0      # mosaic image size Y
 
     def setup(self):
 
@@ -34,6 +36,33 @@ class NftSession():
         self.reference_vol.load_vol(mc_templ_path, "nii")
         self.xdim_img_count, self.ydim_img_count,  self.img2d_dimx,  self.img2d_dimy = get_mosaic_dim(self.reference_vol.dim)
         self.select_rois()
+
+    def set_protocol(self, simulation_protocol):
+
+        conditions = simulation_protocol["ConditionIndex"]
+        cond_length = len(conditions)
+
+        prot_names = []
+        inc = 2
+        for i in range(cond_length):
+            prot_names.append(conditions[i]["ConditionName"])
+
+            # TODO: check if baseline field already exists in protocol
+            offsets = conditions[i]["OnOffsets"]
+
+            for j in range(len(offsets)):
+                self.vect_end_cond[offsets[j][0]-1:offsets[j][1]] = inc
+
+                # for NFB blocks
+                if inc == 2:
+                    self.first_nf_inds.append(offsets[j][0]-1)
+
+            inc = inc + 1
+
+
+
+        # TODO: contrast
+
 
     def select_rois(self):
 
@@ -49,7 +78,6 @@ class NftSession():
                 self.rois[ind_roi].load_weights(weight_file)
 
 
-
 # --------------------------------------------------------------------------
 class NftIteration():
     """Iteration contains data like main_loop_data
@@ -57,7 +85,9 @@ class NftIteration():
 
     # --------------------------------------------------------------------------
     def __init__(self, session):
+        self.pre_iter = -1
         self.iter_number = 0
+        self.iter_norm_number = 0
         self.mr_vol = MrVol()
         self.mr_time_series = MrTimeSeries(session.nr_rois)
         self.session = session
