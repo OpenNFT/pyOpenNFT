@@ -1,2 +1,8 @@
 # OpenNFT default configuration file
 ---
+
+cglm_ar1: True
+a_ar1: 0.2
+shm_file_names:
+  - mc_data
+  - raw_ts_data

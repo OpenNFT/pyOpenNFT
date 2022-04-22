@@ -23,6 +23,8 @@ class NftSession():
         self.reference_vol = MrVol()  # mc_template
         self.vect_end_cond = np.ones((self.config.volumes_nr - self.config.skip_vol_nr, 1))
         self.first_nf_inds = []
+        self.pos_contrast = []
+        self.neg_contrast = []
         self.nr_rois = 0
         self.rois = []
         self.xdim_img_count = 0  # number of image in mosaic per horizontal
@@ -59,9 +61,11 @@ class NftSession():
 
             inc = inc + 1
 
-
-
-        # TODO: contrast
+        # Contrast and Conditions For Contrast
+        if "ContrastActivations" in simulation_protocol:
+            splitted_contrast = simulation_protocol["ContrastActivations"].split("*")
+            self.pos_contrast = np.array(splitted_contrast[0::2])
+            self.neg_contrast = -self.pos_contrast
 
 
     def select_rois(self):
@@ -118,6 +122,7 @@ class NftIteration():
     # --------------------------------------------------------------------------
     def process_time_series(self):
         self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
+        self.mr_time_series.preprocessing(self.iter_norm_number)
 
     # --------------------------------------------------------------------------
     # test function
