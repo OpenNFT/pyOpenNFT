@@ -52,9 +52,9 @@ class Window(QWidget):
 
     def init_shm(self):
 
-        self.base_array = np.zeros((self.nr_vol, 6), dtype=np.float32)
-        self.mc_shm = shared_memory.SharedMemory(create=True, size=self.base_array.nbytes, name=con.shm_file_names[0])
-        self.mc_data = np.ndarray(shape=self.base_array.shape, dtype=self.base_array.dtype, buffer=self.mc_shm.buf)
+        base_array = np.zeros((self.nr_vol, 6), dtype=np.float32)
+        self.mc_shm = shared_memory.SharedMemory(create=True, size=base_array.nbytes, name=con.shm_file_names[0])
+        self.mc_data = np.ndarray(shape=base_array.shape, dtype=base_array.dtype, buffer=self.mc_shm.buf)
 
     def createMcPlot(self, layoutPlot):
         mctrotplot = pg.PlotWidget(self)
