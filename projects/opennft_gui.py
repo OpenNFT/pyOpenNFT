@@ -16,12 +16,6 @@ from opennft.config import config as con
 
 class Window(QWidget):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        loadUi('opennft.ui', self)
-
-        self.timer = QTimer(self)
-        self.timer.timeout.connect(self.onTimer)
 
         self.init_service_data()
 
@@ -32,8 +26,18 @@ class Window(QWidget):
 
         self.init_shm()
 
-        self.mcPlot1 = self.createMcPlot(self.layoutPlot1)
-        self.startBtn.clicked.connect(self.onStart)
+        if con.use_gui:
+            super().__init__(*args, **kwargs)
+
+            loadUi('opennft.ui', self)
+
+            self.mcPlot = self.createMcPlot(self.layoutPlot1)
+            self.btnStart.clicked.connect(self.onStart)
+            self.timer = QTimer(self)
+            self.timer.timeout.connect(self.onTimer)
+            self.show()
+        else:
+            self.onStart()
 
     def init_service_data(self):
 
@@ -50,7 +54,7 @@ class Window(QWidget):
 
         self.base_array = np.zeros((self.nr_vol, 6), dtype=np.float32)
         self.mc_shm = shared_memory.SharedMemory(create=True, size=self.base_array.nbytes, name=con.shm_file_names[0])
-        self.mc_data1 = np.ndarray(shape=self.base_array.shape, dtype=self.base_array.dtype, buffer=self.mc_shm.buf)
+        self.mc_data = np.ndarray(shape=self.base_array.shape, dtype=self.base_array.dtype, buffer=self.mc_shm.buf)
 
     def createMcPlot(self, layoutPlot):
         mctrotplot = pg.PlotWidget(self)
@@ -103,13 +107,14 @@ class Window(QWidget):
         if not self._process.is_alive():
             print("main starting process")
             self._process.start()
-            self.timer.start(30)
+            if con.use_gui:
+                self.timer.start(30)
         else:
             pass
 
     def onTimer(self):
         if self._service_data["data_ready_flags"]:
-            self.drawMcPlots(self.mcPlot1, self.mc_data1)
+            self.drawMcPlots(self.mcPlot, self.mc_data)
             self._service_data["data_ready_flags"] = False
 
     def closeEvent(self, event):
@@ -125,5 +130,4 @@ class Window(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     w = Window()
-    w.show()
     sys.exit(app.exec_())
