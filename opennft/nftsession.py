@@ -8,7 +8,7 @@ from scipy.io import savemat
 from opennft.mrvol import MrVol
 from opennft.mrroi import MrROI
 from opennft.mrtimeseries import MrTimeSeries
-from opennft.utils import get_mosaic_dim, img_2d_to_3d
+from opennft.utils import get_mosaic_dim, img2d_vol3d
 
 
 # --------------------------------------------------------------------------
@@ -108,7 +108,7 @@ class NftIteration():
     def load_vol(self, file_name, im_type):
         # возможно стоит сделать по задел под мультимодальность
         self.mr_vol.load_vol(file_name, im_type)
-        self.mr_vol.volume = np.array(img_2d_to_3d(self.mr_vol.volume, self.session.xdim_img_count,
+        self.mr_vol.volume = np.array(img2d_vol3d(self.mr_vol.volume, self.session.xdim_img_count,
                                           self.session.ydim_img_count, self.session.reference_vol.dim), order='F')
 
     # --------------------------------------------------------------------------

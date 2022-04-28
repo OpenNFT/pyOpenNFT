@@ -45,7 +45,7 @@ def test_mc_nii(data_path, second_data_path, nii_image_1, p_struct, matlab_mc_re
 
             r[1]["mat"] = r[0]["mat"]
             r[1]["dim"] = dim_vol.copy()
-            tmp_vol = utils.img_2d_to_3d(np.array(data.get_fdata(), order='F').squeeze().T,
+            tmp_vol = utils.img2d_vol3d(np.array(data.get_fdata(), order='F').squeeze().T,
                                          xdim_img_number, ydim_img_number, dim_vol)
 
             if p_struct["isZeroPadding"].item():

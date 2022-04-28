@@ -37,7 +37,7 @@ def test_spm_rt(data_path, dcm_image, nii_image_1, p_struct, matlab_result):
         dcm_data = np.array(dcm_image, dtype=float)
 
         r[1]["mat"] = nii_image_1.affine
-        tmp_vol = utils.img_2d_to_3d(dcm_data, xdim_img_number, ydim_img_number, dim_vol)
+        tmp_vol = utils.img2d_vol3d(dcm_data, xdim_img_number, ydim_img_number, dim_vol)
 
         if p_struct["isZeroPadding"].item():
             dim_vol[2] = dim_vol[2] + nr_zero_pad_vol * 2

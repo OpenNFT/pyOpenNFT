@@ -27,7 +27,7 @@ class MrVol():
         self.vol_type = vol_type
         if vol_type == "nii":
             image = nibabel.load(file_path, mmap=False)
-            self.volume = np.array(image.get_fdata(), order='F')
+            self.volume = np.array(image.get_fdata(), dtype=np.float32, order='F')
             self.dim = np.array(image.shape)
 
             mat = image.affine

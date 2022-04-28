@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def img_2d_to_3d(img2d, xdim_img_number, ydim_img_number, dim3d):
+def img2d_vol3d(img2d, xdim_img_number, ydim_img_number, dim3d):
     sl = 0
     vol3d = np.zeros(dim3d)
     for sy in range(0, ydim_img_number):
@@ -16,19 +16,19 @@ def img_2d_to_3d(img2d, xdim_img_number, ydim_img_number, dim3d):
     return vol3d
 
 
-def vol_3d_to_2d(vol3d, sl_nr_img2d_dimx, sl_nr_img2d_dimy, xdim_img_number, ydim_img_number, dim3d):
+def vol3d_img2d(vol3d, sl_nr_img2d_dimx, sl_nr_img2d_dimy, xdim_img_number, ydim_img_number, dim3d):
     sl = 0
-    img_2d = np.zeros((ydim_img_number, xdim_img_number))
+    img2d = np.zeros((ydim_img_number, xdim_img_number))
 
     for sy in range(0, sl_nr_img2d_dimy):
         for sx in range(0, sl_nr_img2d_dimx):
             if sl >= dim3d[2]:
                 break
             else:
-                img_2d[sy * dim3d[1]:(sy + 1) * dim3d[1], sx * dim3d[0]:(sx + 1) * dim3d[0]] = np.rot90(vol3d[:, :, sl])
+                img2d[sy * dim3d[1]:(sy + 1) * dim3d[1], sx * dim3d[0]:(sx + 1) * dim3d[0]] = np.rot90(vol3d[:, :, sl])
             sl += 1
 
-    return img_2d
+    return img2d
 
 
 def get_mosaic_dim(dim3d):

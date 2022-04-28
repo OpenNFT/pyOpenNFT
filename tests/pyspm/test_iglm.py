@@ -4,7 +4,7 @@ from rtspm import spm_smooth
 from scipy.io import savemat
 
 from opennft.iglm_vol import iglm_vol
-from opennft.utils import ar_regr, vol_3d_to_2d, zscore
+from opennft.utils import ar_regr, vol3d_img2d, zscore
 
 
 @pytest.mark.fourth
@@ -155,7 +155,7 @@ def prepr_vol(main_loop_data, p, sm_resl_vol, ind_iglm):
         temp_map[idx_act_vox["pos"]] = stat_map_vect
         stat_map_3d_pos = np.reshape(temp_map, dim, order='F')
 
-        stat_map_2d_pos = vol_3d_to_2d(stat_map_3d_pos, sl_nr_img_2d_dimx, sl_nr_img_2d_dimy,
+        stat_map_2d_pos = vol3d_img2d(stat_map_3d_pos, sl_nr_img_2d_dimx, sl_nr_img_2d_dimy,
                                        img2d_dim_x, img2d_dim_y, dim) / max_t_val_pos
         stat_map_2d_pos *= 255
 

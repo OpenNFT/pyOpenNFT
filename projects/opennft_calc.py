@@ -35,10 +35,10 @@ class OpenNFTCalc(mp.Process):
         simulation_protocol = loader.simulation_protocol  # simulation protocol dictionary from JSON
 
         session = nftsession.NftSession(config)
-        session.setup()
-        session.set_protocol(simulation_protocol)
         # setup ROIs for session
         # setup mr_reference for session
+        session.setup()
+        session.set_protocol(simulation_protocol)
 
         self.config = config
         self.simulation_protocol = simulation_protocol
@@ -46,8 +46,11 @@ class OpenNFTCalc(mp.Process):
         self.iteration = nftsession.NftIteration(session)
         self.nfb_calc = Nfb(session, self.iteration)
 
-        self._service_data["nr_vol"] = self.session.config.volumes_nr-self.session.config.skip_vol_nr
-        self._service_data["nr_rois"] = self.session.nr_rois
+        self._service_data["nr_vol"] = session.config.volumes_nr-session.config.skip_vol_nr
+        self._service_data["nr_rois"] = session.nr_rois
+        self._service_data["vol_dim"] = session.reference_vol.dim
+        self._service_data["mosaic_dim"] = tuple([session.img2d_dimx, session.img2d_dimy])
+        self._service_data["vol_mat"] = self.session.reference_vol.mat
 
     def init_shm(self):
 
@@ -56,6 +59,9 @@ class OpenNFTCalc(mp.Process):
 
         self.mc_shm = shared_memory.SharedMemory(name=con.shm_file_names[0])
         self.mc_data = np.ndarray(shape=(nr_vol, 6), dtype=np.float32, buffer=self.mc_shm.buf)
+
+        self.epi_shm = shared_memory.SharedMemory(name=con.shm_file_names[2])
+        self.epi_volume = np.ndarray(shape=self.session.reference_vol.dim, dtype=np.float32, buffer=self.epi_shm.buf, order="F")
 
     # --------------------------------------------------------------------------
     def run(self):
@@ -94,9 +100,11 @@ class OpenNFTCalc(mp.Process):
 
             time_start = time.time()
             self.iteration.process_vol()
+            self.epi_volume[:,:,:] = self.iteration.mr_vol.volume
+            self._service_data["ready_to_form"] = True
 
             self.mc_data[self.iteration.iter_norm_number, :] = self.iteration.mr_time_series.mc_params[:,-1].T
-            self._service_data["data_ready_flags"] = True
+            self._service_data["data_ready_flag"] = True
 
             self.iteration.process_time_series()
 
@@ -108,9 +116,5 @@ class OpenNFTCalc(mp.Process):
         # self.iteration.save_time_series()
 
         self.mc_shm.close()
+        self.epi_shm.close()
         print("calc process finished")
-
-#
-# # --------------------------------------------------------------------------
-# if __name__ == '__main__':
-#     main()

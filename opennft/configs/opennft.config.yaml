@@ -4,6 +4,13 @@
 cglm_ar1: True
 a_ar1: 0.2
 shm_file_names:
-  - mc_data
-  - raw_ts_data
+  - mc_ts
+  - mosaic
+  - epi_volume
+  - stat_volume
+  - rtqa_volume
+  - projections_t
+  - projections_c
+  - projections_s
 use_gui: True
+use_roi: False

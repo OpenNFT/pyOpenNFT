@@ -57,7 +57,7 @@ def test_mc_dcm(data_path, third_data_path, nii_image_1, p_struct, matlab_mc_res
 
             r[1]["mat"] = r[0]["mat"]
             r[1]["dim"] = dim_vol.copy()
-            tmp_vol = utils.img_2d_to_3d(data, xdim_img_number, ydim_img_number, dim_vol)
+            tmp_vol = utils.img2d_vol3d(data, xdim_img_number, ydim_img_number, dim_vol)
 
             if p_struct["isZeroPadding"].item():
                 dim_vol[2] = dim_vol[2] + nr_zero_pad_vol * 2

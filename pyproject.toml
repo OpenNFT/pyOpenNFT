@@ -48,6 +48,9 @@ pydantic = "^1.9.0"
 python-rtspm = "^0.2.1"
 PyQt5 = "^5.15.6"
 pyqtgraph = "^0.12.4"
+opencv-python = "^4.5.5"
+cycler = "^0.11.0"
+matplotlib = "^3.5.1"
 
 [tool.poetry.dev-dependencies]
 pybind11 = "^2.6.1"
