@@ -62,12 +62,8 @@ class OpenNFTCore(QWidget):
 
             self.mcPlot = self.createMcPlot(self.layoutPlot1)
             self.btnStart.clicked.connect(self.onStart)
-            self.plotsTimer = QTimer(self)
-            self.plotsTimer.timeout.connect(self.onCheckPlotsUpdated)
-            self.mosaicViewTimer = QTimer(self)
-            self.mosaicViewTimer.timeout.connect(self.onCheckMosaicViewUpdated)
-            self.orthViewTimer = QTimer(self)
-            self.orthViewTimer.timeout.connect(self.onCheckOrthViewUpdated)
+            self.guiTimer = QTimer(self)
+            self.guiTimer.timeout.connect(self.onCheckGUIUpdated)
             self.show()
         else:
             self.onStart()
@@ -195,9 +191,7 @@ class OpenNFTCore(QWidget):
             print("main starting process")
             self._calc_process.start()
             if con.use_gui:
-                self.plotsTimer.start(30)
-                self.mosaicViewTimer.start(30)
-                self.orthViewTimer.start(30)
+                self.guiTimer.start(30)
         else:
             pass
 
@@ -227,11 +221,24 @@ class OpenNFTCore(QWidget):
 
         logger.debug('New cursor coords {} for proj "{}" have been received', pos, proj.name)
 
-    def onCheckPlotsUpdated(self):
+    def onCheckGUIUpdated(self):
 
         if self._service_data["data_ready_flag"]:
             self.drawMcPlots(self.mcPlot, self.mc_data)
             self._service_data["data_ready_flag"] = False
+
+        if self._service_data["view_mode"] == ImageViewMode.mosaic :
+
+            if self._service_data["done_mosaic_templ"]:
+
+                self.onCheckMosaicViewUpdated()
+
+        else:
+
+            if self._service_data["done_orth"]:
+
+                self.onCheckOrthViewUpdated()
+                self._service_data["done_orth"] = False
 
     def onCheckMosaicViewUpdated(self):
 
@@ -247,20 +254,16 @@ class OpenNFTCore(QWidget):
 
     def onCheckOrthViewUpdated(self):
 
-        if self._service_data["done_orth"]:
+        for proj in projview.ProjectionType:
 
-            for proj in projview.ProjectionType:
+            if proj == projview.ProjectionType.transversal:
+                bg_image = self.proj_t.T
+            elif proj == projview.ProjectionType.sagittal:
+                bg_image = self.proj_s.T
+            elif proj == projview.ProjectionType.coronal:
+                bg_image = self.proj_c.T
 
-                if proj == projview.ProjectionType.transversal:
-                    bg_image = self.proj_t.T
-                elif proj == projview.ProjectionType.sagittal:
-                    bg_image = self.proj_s.T
-                elif proj == projview.ProjectionType.coronal:
-                    bg_image = self.proj_c.T
-
-                self.orthView.set_background_image(proj, bg_image)
-
-            self._service_data["done_orth"] = False
+            self.orthView.set_background_image(proj, bg_image)
 
     def closeEvent(self, event):
         if self._calc_process.is_alive():
