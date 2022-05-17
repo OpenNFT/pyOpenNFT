@@ -19,27 +19,27 @@ class VolViewFormation(mp.Process):
         mp.Process.__init__(self)
         self.str_param = dict([])
 
-        self._service_data = service_data
+        self.exchange_data = service_data
 
         self.thr_calculator = MapImageThresholdsCalculator(no_value=0.0)
         self.pos_image = RgbaMapImage(colormap='hot', no_value=0.0)
         self.neg_image = RgbaMapImage(colormap='Blues_r', no_value=0.0)
 
-        self.mat_epi = self._service_data["vol_mat"]
-        self.dim = self._service_data["vol_dim"]
+        self.mat_epi = self.exchange_data["vol_mat"]
+        self.dim = self.exchange_data["vol_dim"]
 
         self.xdim, self.ydim, self.img2d_dimx, self.img2d_dimy = get_mosaic_dim(self.dim)
 
-        # if not (self._service_data["anat_volume"] is None):
-        #     anat_name = self._service_data["anat_volume"]
+        # if not (self.exchange_data["anat_volume"] is None):
+        #     anat_name = self.exchange_data["anat_volume"]
         #     anat_data = nib.load(anat_name, mmap=False)
         #     self.anat_volume = np.array(anat_data.get_fdata(), order="F")
         #     self.mat_anat = anat_data.affine
 
         # ROIs
-        if self._service_data["is_ROI"]:
-            self.ROI_vols = np.array(self._service_data["ROI_vols"], order='F')
-            self.ROI_mats = np.array(self._service_data["ROI_mats"], order='F')
+        if self.exchange_data["is_ROI"]:
+            self.ROI_vols = np.array(self.exchange_data["ROI_vols"], order='F')
+            self.ROI_mats = np.array(self.exchange_data["ROI_mats"], order='F')
         else:
             self.ROI_vols = []
             self.ROI_mats = []
@@ -48,66 +48,66 @@ class VolViewFormation(mp.Process):
 
         bb = self.str_param['bb']
         dims = np.squeeze(np.round(np.diff(bb, axis=0).T + 1))
-        self._service_data["proj_dims"] = dims.astype(np.int32)
+        self.exchange_data["proj_dims"] = dims.astype(np.int32)
 
-    def init_shm(self):
+    def init_shmem(self):
 
-        self.mosaic_shm = shared_memory.SharedMemory(name=con.shm_file_names[1])
+        self.mosaic_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[1])
         mosaic_array = np.zeros((self.img2d_dimx, self.img2d_dimy), dtype=np.float32)
         self.mosaic_template = np.ndarray(shape=mosaic_array.shape,
                                           dtype=mosaic_array.dtype,
-                                          buffer=self.mosaic_shm.buf)
+                                          buffer=self.mosaic_shmem.buf)
         self.pos_mosaic_overlay = np.ndarray(shape=mosaic_array.shape,
                                               dtype=mosaic_array.dtype,
                                               offset=mosaic_array.nbytes+1,
-                                              buffer=self.mosaic_shm.buf)
+                                              buffer=self.mosaic_shmem.buf)
         self.neg_mosaic_overlay = np.ndarray(shape=mosaic_array.shape,
                                               dtype=mosaic_array.dtype,
                                               offset=mosaic_array.nbytes*2+1,
-                                              buffer=self.mosaic_shm.buf)
+                                              buffer=self.mosaic_shmem.buf)
 
-        self.epi_shm = shared_memory.SharedMemory(name=con.shm_file_names[2])
+        self.epi_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[2])
         self.epi_volume = np.ndarray(shape=self.dim,
                                      dtype=np.float32,
-                                     buffer=self.epi_shm.buf,
+                                     buffer=self.epi_shmem.buf,
                                      order="F")
 
-        self.overlay_shm = shared_memory.SharedMemory(name=con.shm_file_names[3])
+        self.overlay_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
         self.overlay_vol = np.ndarray(shape=self.dim,
                                      dtype=np.float32,
-                                     buffer=self.overlay_shm.buf,
+                                     buffer=self.overlay_shmem.buf,
                                      order="F")
 
-        dims = self._service_data["proj_dims"]
-        self.proj_t_shm = shared_memory.SharedMemory(name=con.shm_file_names[5])
+        dims = self.exchange_data["proj_dims"]
+        self.proj_t_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[5])
         self.proj_t = np.ndarray(shape=(dims[0],dims[1]),
                                  dtype=np.float32,
-                                 buffer=self.proj_t_shm.buf,
+                                 buffer=self.proj_t_shmem.buf,
                                  order="F")
 
-        self.proj_c_shm = shared_memory.SharedMemory(name=con.shm_file_names[6])
+        self.proj_c_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[6])
         self.proj_c = np.ndarray(shape=(dims[0],dims[2]),
                                  dtype=np.float32,
-                                 buffer=self.proj_c_shm.buf,
+                                 buffer=self.proj_c_shmem.buf,
                                  order="F")
 
-        self.proj_s_shm = shared_memory.SharedMemory(name=con.shm_file_names[7])
+        self.proj_s_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[7])
         self.proj_s = np.ndarray(shape=(dims[1],dims[2]),
                                  dtype=np.float32,
-                                 buffer=self.proj_s_shm.buf,
+                                 buffer=self.proj_s_shmem.buf,
                                  order="F")
 
     def run(self):
 
-        self.init_shm()
+        self.init_shmem()
 
         np.seterr(divide='ignore', invalid='ignore')
 
-        while not self._service_data["is_stopped"]:
+        while not self.exchange_data["is_stopped"]:
 
-            if self._service_data["ready_to_form"]:
+            if self.exchange_data["ready_to_form"]:
 
-                if self._service_data["view_mode"] == 0:
+                if self.exchange_data["view_mode"] == 'mosaic':
 
                     img_vol = self.epi_volume
                     max_vol = np.max(img_vol)
@@ -116,29 +116,29 @@ class VolViewFormation(mp.Process):
                     self.mosaic_template[:,:] = vol3d_img2d(img_vol, self.xdim, self.ydim,
                                                        self.img2d_dimx, self.img2d_dimy, self.dim)
 
-                    self._service_data["done_mosaic_templ"] = True
+                    self.exchange_data["done_mosaic_templ"] = True
 
-                    # if self._service_data["overlay_ready"]:
-                    #     if self._service_data["is_rtqa"]:
-                    #         overlay_vol = self._service_data["rtQA_volume"]
+                    # if self.exchange_data["overlay_ready"]:
+                    #     if self.exchange_data["is_rtqa"]:
+                    #         overlay_vol = self.exchange_data["rtQA_volume"]
                     #         overlay_img = vol3d_img2d(overlay_vol, self.xdim, self.ydim,
                     #                                   self.img2d_dimx, self.img2d_dimy, self.dim)
                     #         overlay_img = (overlay_img / np.max(overlay_img)) * 255
                     #     else:
-                    #         filename = self._service_data["stat_volume"]
-                    #         overlay_vol = np.memmap(filename, dtype=np.float64, shape=self._service_data["dim"], offset=0, order='F')
+                    #         filename = self.exchange_data["stat_volume"]
+                    #         overlay_vol = np.memmap(filename, dtype=np.float64, shape=self.exchange_data["dim"], offset=0, order='F')
                     #         overlay_img = vol3d_img2d(overlay_vol, self.xdim, self.ydim,
                     #                                   self.img2d_dimx, self.img2d_dimy, self.dim)
                     #         overlay_img = (overlay_img / np.max(overlay_img)) * 255
                     #
-                    #         if self._service_data["is_neg"]:
-                    #             neg_overlay_vol = np.memmap(filename, dtype=np.float64, shape=self._service_data["dim"],
+                    #         if self.exchange_data["is_neg"]:
+                    #             neg_overlay_vol = np.memmap(filename, dtype=np.float64, shape=self.exchange_data["dim"],
                     #                                         offset=overlay_vol.size * overlay_vol.data.itemsize, order='F')
                     #             neg_overlay_img = vol3d_img2d(neg_overlay_vol, self.xdim, self.ydim,
                     #                                           self.img2d_dimx, self.img2d_dimy, self.dim)
                     #             neg_overlay_img = (neg_overlay_img / np.max(neg_overlay_img)) * 255
                     #
-                    #     if self._service_data["auto_thr_pos"]:
+                    #     if self.exchange_data["auto_thr_pos"]:
                     #         pos_thr = self.thr_calculator(overlay_img)
                     #         if pos_thr.lower < 0:
                     #             pos_thr = Thresholds(0, pos_thr.upper)
@@ -147,8 +147,8 @@ class VolViewFormation(mp.Process):
                     #         pos_thr = self.output_data["pos_thresholds"]
                     #     self.output_data["mosaic_pos_overlay"] = self.pos_image(overlay_img, pos_thr, 1.0)
                     #
-                    #     if self._service_data["is_neg"]:
-                    #         if self._service_data["auto_thr_neg"]:
+                    #     if self.exchange_data["is_neg"]:
+                    #         if self.exchange_data["auto_thr_neg"]:
                     #             neg_thr = self.thr_calculator(neg_overlay_img)
                     #             if neg_thr.lower < 0:
                     #                 neg_thr = Thresholds(0, neg_thr.upper)
@@ -157,12 +157,12 @@ class VolViewFormation(mp.Process):
                     #             neg_thr = self.output_data["neg_thresholds"]
                     #         self.output_data["mosaic_neg_overlay"] = self.neg_image(neg_overlay_img, neg_thr, 1.0)
                     #
-                    #     self._service_data["done_mosaic_overlay"] = True
+                    #     self.exchange_data["done_mosaic_overlay"] = True
 
 
                 else:
 
-                    flags = [self._service_data["bg_type"], self._service_data["is_neg"], self._service_data["is_ROI"]]
+                    flags = [self.exchange_data["bg_type"], self.exchange_data["is_neg"], self.exchange_data["is_ROI"]]
 
                     # background
                     if flags[0] == "bgEPI":
@@ -175,8 +175,8 @@ class VolViewFormation(mp.Process):
                     ROI_vols = []
                     ROI_mats = []
 
-                    cursor_pos = self._service_data["cursor_pos"]
-                    flags_planes = self._service_data["flags_planes"]
+                    cursor_pos = self.exchange_data["cursor_pos"]
+                    flags_planes = self.exchange_data["flags_planes"]
 
                     proj = np.nonzero(flags_planes)
 
@@ -196,7 +196,7 @@ class VolViewFormation(mp.Process):
                     # pos_maps_values = np.array(self.output_data["overlay_t"].ravel(), dtype=np.uint8)
                     # pos_maps_values = np.append(pos_maps_values, self.output_data["overlay_c"].ravel())
                     # pos_maps_values = np.append(pos_maps_values, self.output_data["overlay_s"].ravel())
-                    # if self._service_data["auto_thr_pos"]:
+                    # if self.exchange_data["auto_thr_pos"]:
                     #     pos_thr = self.thr_calculator(pos_maps_values)
                     #     if (not pos_thr is None) and pos_thr.lower < 0:
                     #         pos_thr = Thresholds(0, pos_thr.upper)
@@ -207,11 +207,11 @@ class VolViewFormation(mp.Process):
                     # self.output_data["overlay_c"] = self.pos_image(self.output_data["overlay_c"], pos_thr, 1.0)
                     # self.output_data["overlay_s"] = self.pos_image(self.output_data["overlay_s"], pos_thr, 1.0)
                     #
-                    # if self._service_data["is_neg"]:
+                    # if self.exchange_data["is_neg"]:
                     #     neg_maps_values = np.array(self.output_data["neg_overlay_t"].ravel(), dtype=np.uint8)
                     #     neg_maps_values = np.append(neg_maps_values, self.output_data["neg_overlay_c"].ravel())
                     #     neg_maps_values = np.append(neg_maps_values, self.output_data["neg_overlay_s"].ravel())
-                    #     if self._service_data["auto_thr_neg"]:
+                    #     if self.exchange_data["auto_thr_neg"]:
                     #         neg_thr = self.thr_calculator(neg_maps_values)
                     #         if (not neg_thr is None) and neg_thr.lower < 0:
                     #             neg_thr = Thresholds(0, neg_thr.upper)
@@ -225,15 +225,15 @@ class VolViewFormation(mp.Process):
                     #     self.output_data["neg_overlay_s"] = self.neg_image(self.output_data["neg_overlay_s"],
                     #                                                        neg_thr, 1.0)
 
-                    self._service_data["done_orth"] = True
+                    self.exchange_data["done_orth"] = True
 
-                self._service_data["ready_to_form"] = False
+                self.exchange_data["ready_to_form"] = False
 
-        self.mosaic_shm.close()
-        self.epi_shm.close()
-        self.proj_t_shm.close()
-        self.proj_c_shm.close()
-        self.proj_s_shm.close()
+        self.mosaic_shmem.close()
+        self.epi_shmem.close()
+        self.proj_t_shmem.close()
+        self.proj_c_shmem.close()
+        self.proj_s_shmem.close()
 
     def prepare_orth_view(self, mat, dim):
         # set structure for Display and draw a first overlay
@@ -341,7 +341,7 @@ class VolViewFormation(mp.Process):
             neg_overlay_imgc = None
             neg_overlay_imgs = None
 
-        nrROIs = self._service_data["nr_rois"]
+        nrROIs = self.exchange_data["nr_rois"]
         ROI_t = [None]*nrROIs
         ROI_c = [None]*nrROIs
         ROI_s = [None]*nrROIs

@@ -27,17 +27,13 @@ class Nfb():
 
         pass
 
-    def main_loop_entry(self):
+    def nfb_init(self):
 
-        ind_vol = self.iteration.iter_number
-        skip_number = self.session.config.skip_vol_nr
-
-        if ind_vol < skip_number:
+        if self.iteration.iter_number < self.session.config.skip_vol_nr:
             return
 
         if self.session.config.type == "PSC":
-            iter_norm_number = ind_vol - skip_number
-            self.iteration.iter_norm_number = iter_norm_number
+            iter_norm_number = self.iteration.iter_norm_number
 
             condition = self.session.vect_end_cond[iter_norm_number]
             self.condition = condition

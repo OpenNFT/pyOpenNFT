@@ -11,31 +11,31 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QApplication, QWidget
 from loguru import logger
 
-import opennft_calc
+import opennft_console_proj
 from opennft import mosaicview, projview, mapimagewidget, volviewformation
 from opennft.config import config as con
 
 
-class ImageViewMode(enum.IntEnum):
-    mosaic = 0
-    orthview_anat = 1
-    orthview_epi = 2
+class ImageViewMode(str, enum.Enum):
+    mosaic = 'mosaic'
+    orthview_anat = 'orthview_anat'
+    orthview_epi = 'orthview_epi'
 
 
-class OpenNFTCore(QWidget):
+class OpenNFTManager(QWidget):
     def __init__(self, *args, **kwargs):
 
-        self.init_service_data()
+        self.init_exchange_data()
 
-        self._calc_process = opennft_calc.OpenNFTCalc(self._service_data)
+        self._core_process = opennft_console_proj.OpenNFTCoreProj(self.exchange_data)
 
-        self.nr_vol = self._service_data["nr_vol"]
-        self.nr_rois = self._service_data["nr_rois"]
-        self.vol_dim = self._service_data["vol_dim"]
-        self.mosaic_dim = self._service_data["mosaic_dim"]
+        self.nr_vol = self.exchange_data["nr_vol"]
+        self.nr_rois = self.exchange_data["nr_rois"]
+        self.vol_dim = self.exchange_data["vol_dim"]
+        self.mosaic_dim = self.exchange_data["mosaic_dim"]
         self.view_form_init()
 
-        self.init_shm()
+        self.init_shmem()
 
         if con.use_gui:
             super().__init__(*args, **kwargs)
@@ -68,76 +68,76 @@ class OpenNFTCore(QWidget):
         else:
             self.onStart()
 
-    def init_service_data(self):
+    def init_exchange_data(self):
 
-        self._service_data = mp.Manager().dict()
+        self.exchange_data = mp.Manager().dict()
 
-        self._service_data["data_ready_flag"] = False
-        self._service_data["init"] = False
-        self._service_data["nr_vol"] = 0
-        self._service_data["nr_rois"] = 0
-        self._service_data["vol_dim"] = 0
-        self._service_data["mosaic_dim"] = 0
-        self._service_data["is_ROI"] = con.use_roi
-        self._service_data["vol_mat"] = None
-        self._service_data["is_stopped"] = False
-        self._service_data["ready_to_form"] = False
-        self._service_data["view_mode"] = 0
-        self._service_data["done_mosaic_templ"] = False
-        self._service_data["done_orth"] = False
-        self._service_data["overlay_ready"] = False
+        self.exchange_data["data_ready_flag"] = False
+        self.exchange_data["init"] = False
+        self.exchange_data["nr_vol"] = 0
+        self.exchange_data["nr_rois"] = 0
+        self.exchange_data["vol_dim"] = 0
+        self.exchange_data["mosaic_dim"] = 0
+        self.exchange_data["is_ROI"] = con.use_roi
+        self.exchange_data["vol_mat"] = None
+        self.exchange_data["is_stopped"] = False
+        self.exchange_data["ready_to_form"] = False
+        self.exchange_data["view_mode"] = 'mosaic'
+        self.exchange_data["done_mosaic_templ"] = False
+        self.exchange_data["done_orth"] = False
+        self.exchange_data["overlay_ready"] = False
 
-        self._service_data["proj_dims"] = None
-        self._service_data["is_neg"] = False
-        self._service_data["bg_type"] = "bgEPI"
-        self._service_data["cursor_pos"] = (129, 95)
-        self._service_data["flags_planes"] = projview.ProjectionType.coronal.value
+        self.exchange_data["proj_dims"] = None
+        self.exchange_data["is_neg"] = False
+        self.exchange_data["bg_type"] = "bgEPI"
+        self.exchange_data["cursor_pos"] = (129, 95)
+        self.exchange_data["flags_planes"] = projview.ProjectionType.coronal.value
 
-    def init_shm(self):
+    def init_shmem(self):
 
         mc_array = np.zeros((self.nr_vol, 6), dtype=np.float32)
-        self.mc_shm = shared_memory.SharedMemory(create=True, size=mc_array.nbytes, name=con.shm_file_names[0])
-        self.mc_data = np.ndarray(shape=mc_array.shape, dtype=mc_array.dtype, buffer=self.mc_shm.buf)
+        self.mc_shmem = shared_memory.SharedMemory(create=True, size=mc_array.nbytes, name=con.shmem_file_names[0])
+        self.mc_data = np.ndarray(shape=mc_array.shape, dtype=mc_array.dtype, buffer=self.mc_shmem.buf)
 
         mosaic_array = np.zeros(self.mosaic_dim, dtype=np.float32)
-        self.mosaic_shm = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes * 3, name=con.shm_file_names[1])
-        self.mosaic_data = np.ndarray(shape=mosaic_array.shape, dtype=mosaic_array.dtype, buffer=self.mosaic_shm.buf)
+        self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes * 3, name=con.shmem_file_names[1])
+        self.mosaic_data = np.ndarray(shape=mosaic_array.shape, dtype=mosaic_array.dtype, buffer=self.mosaic_shmem.buf)
 
-        vol_array = np.zeros(self._service_data["vol_dim"], dtype=np.float32)
-        self.epi_shm = shared_memory.SharedMemory(create=True, size=vol_array.nbytes, name=con.shm_file_names[2])
-        self.epi_data = np.ndarray(shape=vol_array.shape, dtype=vol_array.dtype, buffer=self.epi_shm.buf)
-        self.epi_data[:,:,:] = self._calc_process.session.reference_vol.volume
+        vol_array = np.zeros(self.exchange_data["vol_dim"], dtype=np.float32)
+        self.epi_shmem = shared_memory.SharedMemory(create=True, size=vol_array.nbytes, name=con.shmem_file_names[2])
+        self.epi_data = np.ndarray(shape=vol_array.shape, dtype=vol_array.dtype, buffer=self.epi_shmem.buf)
+        self.epi_data[:,:,:] = self._core_process.session.reference_vol.volume
 
-        overlay_array = np.zeros(self._service_data["vol_dim"], dtype=np.float32)
-        self.overlay_shm = shared_memory.SharedMemory(create=True, size=overlay_array.nbytes, name=con.shm_file_names[3])
-        self.overlay_data = np.ndarray(shape=overlay_array.shape, dtype=overlay_array.dtype, buffer=self.overlay_shm.buf)
+        overlay_array = np.zeros(self.exchange_data["vol_dim"], dtype=np.float32)
+        self.overlay_shmem = shared_memory.SharedMemory(create=True, size=overlay_array.nbytes, name=con.shmem_file_names[3])
+        self.overlay_data = np.ndarray(shape=overlay_array.shape, dtype=overlay_array.dtype, buffer=self.overlay_shmem.buf)
 
-        dims = self._service_data["proj_dims"]
+        dims = self.exchange_data["proj_dims"]
         proj_array = np.zeros((dims[0],dims[1]), dtype=np.float32)
-        self.proj_t_shm = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shm_file_names[5])
+        self.proj_t_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[5])
         self.proj_t = np.ndarray(shape=(dims[0],dims[1]),
                                  dtype=np.float32,
-                                 buffer=self.proj_t_shm.buf,
+                                 buffer=self.proj_t_shmem.buf,
                                  order="F")
 
         proj_array = np.zeros((dims[0],dims[2]), dtype=np.float32)
-        self.proj_c_shm = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shm_file_names[6])
+        self.proj_c_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[6])
         self.proj_c = np.ndarray(shape=(dims[0],dims[2]),
                                  dtype=np.float32,
-                                 buffer=self.proj_c_shm.buf,
+                                 buffer=self.proj_c_shmem.buf,
                                  order="F")
 
         proj_array = np.zeros((dims[1],dims[2]), dtype=np.float32)
-        self.proj_s_shm = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shm_file_names[7])
+        self.proj_s_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[7])
         self.proj_s = np.ndarray(shape=(dims[1],dims[2]),
                                  dtype=np.float32,
-                                 buffer=self.proj_s_shm.buf,
+                                 buffer=self.proj_s_shmem.buf,
                                  order="F")
 
     def view_form_init(self):
 
-        self._orth_view = volviewformation.VolViewFormation(self._service_data)
-        self._orth_view.start()
+        self._view_form_process = volviewformation.VolViewFormation(self.exchange_data)
+        self._view_form_process.start()
 
     def createMcPlot(self, layoutPlot):
         mctrotplot = pg.PlotWidget(self)
@@ -161,7 +161,7 @@ class OpenNFTCore(QWidget):
 
         mctrrot = mcPlot.getPlotItem()
 
-        # if self._service_data["init"]:
+        # if self.exchange_data["init"]:
         mctrrot.clear()
 
         plots = []
@@ -187,9 +187,9 @@ class OpenNFTCore(QWidget):
             pt.setData(x=x, y=data[:, i1])
 
     def onStart(self):
-        if not self._calc_process.is_alive():
+        if not self._core_process.is_alive():
             print("main starting process")
-            self._calc_process.start()
+            self._core_process.start()
             if con.use_gui:
                 self.guiTimer.start(30)
         else:
@@ -208,7 +208,7 @@ class OpenNFTCore(QWidget):
             mode = ImageViewMode.orthview_epi
 
         self.stackedWidgetImages.setCurrentIndex(stack_index)
-        self._service_data["view_mode"] = mode
+        self.exchange_data["view_mode"] = mode
 
         # if self.cbImageViewMode.isEnabled():
         #     self.updateOrthViewAsync()
@@ -216,41 +216,41 @@ class OpenNFTCore(QWidget):
 
     # --------------------------------------------------------------------------
     def onChangeOrthViewCursorPosition(self, pos, proj):
-        self._service_data["cursor_pos"] = pos
-        self._service_data["flags_planes"] = proj.value
+        self.exchange_data["cursor_pos"] = pos
+        self.exchange_data["flags_planes"] = proj.value
 
         logger.debug('New cursor coords {} for proj "{}" have been received', pos, proj.name)
 
     def onCheckGUIUpdated(self):
 
-        if self._service_data["data_ready_flag"]:
+        if self.exchange_data["data_ready_flag"]:
             self.drawMcPlots(self.mcPlot, self.mc_data)
-            self._service_data["data_ready_flag"] = False
+            self.exchange_data["data_ready_flag"] = False
 
-        if self._service_data["view_mode"] == ImageViewMode.mosaic :
+        if self.exchange_data["view_mode"] == ImageViewMode.mosaic :
 
-            if self._service_data["done_mosaic_templ"]:
+            if self.exchange_data["done_mosaic_templ"]:
 
                 self.onCheckMosaicViewUpdated()
 
         else:
 
-            if self._service_data["done_orth"]:
+            if self.exchange_data["done_orth"]:
 
                 self.onCheckOrthViewUpdated()
-                self._service_data["done_orth"] = False
+                self.exchange_data["done_orth"] = False
 
     def onCheckMosaicViewUpdated(self):
 
-        if self._service_data["done_mosaic_templ"]:
-            background_image = np.ndarray(shape=self.mosaic_dim, dtype=np.float32, buffer=self.mosaic_shm.buf)
+        if self.exchange_data["done_mosaic_templ"]:
+            background_image = np.ndarray(shape=self.mosaic_dim, dtype=np.float32, buffer=self.mosaic_shmem.buf)
             if background_image.size > 0:
                 logger.info("Done mosaic template")
                 self.mosaicImageView.set_background_image(background_image)
             else:
                 return
 
-            self._service_data["done_mosaic_templ"] = False
+            self.exchange_data["done_mosaic_templ"] = False
 
     def onCheckOrthViewUpdated(self):
 
@@ -266,33 +266,37 @@ class OpenNFTCore(QWidget):
             self.orthView.set_background_image(proj, bg_image)
 
     def closeEvent(self, event):
-        if self._calc_process.is_alive():
-            self._calc_process.join()
-        if self._orth_view.is_alive():
-            self._service_data["is_stopped"] = True
-            self._orth_view.join()
+        if self._core_process.is_alive():
+            self._core_process.join()
+        if self._view_form_process.is_alive():
+            self.exchange_data["is_stopped"] = True
+            self._view_form_process.join()
 
-        self.mc_shm.close()
-        self.mc_shm.unlink()
-        self.mosaic_shm.close()
-        self.mosaic_shm.unlink()
-        self.epi_shm.close()
-        self.epi_shm.unlink()
-        self.stat_shm.close()
-        self.stat_shm.unlink()
-        self.proj_t_shm.close()
-        self.proj_t_shm.unlink()
-        self.proj_c_shm.close()
-        self.proj_c_shm.unlink()
-        self.proj_s_shm.close()
-        self.proj_s_shm.unlink()
+        self.close_shmem()
 
-        self._service_data = None
+        self.exchange_data = None
         self.close()
         print("main process finished")
+
+    def close_shmem(self):
+
+        self.mc_shmem.close()
+        self.mc_shmem.unlink()
+        self.mosaic_shmem.close()
+        self.mosaic_shmem.unlink()
+        self.epi_shmem.close()
+        self.epi_shmem.unlink()
+        self.stat_shmem.close()
+        self.stat_shmem.unlink()
+        self.proj_t_shmem.close()
+        self.proj_t_shmem.unlink()
+        self.proj_c_shmem.close()
+        self.proj_c_shmem.unlink()
+        self.proj_s_shmem.close()
+        self.proj_s_shmem.unlink()
 
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
-    w = OpenNFTCore()
+    w = OpenNFTManager()
     sys.exit(app.exec_())

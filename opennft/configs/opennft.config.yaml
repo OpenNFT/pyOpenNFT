@@ -3,14 +3,14 @@
 
 cglm_ar1: True
 a_ar1: 0.2
-shm_file_names:
+shmem_file_names:
   - mc_ts
   - mosaic
   - epi_volume
   - stat_volume
   - rtqa_volume
-  - projections_t
-  - projections_c
-  - projections_s
+  - orth_view_t
+  - orth_view_c
+  - orth_view_s
 use_gui: True
 use_roi: False

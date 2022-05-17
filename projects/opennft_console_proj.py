@@ -15,13 +15,14 @@ import opennft.nftsession as nftsession
 from opennft.config import config as con
 
 
-class OpenNFTCalc(mp.Process):
+class OpenNFTCoreProj(mp.Process):
 
     def __init__(self, service_dict):
 
         super().__init__()
-        self._service_data = service_dict
+        self.exchange_data = service_dict
         self.init_data()
+        self.init_exchange_data()
 
     def init_data(self):
 
@@ -46,28 +47,30 @@ class OpenNFTCalc(mp.Process):
         self.iteration = nftsession.NftIteration(session)
         self.nfb_calc = Nfb(session, self.iteration)
 
-        self._service_data["nr_vol"] = session.config.volumes_nr-session.config.skip_vol_nr
-        self._service_data["nr_rois"] = session.nr_rois
-        self._service_data["vol_dim"] = session.reference_vol.dim
-        self._service_data["mosaic_dim"] = tuple([session.img2d_dimx, session.img2d_dimy])
-        self._service_data["vol_mat"] = self.session.reference_vol.mat
+    def init_exchange_data(self):
 
-    def init_shm(self):
+        self.exchange_data["nr_vol"] = self.session.config.volumes_nr - self.session.config.skip_vol_nr
+        self.exchange_data["nr_rois"] = self.session.nr_rois
+        self.exchange_data["vol_dim"] = self.session.reference_vol.dim
+        self.exchange_data["mosaic_dim"] = tuple([self.session.img2d_dimx, self.session.img2d_dimy])
+        self.exchange_data["vol_mat"] = self.session.reference_vol.mat
+
+    def init_shmem(self):
 
         nr_vol = self.session.config.volumes_nr-self.session.config.skip_vol_nr
         nr_rois = self.session.nr_rois
 
-        self.mc_shm = shared_memory.SharedMemory(name=con.shm_file_names[0])
-        self.mc_data = np.ndarray(shape=(nr_vol, 6), dtype=np.float32, buffer=self.mc_shm.buf)
+        self.mc_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[0])
+        self.mc_data = np.ndarray(shape=(nr_vol, 6), dtype=np.float32, buffer=self.mc_shmem.buf)
 
-        self.epi_shm = shared_memory.SharedMemory(name=con.shm_file_names[2])
-        self.epi_volume = np.ndarray(shape=self.session.reference_vol.dim, dtype=np.float32, buffer=self.epi_shm.buf, order="F")
+        self.epi_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[2])
+        self.epi_volume = np.ndarray(shape=self.session.reference_vol.dim, dtype=np.float32, buffer=self.epi_shmem.buf, order="F")
 
     # --------------------------------------------------------------------------
     def run(self):
         # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
 
-        self.init_shm()
+        self.init_shmem()
         print("calc process started")
 
         fw = FileWatcher()
@@ -85,7 +88,8 @@ class OpenNFTCalc(mp.Process):
 
             if self.iteration.pre_iter < self.iteration.iter_number:
                 # pre-acquisition routine
-                self.nfb_calc.main_loop_entry()
+                self.iteration.iter_norm_number = self.iteration.iter_number - self.session.config.skip_vol_nr
+                self.nfb_calc.nfb_init()
 
             self.iteration.load_vol(vol_filename, "dcm")
 
@@ -96,15 +100,15 @@ class OpenNFTCalc(mp.Process):
                 self.iteration.iter_number += 1
                 continue
 
-            self._service_data["init"] = (self.iteration.iter_number == self.session.config.skip_vol_nr)
+            self.exchange_data["init"] = (self.iteration.iter_number == self.session.config.skip_vol_nr)
 
             time_start = time.time()
             self.iteration.process_vol()
             self.epi_volume[:,:,:] = self.iteration.mr_vol.volume
-            self._service_data["ready_to_form"] = True
+            self.exchange_data["ready_to_form"] = True
 
             self.mc_data[self.iteration.iter_norm_number, :] = self.iteration.mr_time_series.mc_params[:,-1].T
-            self._service_data["data_ready_flag"] = True
+            self.exchange_data["data_ready_flag"] = True
 
             self.iteration.process_time_series()
 
@@ -115,6 +119,6 @@ class OpenNFTCalc(mp.Process):
 
         # self.iteration.save_time_series()
 
-        self.mc_shm.close()
-        self.epi_shm.close()
+        self.mc_shmem.close()
+        self.epi_shmem.close()
         print("calc process finished")
