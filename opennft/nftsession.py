@@ -44,27 +44,29 @@ class NftSession():
         conditions = simulation_protocol["ConditionIndex"]
         cond_length = len(conditions)
 
-        prot_names = []
+        self.prot_names = []
+        self.offsets = []
         inc = 2
         for i in range(cond_length):
-            prot_names.append(conditions[i]["ConditionName"])
+            self.prot_names.append(conditions[i]["ConditionName"])
 
             # TODO: check if baseline field already exists in protocol
-            offsets = conditions[i]["OnOffsets"]
+            offsets = np.array(conditions[i]["OnOffsets"])
 
             for j in range(len(offsets)):
                 self.vect_end_cond[offsets[j][0]-1:offsets[j][1]] = inc
 
-                # for NFB blocks
-                if inc == 2:
-                    self.first_nf_inds.append(offsets[j][0]-1)
+
+            self.first_nf_inds.append(offsets[:,0]-1)
+
+            self.offsets.append(offsets)
 
             inc = inc + 1
 
         # Contrast and Conditions For Contrast
-        if "ContrastActivations" in simulation_protocol:
-            splitted_contrast = simulation_protocol["ContrastActivations"].split("*")
-            self.pos_contrast = np.array(splitted_contrast[0::2])
+        if "ContrastActivation" in simulation_protocol:
+            splitted_contrast = simulation_protocol["ContrastActivation"].split("*")
+            self.pos_contrast = np.array(splitted_contrast[0::2], dtype=np.int32)
             self.neg_contrast = -self.pos_contrast
 
 
