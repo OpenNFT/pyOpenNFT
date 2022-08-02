@@ -69,7 +69,11 @@ def zscore(x):
 
     mu = np.mean(x, axis=dim)
     sigma = np.std(x, ddof=1, axis=dim)
-    sigma[sigma == 0] = 1
+    if sigma.size == 1:
+        if sigma == 0:
+            sigma = 1
+    else:
+        sigma[sigma == 0] = 1
     z = (x - mu) / sigma
 
     return z

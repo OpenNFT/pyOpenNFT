@@ -526,7 +526,7 @@ six = ">=1.5"
 
 [[package]]
 name = "python-rtspm"
-version = "0.2.1"
+version = "0.2.4"
 description = "Python adaptation of SPM functions for real-time fMRI analysis"
 category = "main"
 optional = false
@@ -1216,19 +1216,19 @@ python-dateutil = [
     {file = "python_dateutil-2.8.2-py2.py3-none-any.whl", hash = "sha256:961d03dc3453ebbc59dbdea9e4e11c5651520a876d0f4db161e8674aae935da9"},
 ]
 python-rtspm = [
-    {file = "python-rtspm-0.2.1.tar.gz", hash = "sha256:e02b23d5c3859162d9187bcc7f1d4f87c1ff2f300f3972b0536f02e655c20ea0"},
-    {file = "python_rtspm-0.2.1-cp36-cp36m-macosx_10_16_x86_64.whl", hash = "sha256:31070207341f045817476f05e9afbd671c4d3c0f916460d3f6d37b26bea1705e"},
-    {file = "python_rtspm-0.2.1-cp36-cp36m-manylinux_2_17_x86_64.whl", hash = "sha256:4145c35797415f5a11dc74573c7c0fbf11582324690ff51d6ee26dbb9f990049"},
-    {file = "python_rtspm-0.2.1-cp36-cp36m-win_amd64.whl", hash = "sha256:703175ae02828204f82f3e4bfd88d2bc6514aa9b44a3a24bc4d7be6bfa001f83"},
-    {file = "python_rtspm-0.2.1-cp37-cp37m-macosx_10_16_x86_64.whl", hash = "sha256:1cf3c728705f13ea75c3e6963d8a999226b058d5a91dd4ed31aeac5470602def"},
-    {file = "python_rtspm-0.2.1-cp37-cp37m-manylinux_2_17_x86_64.whl", hash = "sha256:74017416513ceea1cf078d60a33629bdc2a0ac4d23d4693d076809a0f35adcd8"},
-    {file = "python_rtspm-0.2.1-cp37-cp37m-win_amd64.whl", hash = "sha256:b3a9fc7fc91c55c715f56efa3fde3f798b08502143e5b78af7d818238cd43eb2"},
-    {file = "python_rtspm-0.2.1-cp38-cp38-macosx_10_16_x86_64.whl", hash = "sha256:a9155bec28c7f06a8bfa6ca32c00dc5eb905ff9729a92ccd11aabfec75c1af81"},
-    {file = "python_rtspm-0.2.1-cp38-cp38-manylinux_2_17_x86_64.whl", hash = "sha256:5ff38763843a3934e5021907ec3df92e47604845459583114898bd36ba0b3ba3"},
-    {file = "python_rtspm-0.2.1-cp38-cp38-win_amd64.whl", hash = "sha256:86585afb2a570a6c7166f1b2c1a21ccdc4a8cf4985f5f67854fb2eb0ec523007"},
-    {file = "python_rtspm-0.2.1-cp39-cp39-macosx_10_16_x86_64.whl", hash = "sha256:d931c99f9f59d3de90241add2a14b396a21fcd5a98001635f2203237078d0a85"},
-    {file = "python_rtspm-0.2.1-cp39-cp39-manylinux_2_17_x86_64.whl", hash = "sha256:7fe8a7fcd5cd3a7058fb959037bd32acf2bfd80ae5b369d79c845cd49b0c5bea"},
-    {file = "python_rtspm-0.2.1-cp39-cp39-win_amd64.whl", hash = "sha256:eec00e0d825a171f366964e7dcc892bce933b9d1b6669a8838e89070aa0afe9f"},
+    {file = "python-rtspm-0.2.4.tar.gz", hash = "sha256:ce60b5139f17b8d8a2e2548e64cf3137626070c4e6fa2f3a7670d622c990a128"},
+    {file = "python_rtspm-0.2.4-cp36-cp36m-macosx_10_16_x86_64.whl", hash = "sha256:9b16f644a44d23f983fd3a1957f816c1b72fe2a1bc208513ce1250fa1837c550"},
+    {file = "python_rtspm-0.2.4-cp36-cp36m-manylinux_2_17_x86_64.whl", hash = "sha256:5c48862e389a204f7be7da019c259ee71f453f2401b84eee15574ca55011a58f"},
+    {file = "python_rtspm-0.2.4-cp36-cp36m-win_amd64.whl", hash = "sha256:04b9304a7e613c58c3190a84b662ee502f24647f10a74a9ff0e138977bafb86f"},
+    {file = "python_rtspm-0.2.4-cp37-cp37m-macosx_10_16_x86_64.whl", hash = "sha256:f0dd37e1d7cbf6696d0a2a51b4817cdbf5f3d37520d7abfbbec43eff39d62b2a"},
+    {file = "python_rtspm-0.2.4-cp37-cp37m-manylinux_2_17_x86_64.whl", hash = "sha256:fb1e9f274ba240f19c2452c7933d32e3c988a7591b9aec4021cb9e2030a106f4"},
+    {file = "python_rtspm-0.2.4-cp37-cp37m-win_amd64.whl", hash = "sha256:d84f99ca8b8f762896921c73574ab1b6596af232e82c7547dfbfb8586f812f75"},
+    {file = "python_rtspm-0.2.4-cp38-cp38-macosx_10_16_x86_64.whl", hash = "sha256:63e48a3507238bfa3bec3e748b8ba1e85e661f7ea33561d1428ef031d99044eb"},
+    {file = "python_rtspm-0.2.4-cp38-cp38-manylinux_2_17_x86_64.whl", hash = "sha256:c9fc86313385159e92dc419cbcaeb440ca4130c739ad3780fa89a3852ebc5d0c"},
+    {file = "python_rtspm-0.2.4-cp38-cp38-win_amd64.whl", hash = "sha256:0621e6ee5c39ff6a7dbbdce3a215b8892bc7664b6865a7e9af29fcfb381c5415"},
+    {file = "python_rtspm-0.2.4-cp39-cp39-macosx_10_16_x86_64.whl", hash = "sha256:8bdf48b31a4fef5a8aa5d7be8825ab56387164a63188444379c6c6c01fd1e7b9"},
+    {file = "python_rtspm-0.2.4-cp39-cp39-manylinux_2_17_x86_64.whl", hash = "sha256:faaacf75b071f42a9726dfb3f2cde80a55bd59cb8d0c163ce83c033ec7d33f4e"},
+    {file = "python_rtspm-0.2.4-cp39-cp39-win_amd64.whl", hash = "sha256:e72bf94e5641acb6551e4406745f6e32e76166e010b1d673ce48f427ed40fe76"},
 ]
 pytz = [
     {file = "pytz-2021.3-py2.py3-none-any.whl", hash = "sha256:3672058bc3453457b622aab7a1c3bfd5ab0bdae451512f6cf25f64ed37f5b87c"},

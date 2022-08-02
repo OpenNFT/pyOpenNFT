@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
-import shutil
+
 import time
 from pathlib import Path
 from loguru import logger
 import multiprocessing as mp
 from multiprocessing import shared_memory
 import numpy as np
+from rtspm import spm_setup
 
 from opennft.filewatcher import FileWatcher
 from opennft.nfbcalc import Nfb
 from opennft import LegacyNftConfigLoader
+from opennft.utils import ar_regr, zscore
 
 import opennft.nftsession as nftsession
 from opennft.config import config as con
@@ -40,12 +42,28 @@ class OpenNFTCoreProj(mp.Process):
         # setup mr_reference for session
         session.setup()
         session.set_protocol(simulation_protocol)
+        session.spm = spm_setup(config.tr,
+                                config.volumes_nr-config.skip_vol_nr,
+                                np.mean(session.reference_vol.volume, axis=None),
+                                session.offsets,
+                                session.first_nf_inds,
+                                session.prot_names
+                                )
+        self.session = session
+        self.iteration = nftsession.NftIteration(session)
+
+        if con.iglm_ar1:
+            self.iteration.bas_func = ar_regr(con.a_ar1, session.spm["xX_x"][:,0:-1])
+        else:
+            self.iteration.bas_func = session.spm["xX_x"][:,0:-2]
+
+        self.iteration.lin_regr = zscore(np.array(range(0,config.volumes_nr-config.skip_vol_nr), ndmin=2).transpose())
 
         self.config = config
         self.simulation_protocol = simulation_protocol
-        self.session = session
-        self.iteration = nftsession.NftIteration(session)
         self.nfb_calc = Nfb(session, self.iteration)
+
+
 
     def init_exchange_data(self):
 
@@ -117,7 +135,7 @@ class OpenNFTCoreProj(mp.Process):
 
             logger.info('{} {:.4f} {}', "Elapsed time: ", elapsed_time, 's')
 
-        # self.iteration.save_time_series()
+        self.iteration.save_time_series()
 
         self.mc_shmem.close()
         self.epi_shmem.close()

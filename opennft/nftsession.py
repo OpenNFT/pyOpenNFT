@@ -25,12 +25,14 @@ class NftSession():
         self.first_nf_inds = []
         self.pos_contrast = []
         self.neg_contrast = []
+        self.nr_vols = config.volumes_nr-config.skip_vol_nr
         self.nr_rois = 0
         self.rois = []
         self.xdim_img_count = 0  # number of image in mosaic per horizontal
         self.ydim_img_count = 0  # number of image in mosaic per vertical
         self.img2d_dimx = 0      # mosaic image size X
         self.img2d_dimy = 0      # mosaic image size Y
+        self.spm = None
 
     def setup(self):
 
@@ -94,9 +96,13 @@ class NftIteration():
         self.pre_iter = -1
         self.iter_number = 0
         self.iter_norm_number = 0
+        self.nr_blocks_in_sliding_window = 100
         self.mr_vol = MrVol()
-        self.mr_time_series = MrTimeSeries(session.nr_rois)
+        self.mr_time_series = MrTimeSeries(session.nr_rois, session.nr_vols)
         self.session = session
+        self.bas_func = []
+        self.sig_prproc_glm_design = []
+        self.lin_regr = []
 
         # realigment parameters
         self.a0 = []
@@ -113,6 +119,7 @@ class NftIteration():
         self.mr_vol.volume = np.array(img2d_vol3d(self.mr_vol.volume, self.session.xdim_img_count,
                                           self.session.ydim_img_count, self.session.reference_vol.dim), order='F')
 
+
     # --------------------------------------------------------------------------
     def process_vol(self):
         r, self.a0, self.x1, self.x2, self.x3, self.deg, self.b = self.mr_vol.realign(self, self.a0, self.x1, self.x2,
@@ -124,7 +131,9 @@ class NftIteration():
     # --------------------------------------------------------------------------
     def process_time_series(self):
         self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
-        self.mr_time_series.preprocessing(self.iter_norm_number)
+        sl_wind = (self.session.offsets[0][0][0]-1)*self.nr_blocks_in_sliding_window
+        self.mr_time_series.preprocessing(self.iter_norm_number, self.bas_func, self.lin_regr, sl_wind,
+                                          self.session.vect_end_cond, self.session.offsets[0][0][0]-1)
 
     # --------------------------------------------------------------------------
     # test function
@@ -135,6 +144,10 @@ class NftIteration():
             return
 
         savemat("py_time_series.mat", {"raw_time_series": self.mr_time_series.raw_time_series[0],
+                                       "raw_time_series_ar1": self.mr_time_series.raw_time_series_ar1[0],
+                                       "kalman_proc_time_series": self.mr_time_series.kalman_proc_time_series[0],
+                                       "glm_time_series": self.mr_time_series.glm_time_series[0],
+                                       "scale_time_series": self.mr_time_series.scale_time_series[0],
                                        "x": self.mr_time_series.mc_params[0,:],
                                        "y": self.mr_time_series.mc_params[1,:],
                                        "z": self.mr_time_series.mc_params[2,:],

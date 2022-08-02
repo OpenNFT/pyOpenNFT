@@ -3,6 +3,7 @@
 
 cglm_ar1: True
 a_ar1: 0.2
+iglm_ar1: True
 shmem_file_names:
   - mc_ts
   - mosaic
@@ -12,5 +13,5 @@ shmem_file_names:
   - orth_view_t
   - orth_view_c
   - orth_view_s
-use_gui: True
+use_gui: False
 use_roi: False
