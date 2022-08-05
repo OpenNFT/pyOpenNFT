@@ -48,6 +48,7 @@ class NftSession():
 
         self.prot_names = []
         self.offsets = []
+        self.prot_cond = [None] * (cond_length+1)
         inc = 2
         for i in range(cond_length):
             self.prot_names.append(conditions[i]["ConditionName"])
@@ -57,20 +58,37 @@ class NftSession():
 
             for j in range(len(offsets)):
                 self.vect_end_cond[offsets[j][0]-1:offsets[j][1]] = inc
-
+                if self.prot_cond[inc-1] is None:
+                    self.prot_cond[inc-1] = np.array(range(offsets[j][0],offsets[j][1]+1))
+                else:
+                    self.prot_cond[inc-1] = np.vstack((self.prot_cond[inc-1],np.array(range(offsets[j][0],offsets[j][1]+1))))
 
             self.first_nf_inds.append(offsets[:,0]-1)
 
             self.offsets.append(offsets)
 
+
             inc = inc + 1
+
+        bas_inds = np.where(self.vect_end_cond == 1)[0]+1
+        bas_offsets = []
+        for i in range(len(self.offsets[0])):
+            if i == 0:
+                inds = bas_inds[np.where(bas_inds < self.offsets[0][i][0])[0]]
+            else:
+                inds = bas_inds[np.where(np.logical_and(bas_inds > self.offsets[0][i-1][1],
+                                                        bas_inds < self.offsets[0][i][0]))[0]]
+
+            bas_offsets.append(inds)
+
+        bas_offsets = np.array(bas_offsets, ndmin=2)
+        self.prot_cond[0] = bas_offsets
 
         # Contrast and Conditions For Contrast
         if "ContrastActivation" in simulation_protocol:
             splitted_contrast = simulation_protocol["ContrastActivation"].split("*")
             self.pos_contrast = np.array(splitted_contrast[0::2], dtype=np.int32)
             self.neg_contrast = -self.pos_contrast
-
 
     def select_rois(self):
 

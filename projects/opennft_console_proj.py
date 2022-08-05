@@ -130,12 +130,15 @@ class OpenNFTCoreProj(mp.Process):
 
             self.iteration.process_time_series()
 
+            self.nfb_calc.nfb_calc()
+
             self.iteration.iter_number += 1
             elapsed_time = time.time() - time_start
 
             logger.info('{} {:.4f} {}', "Elapsed time: ", elapsed_time, 's')
 
         self.iteration.save_time_series()
+        self.nfb_calc.nfb_save()
 
         self.mc_shmem.close()
         self.epi_shmem.close()
