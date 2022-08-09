@@ -25,20 +25,22 @@ class NftSession():
         self.first_nf_inds = []
         self.pos_contrast = []
         self.neg_contrast = []
-        self.nr_vols = config.volumes_nr-config.skip_vol_nr
+        self.nr_vols = config.volumes_nr - config.skip_vol_nr
         self.nr_rois = 0
         self.rois = []
+        self.roi_names = []
         self.xdim_img_count = 0  # number of image in mosaic per horizontal
         self.ydim_img_count = 0  # number of image in mosaic per vertical
-        self.img2d_dimx = 0      # mosaic image size X
-        self.img2d_dimy = 0      # mosaic image size Y
+        self.img2d_dimx = 0  # mosaic image size X
+        self.img2d_dimy = 0  # mosaic image size Y
         self.spm = None
 
     def setup(self):
 
         mc_templ_path = self.config.mc_template_file
         self.reference_vol.load_vol(mc_templ_path, "nii")
-        self.xdim_img_count, self.ydim_img_count,  self.img2d_dimx,  self.img2d_dimy = get_mosaic_dim(self.reference_vol.dim)
+        self.xdim_img_count, self.ydim_img_count, self.img2d_dimx, self.img2d_dimy = get_mosaic_dim(
+            self.reference_vol.dim)
         self.select_rois()
 
     def set_protocol(self, simulation_protocol):
@@ -48,7 +50,7 @@ class NftSession():
 
         self.prot_names = []
         self.offsets = []
-        self.prot_cond = [None] * (cond_length+1)
+        self.prot_cond = [None] * (cond_length + 1)
         inc = 2
         for i in range(cond_length):
             self.prot_names.append(conditions[i]["ConditionName"])
@@ -57,26 +59,27 @@ class NftSession():
             offsets = np.array(conditions[i]["OnOffsets"])
 
             for j in range(len(offsets)):
-                self.vect_end_cond[offsets[j][0]-1:offsets[j][1]] = inc
-                if self.prot_cond[inc-1] is None:
-                    self.prot_cond[inc-1] = np.array(range(offsets[j][0],offsets[j][1]+1))
+                self.vect_end_cond[offsets[j][0] - 1:offsets[j][1]] = inc
+                if self.prot_cond[inc - 1] is None:
+                    self.prot_cond[inc - 1] = np.array(range(offsets[j][0], offsets[j][1] + 1))
                 else:
-                    self.prot_cond[inc-1] = np.vstack((self.prot_cond[inc-1],np.array(range(offsets[j][0],offsets[j][1]+1))))
+                    self.prot_cond[inc - 1] = np.vstack(
+                        (self.prot_cond[inc - 1], np.array(range(offsets[j][0], offsets[j][1] + 1))))
 
-            self.first_nf_inds.append(offsets[:,0]-1)
+            self.first_nf_inds.append(offsets[:, 0] - 1)
 
             self.offsets.append(offsets)
 
-
             inc = inc + 1
 
-        bas_inds = np.where(self.vect_end_cond == 1)[0]+1
+        # Implicit baseline
+        bas_inds = np.where(self.vect_end_cond == 1)[0] + 1
         bas_offsets = []
         for i in range(len(self.offsets[0])):
             if i == 0:
                 inds = bas_inds[np.where(bas_inds < self.offsets[0][i][0])[0]]
             else:
-                inds = bas_inds[np.where(np.logical_and(bas_inds > self.offsets[0][i-1][1],
+                inds = bas_inds[np.where(np.logical_and(bas_inds > self.offsets[0][i - 1][1],
                                                         bas_inds < self.offsets[0][i][0]))[0]]
 
             bas_offsets.append(inds)
@@ -98,6 +101,7 @@ class NftSession():
                 new_roi = MrROI()
                 new_roi.load_roi(roi_file.absolute())
                 self.rois.append(new_roi)
+                self.roi_names.append(new_roi.name)
 
         if self.config.type == "SVM":
             for weight_file, ind_roi in zip(Path(self.config.weights_file_name).iterdir(), range(self.nr_rois)):
@@ -135,8 +139,8 @@ class NftIteration():
         # возможно стоит сделать по задел под мультимодальность
         self.mr_vol.load_vol(file_name, im_type)
         self.mr_vol.volume = np.array(img2d_vol3d(self.mr_vol.volume, self.session.xdim_img_count,
-                                          self.session.ydim_img_count, self.session.reference_vol.dim), order='F')
-
+                                                  self.session.ydim_img_count, self.session.reference_vol.dim),
+                                      order='F')
 
     # --------------------------------------------------------------------------
     def process_vol(self):
@@ -149,14 +153,13 @@ class NftIteration():
     # --------------------------------------------------------------------------
     def process_time_series(self):
         self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
-        sl_wind = (self.session.offsets[0][0][0]-1)*self.nr_blocks_in_sliding_window
+        sl_wind = (self.session.offsets[0][0][0] - 1) * self.nr_blocks_in_sliding_window
         self.mr_time_series.preprocessing(self.iter_norm_number, self.bas_func, self.lin_regr, sl_wind,
-                                          self.session.vect_end_cond, self.session.offsets[0][0][0]-1)
+                                          self.session.vect_end_cond, self.session.offsets[0][0][0] - 1)
 
     # --------------------------------------------------------------------------
     # test function
     def save_time_series(self):
-
         if len(self.mr_time_series.mc_params) == 0:
             logger.info(f"Empty data, nothing to save")
             return
@@ -166,10 +169,10 @@ class NftIteration():
                                        "kalman_proc_time_series": self.mr_time_series.kalman_proc_time_series[0],
                                        "glm_time_series": self.mr_time_series.glm_time_series[0],
                                        "scale_time_series": self.mr_time_series.scale_time_series[0],
-                                       "x": self.mr_time_series.mc_params[0,:],
-                                       "y": self.mr_time_series.mc_params[1,:],
-                                       "z": self.mr_time_series.mc_params[2,:],
-                                       "pitch": self.mr_time_series.mc_params[3,:],
-                                       "roll": self.mr_time_series.mc_params[4,:],
-                                       "yaw": self.mr_time_series.mc_params[5,:],
+                                       "x": self.mr_time_series.mc_params[0, :],
+                                       "y": self.mr_time_series.mc_params[1, :],
+                                       "z": self.mr_time_series.mc_params[2, :],
+                                       "pitch": self.mr_time_series.mc_params[3, :],
+                                       "roll": self.mr_time_series.mc_params[4, :],
+                                       "yaw": self.mr_time_series.mc_params[5, :],
                                        })

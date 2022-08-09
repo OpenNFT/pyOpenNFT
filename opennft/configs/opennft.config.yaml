@@ -13,5 +13,11 @@ shmem_file_names:
   - orth_view_t
   - orth_view_c
   - orth_view_s
-use_gui: False
+  - time_series
+use_gui: True
 use_roi: False
+max_roi_name_length: 6
+plot_grid_alpha: 0.7
+roi_plot_width: 2.0
+muster_y_limits: [-32767, 32768]
+muster_plot_alpha: 50

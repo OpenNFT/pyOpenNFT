@@ -177,7 +177,7 @@ class MrTimeSeries():
                 temp_s,self.flag_pos_deriv_spike[i_roi], self.flag_neg_deriv_spike[i_roi])
 
             if tmp_ind_end == 0:
-                self.kalman_proc_time_series[i_roi] = np.array(kalman_out)
+                self.kalman_proc_time_series[i_roi] = np.array(kalman_out, ndmin=1)
             else:
                 self.kalman_proc_time_series[i_roi] = np.append(self.kalman_proc_time_series[i_roi], kalman_out)
 
@@ -192,7 +192,7 @@ class MrTimeSeries():
             )
 
             if tmp_ind_end == 0:
-                self.scale_time_series[i_roi] = np.array(scale_out)
+                self.scale_time_series[i_roi] = np.array(scale_out, ndmin=1)
             else:
                 self.scale_time_series[i_roi] = np.append(self.scale_time_series[i_roi], scale_out)
 
