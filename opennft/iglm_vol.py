@@ -21,7 +21,7 @@ def iglm_vol(cn, dn, sigma2n, tn, yn, n, nr_bas_fct, contr, bas_fct, p_val, rec_
     e2n = np.zeros(sigma2n.shape)
 
     try:
-        nn = linalg.cholesky(cn)
+        nn = np.linalg.cholesky(cn.T)
         p = 0
     except np.linalg.LinAlgError:
         nn = []
@@ -29,7 +29,7 @@ def iglm_vol(cn, dn, sigma2n, tn, yn, n, nr_bas_fct, contr, bas_fct, p_val, rec_
 
     if p == 0 and n > nr_bas_fct + 2:
 
-        inv_nn = linalg.inv(nn.T)
+        inv_nn = np.linalg.inv(nn)
         an = (dn @ inv_nn.T) / n
         bn = an @ inv_nn
         e2n = n / df * (sigma2n / n - np.array(np.sum(an * an, 1), ndmin=2).T)

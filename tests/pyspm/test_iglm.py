@@ -42,6 +42,7 @@ def test_iglm(data_path, nii_image_1, mc_param, prepr_data, sum_vols, stat_map_2
     }
 
     stat_map_2d_pos = np.zeros((main_loop_data["img2DdimX"], main_loop_data["img2DdimY"]))
+    stat_map_2d_all_pos = np.zeros((150, main_loop_data["img2DdimX"], main_loop_data["img2DdimY"]))
 
     for i in range(5, 155):
 
@@ -61,8 +62,11 @@ def test_iglm(data_path, nii_image_1, mc_param, prepr_data, sum_vols, stat_map_2
         sm_resl_vol = main_loop_data["smReslVolAR1_1"]
         
         main_loop_data, stat_map_2d_pos = prepr_vol(main_loop_data, p, sm_resl_vol, ind_vol_norm+1)
+        stat_map_2d_all_pos[ind_vol_norm,:,:] = stat_map_2d_pos
+        # tn[ind_vol_norm,:,:] = main_loop_data["tn"] "tn": tn
 
-    savemat(data_path / "stat_map_2d_python.mat", {"stat_map_2d_python": stat_map_2d_pos})
+    savemat(data_path / "stat_map_2d_all_python.mat", {"stat_map_2d_all_python": stat_map_2d_all_pos,
+                                                       "stat_map_2d_python": stat_map_2d_pos,})
 
     np.testing.assert_almost_equal(stat_map_2d_pos, stat_map_2d_matlab['statMap2D'], decimal=7, err_msg="Not equal")
 
