@@ -109,9 +109,13 @@ class OpenNFTManager(QWidget):
         self.mc_shmem = shared_memory.SharedMemory(create=True, size=mc_array.nbytes, name=con.shmem_file_names[0])
         self.mc_data = np.ndarray(shape=mc_array.shape, dtype=mc_array.dtype, buffer=self.mc_shmem.buf)
 
-        time_series_array = np.zeros((3, self.nr_vol, self.nr_rois), dtype=np.float32)
+        time_series_array = np.zeros((5, self.nr_vol, self.nr_rois), dtype=np.float32)
         self.ts_shmem = shared_memory.SharedMemory(create=True, size=time_series_array.nbytes, name=con.shmem_file_names[8])
         self.ts_data = np.ndarray(shape=time_series_array.shape, dtype=time_series_array.dtype, buffer=self.ts_shmem.buf)
+
+        nfb_array = np.zeros((1, self.nr_vol), dtype=np.float32)
+        self.nfb_shmem = shared_memory.SharedMemory(create=True, size=nfb_array.nbytes, name=con.shmem_file_names[9])
+        self.nfb_data = np.ndarray(shape=nfb_array.shape, dtype=nfb_array.dtype, buffer=self.nfb_shmem.buf)
 
         mosaic_array = np.zeros(self.mosaic_dim, dtype=np.float32)
         self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes * 3, name=con.shmem_file_names[1])
@@ -437,21 +441,24 @@ class OpenNFTManager(QWidget):
 
     def drawRoiPlots(self, init, data):
 
-        dataRaw = np.array(data[0,:,:].squeeze().T, ndmin=2)
-        dataProc = np.array(data[1,:,:].squeeze().T, ndmin=2)
-        dataNorm = np.array(data[2,:,:].squeeze().T, ndmin=2)
+        iter = data.shape[1]
 
-        # TODO: plot_feedback
-        # if self.config.plot_feedback:
-        #     dataNorm = np.concatenate(
-        #         (dataNorm, np.array([self.displaySamples]) / self.config.max_feedback_val)
-        #     )
+        data_raw = np.array(data[0,:,:].squeeze().T, ndmin=2)
+        data_proc = np.array(data[1,:,:].squeeze().T, ndmin=2)
+        data_norm = np.array(data[2,:,:].squeeze().T, ndmin=2)
+        data_pos = np.array(data[3:5,:,:], ndmin=2)
 
-        self.drawGivenRoiPlot(init, self.rawRoiPlot, dataRaw)
-        self.drawGivenRoiPlot(init, self.procRoiPlot, dataProc)
-        self.drawGivenRoiPlot(init, self.normRoiPlot, dataNorm)
+        if self.config.plot_feedback:
+            if iter == 1:
+                data_norm = np.hstack((data_norm, self.nfb_data[:, 0:iter]))
+            else:
+                data_norm = np.vstack((data_norm, self.nfb_data[:,0:iter]))
 
-    def drawGivenRoiPlot(self, init, plotwidget: pg.PlotWidget, data):
+        self.drawGivenRoiPlot(init, self.rawRoiPlot, data_raw)
+        self.drawGivenRoiPlot(init, self.procRoiPlot, data_proc, data_pos)
+        self.drawGivenRoiPlot(init, self.normRoiPlot, data_norm)
+
+    def drawGivenRoiPlot(self, init, plotwidget: pg.PlotWidget, data, data_pos=None):
         plotitem = plotwidget.getPlotItem()
 
         sz, l = data.shape
@@ -480,18 +487,17 @@ class OpenNFTManager(QWidget):
         for p, y in zip(self.drawGivenRoiPlot.__dict__[plotitem][0], data):
             p.setData(x=x, y=np.array(y))
 
-        # if self.config.prot != 'InterBlock':
-        #     if plotwidget == self.procRoiPlot:
-        #         posMin = np.array(self.outputSamples['posMin'], ndmin=2)
-        #         posMax = np.array(self.outputSamples['posMax'], ndmin=2)
-        #         inds = list(self.selectedRoi)
-        #         inds.append(len(posMin) - 1)
-        #         posMin = posMin[inds]
-        #         posMax = posMax[inds]
-        #
-        #         self.drawMinMaxProcRoiPlot(
-        #             init, data,
-        #             posMin, posMax)
+        if self.config.prot != 'InterBlock':
+            if plotwidget == self.procRoiPlot:
+                posMin = np.array(data_pos[0,:,:].squeeze(), ndmin=2).T
+                posMax = np.array(data_pos[1,:,:].squeeze(), ndmin=2).T
+                # inds = list(self.selectedRoi)
+                # inds.append(len(posMin) - 1)
+                # posMin = posMin[inds]
+                # posMax = posMax[inds]
+
+                self.drawMinMaxProcRoiPlot(
+                    init, posMin, posMax)
 
         items = plotitem.listDataItems()
 
@@ -506,6 +512,37 @@ class OpenNFTManager(QWidget):
         else:
             grid = False
         self.basicSetupPlot(plotitem, grid)
+
+    # --------------------------------------------------------------------------
+    def drawMinMaxProcRoiPlot(self, init, posMin, posMax):
+        plotitem = self.procRoiPlot.getPlotItem()
+        sz = posMin.shape[0] + 1
+        l = posMin.shape[1]
+
+        if init:
+            plotsMin = []
+            plotsMax = []
+
+            plot_colors = np.array(col.ROI_PLOT_COLORS)
+            # plot_colors = np.append(plot_colors[self.selectedRoi], plot_colors[-1])
+            for i, c in zip(range(sz), plot_colors):
+                plotsMin.append(plotitem.plot(pen=pg.mkPen(
+                    color=c, width=con.roi_plot_width)))
+                plotsMax.append(plotitem.plot(pen=pg.mkPen(
+                    color=c, width=con.roi_plot_width)))
+
+            self.drawMinMaxProcRoiPlot.__dict__['posMin'] = plotsMin
+            self.drawMinMaxProcRoiPlot.__dict__['posMax'] = plotsMax
+
+        x = np.arange(1, l + 1, dtype=np.float64)
+
+        for pmi, mi, pma, ma in zip(
+                self.drawMinMaxProcRoiPlot.__dict__['posMin'], posMin,
+                self.drawMinMaxProcRoiPlot.__dict__['posMax'], posMax):
+            mi = np.array(mi, ndmin=1)
+            ma = np.array(ma, ndmin=1)
+            pmi.setData(x=x, y=mi)
+            pma.setData(x=x, y=ma)
 
     def onStart(self):
         if not self._core_process.is_alive():
@@ -545,7 +582,7 @@ class OpenNFTManager(QWidget):
 
     def onCheckGUIUpdated(self):
 
-        if not self.exchange_data["is_stopped"]:
+        if not (self.exchange_data is None) or not self.exchange_data["is_stopped"]:
 
             if self.exchange_data["data_ready_flag"]:
                 self.drawMcPlots(self.mcPlot, self.mc_data)
@@ -623,6 +660,10 @@ class OpenNFTManager(QWidget):
         self.proj_c_shmem.unlink()
         self.proj_s_shmem.close()
         self.proj_s_shmem.unlink()
+        self.nfb_shmem.close()
+        self.nfb_shmem.unlink()
+        self.ts_shmem.close()
+        self.ts_shmem.unlink()
 
 
 if __name__ == '__main__':

@@ -34,8 +34,12 @@ class MrTimeSeries():
         self.flag_neg_deriv_spike = np.zeros((nr_rois, 1))
 
         # Scaling
-        self.pos_min = np.zeros((nr_rois, 1))
-        self.pos_max = np.zeros((nr_rois, 1))
+        self.tmp_pos_min = np.zeros((nr_rois, 1))
+        self.tmp_pos_max = np.zeros((nr_rois, 1))
+        self.pos_min = [None] * nr_rois
+        self.pos_max = [None] * nr_rois
+        self.output_pos_min = []
+        self.output_pos_max = []
 
     def acquiring(self, type, vol, rois):
 
@@ -186,17 +190,37 @@ class MrTimeSeries():
             self.s["x"][i_roi] = temp_s["x"]
 
             # 4. Scaling
-            scale_out, self.pos_min[i_roi], self.pos_max[i_roi] = scale_time_series(
+            scale_out, self.tmp_pos_min[i_roi], self.tmp_pos_max[i_roi] = scale_time_series(
                 self.kalman_proc_time_series[i_roi], ind_vol_norm, sl_wind, self.init_lim[i_roi],
-                self.pos_min[i_roi], self.pos_max[i_roi], vect_end_cond, bas_block_length
+                self.tmp_pos_min[i_roi], self.tmp_pos_max[i_roi], vect_end_cond, bas_block_length
             )
 
             if tmp_ind_end == 0:
                 self.scale_time_series[i_roi] = np.array(scale_out, ndmin=1)
+                self.pos_min[i_roi] = np.array(self.tmp_pos_min[i_roi], ndmin=1)
+                self.pos_max[i_roi] = np.array(self.tmp_pos_max[i_roi], ndmin=1)
             else:
                 self.scale_time_series[i_roi] = np.append(self.scale_time_series[i_roi], scale_out)
+                self.pos_min[i_roi] = np.append(self.pos_min[i_roi], self.tmp_pos_min[i_roi])
+                self.pos_max[i_roi] = np.append(self.pos_max[i_roi], self.tmp_pos_max[i_roi])
 
             # 5. z-scoring and sigmoidal transform
             if False:
                 zscored_val = zscore(self.scale_time_series[i_roi][0:ind_vol_norm])
                 self.scale_time_series[i_roi][ind_vol_norm] = 1 / (1 + np.exp(-zscored_val[-1]))
+
+        mean_pos_min = np.mean(np.array(self.pos_min))
+        mean_pos_max = np.mean(np.array(self.pos_max))
+
+        if tmp_ind_end == 0:
+            self.output_pos_min = self.pos_min.copy()
+            self.output_pos_min.append(np.array(mean_pos_min, ndmin=1))
+            self.output_pos_max = self.pos_max.copy()
+            self.output_pos_max.append(np.array(mean_pos_max, ndmin=1))
+        else:
+            for i_roi in range(self.nr_rois):
+                self.output_pos_min[i_roi] = np.append(self.output_pos_min[i_roi], self.pos_min[i_roi][-1])
+                self.output_pos_max[i_roi] = np.append(self.output_pos_max[i_roi], self.pos_max[i_roi][-1])
+            self.output_pos_min[-1] = np.append(self.output_pos_min[-1], mean_pos_min)
+            self.output_pos_max[-1] = np.append(self.output_pos_max[-1], mean_pos_max)
+

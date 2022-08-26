@@ -14,6 +14,7 @@ shmem_file_names:
   - orth_view_c
   - orth_view_s
   - time_series
+  - nfb
 use_gui: True
 use_roi: False
 max_roi_name_length: 6

@@ -90,7 +90,10 @@ class OpenNFTCoreProj(mp.Process):
         self.mc_data = np.ndarray(shape=(nr_vol, 6), dtype=np.float32, buffer=self.mc_shmem.buf)
 
         self.ts_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[8])
-        self.ts_data = np.ndarray(shape=(3, nr_vol, nr_rois), dtype=np.float32, buffer=self.ts_shmem.buf)
+        self.ts_data = np.ndarray(shape=(5, nr_vol, nr_rois), dtype=np.float32, buffer=self.ts_shmem.buf)
+
+        self.nfb_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[9])
+        self.nfb_data = np.ndarray(shape=(1, nr_vol), dtype=np.float32, buffer=self.nfb_shmem.buf)
 
         self.epi_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[2])
         self.epi_volume = np.ndarray(shape=self.session.reference_vol.dim, dtype=np.float32, buffer=self.epi_shmem.buf,
@@ -139,6 +142,7 @@ class OpenNFTCoreProj(mp.Process):
             self.exchange_data["ready_to_form"] = True
 
             self.iteration.process_time_series()
+            self.nfb_calc.nfb_calc()
 
             iter_number = self.iteration.iter_norm_number
             self.mc_data[iter_number, :] = self.iteration.mr_time_series.mc_params[:, -1].T
@@ -146,12 +150,13 @@ class OpenNFTCoreProj(mp.Process):
                 if self.config.prot != 'InterBlock':
                     self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.disp_raw_time_series[i][iter_number].T
                 else:
-                    self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.raw_time_series[i][iter_number].T
-                self.ts_data[1, iter_number, i] = self.iteration.mr_time_series.kalman_proc_time_series[i][iter_number].T
-                self.ts_data[2, iter_number, i] = self.iteration.mr_time_series.scale_time_series[i][iter_number].T
+                    self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.raw_time_series[i][iter_number]
+                self.ts_data[1, iter_number, i] = self.iteration.mr_time_series.kalman_proc_time_series[i][iter_number]
+                self.ts_data[2, iter_number, i] = self.iteration.mr_time_series.scale_time_series[i][iter_number]
+                self.ts_data[3, iter_number, i] = self.iteration.mr_time_series.output_pos_min[i][iter_number]
+                self.ts_data[4, iter_number, i] = self.iteration.mr_time_series.output_pos_max[i][iter_number]
+            self.nfb_data[0,iter_number] = self.nfb_calc.disp_values[iter_number] / self.config.max_feedback_val
             self.exchange_data["data_ready_flag"] = True
-
-            self.nfb_calc.nfb_calc()
 
             self.iteration.iter_number += 1
             elapsed_time = time.time() - time_start
