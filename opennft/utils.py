@@ -65,12 +65,19 @@ def ar_regr(a, input):
 
 
 def zscore(x):
-    dim = np.nonzero(np.array(x.shape) != 1)[0][0]
+
+    np.seterr(divide='ignore', invalid='ignore')
+    dim = np.nonzero(np.array(x.shape) != 1)[0]
+
+    if dim.size:
+        dim = dim[0]
+    else:
+        dim = 0
 
     mu = np.mean(x, axis=dim)
     sigma = np.std(x, ddof=1, axis=dim)
     if sigma.size == 1:
-        if sigma == 0:
+        if sigma == 0 or sigma != sigma:
             sigma = 1
     else:
         sigma[sigma == 0] = 1

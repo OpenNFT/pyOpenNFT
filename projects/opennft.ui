@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1423</width>
-    <height>846</height>
+    <width>1296</width>
+    <height>834</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -18,6 +18,9 @@
     <layout class="QHBoxLayout" name="horizontalLayout_7" stretch="0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0">
      <item>
       <widget class="QPushButton" name="btnInit">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="text">
         <string>Initialize</string>
        </property>
@@ -34,7 +37,6 @@
       <widget class="QPushButton" name="pbMoreParameters">
        <property name="font">
         <font>
-         <weight>50</weight>
          <bold>false</bold>
         </font>
        </property>
@@ -65,7 +67,7 @@
      <item>
       <widget class="QPushButton" name="btnSetup">
        <property name="enabled">
-        <bool>false</bool>
+        <bool>true</bool>
        </property>
        <property name="text">
         <string>Setup</string>
@@ -82,7 +84,7 @@
      <item>
       <widget class="QPushButton" name="btnStart">
        <property name="enabled">
-        <bool>true</bool>
+        <bool>false</bool>
        </property>
        <property name="text">
         <string>Start</string>
@@ -274,7 +276,7 @@
                 <item>
                  <widget class="QFrame" name="frameShortParams">
                   <property name="enabled">
-                   <bool>false</bool>
+                   <bool>true</bool>
                   </property>
                   <property name="frameShape">
                    <enum>QFrame::NoFrame</enum>
@@ -301,10 +303,17 @@
                       <enum>QLayout::SetMinimumSize</enum>
                      </property>
                      <item row="0" column="1">
-                      <widget class="QLineEdit" name="leSetFile2"/>
+                      <widget class="QLineEdit" name="leSetFile2">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
+                      </widget>
                      </item>
                      <item row="0" column="0">
                       <widget class="QLabel" name="label_5">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
                        <property name="text">
                         <string>Setup File</string>
                        </property>
@@ -312,6 +321,9 @@
                      </item>
                      <item row="0" column="2">
                       <widget class="QPushButton" name="btnChooseSetFile2">
+                       <property name="enabled">
+                        <bool>true</bool>
+                       </property>
                        <property name="maximumSize">
                         <size>
                          <width>32</width>
@@ -1100,6 +1112,9 @@
       </layout>
      </widget>
      <widget class="QWidget" name="pageSettings">
+      <property name="enabled">
+       <bool>true</bool>
+      </property>
       <layout class="QVBoxLayout" name="verticalLayout_6">
        <property name="leftMargin">
         <number>0</number>
@@ -1126,8 +1141,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1084</width>
-            <height>800</height>
+            <width>1261</width>
+            <height>831</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -1146,7 +1161,7 @@
            <item>
             <widget class="QFrame" name="frameParams">
              <property name="enabled">
-              <bool>false</bool>
+              <bool>true</bool>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_8">
               <property name="leftMargin">

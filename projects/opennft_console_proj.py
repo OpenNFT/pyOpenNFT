@@ -36,7 +36,7 @@ class OpenNFTCoreProj(mp.Process):
     def init_data(self):
 
         config_path = Path().resolve()
-        config_path /= 'config.ini'
+        config_path /= self.exchange_data["set_file"]
 
         loader = LegacyNftConfigLoader()
         loader.load(config_path)

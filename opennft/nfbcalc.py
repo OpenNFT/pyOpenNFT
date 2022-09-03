@@ -35,7 +35,7 @@ class Nfb():
         if self.iteration.iter_number < self.session.config.skip_vol_nr:
             return
 
-        if self.session.config.type == "PSC":
+        if self.session.config.type == "PSC" or self.session.config.type == "SVM":
             iter_norm_number = self.iteration.iter_norm_number
 
             condition = self.session.vect_end_cond[iter_norm_number]
@@ -154,9 +154,9 @@ class Nfb():
 
             if condition == 2:
 
-                if ind_vol_norm in self.session.first_nf_inds:
-                    self.block_nf = self.session.first_nf_inds.index(ind_vol_norm) + 1
-                    self.first_nf = ind_vol_norm
+                if ind_vol_norm in self.session.first_nf_inds[0]:
+                    block_nf = np.where(self.session.first_nf_inds[0] == ind_vol_norm)[0][0]
+                    first_nf = ind_vol_norm
 
                 norm_perc_values = np.zeros((nr_rois, 1))
                 for i_roi in range(0, nr_rois):

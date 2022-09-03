@@ -153,9 +153,12 @@ class NftIteration():
     # --------------------------------------------------------------------------
     def process_time_series(self):
         self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
+
         sl_wind = (self.session.offsets[0][0][0] - 1) * self.nr_blocks_in_sliding_window
+        is_svm = self.session.config.type == 'SVM'
+
         self.mr_time_series.preprocessing(self.iter_norm_number, self.bas_func, self.lin_regr, sl_wind,
-                                          self.session.vect_end_cond, self.session.offsets[0][0][0] - 1)
+                                          self.session.vect_end_cond, self.session.offsets[0][0][0] - 1, is_svm)
 
     # --------------------------------------------------------------------------
     # test function

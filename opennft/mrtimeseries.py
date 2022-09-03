@@ -51,9 +51,9 @@ class MrTimeSeries():
                                               rois[ind_roi].voxel_index[:, 2]], axis=None)
 
             elif type == "SVM":
-                roi_vect = vol.volume(vol.volume[rois[ind_roi].voxel_index[:, 0],
-                                                 rois[ind_roi].voxel_index[:, 1],
-                                                 rois[ind_roi].voxel_index[:, 2]])
+                roi_vect = vol.volume[rois[ind_roi].voxel_index[:, 0],
+                                      rois[ind_roi].voxel_index[:, 1],
+                                      rois[ind_roi].voxel_index[:, 2]]
                 weight_vect = rois[ind_roi].weights[rois[ind_roi].voxel_index[:, 0],
                                                     rois[ind_roi].voxel_index[:, 1],
                                                     rois[ind_roi].voxel_index[:, 2]]
@@ -77,7 +77,7 @@ class MrTimeSeries():
         else:
             self.mc_params = np.hstack((self.mc_params, mot_corr_params[0:6] - self.offset_mc))
 
-    def preprocessing(self, ind_vol_norm, bas_func, lin_regr, sl_wind, vect_end_cond, bas_block_length):
+    def preprocessing(self, ind_vol_norm, bas_func, lin_regr, sl_wind, vect_end_cond, bas_block_length, is_svm):
 
         nr_bas_func = len(bas_func[0])
 
@@ -205,8 +205,9 @@ class MrTimeSeries():
                 self.pos_max[i_roi] = np.append(self.pos_max[i_roi], self.tmp_pos_max[i_roi])
 
             # 5. z-scoring and sigmoidal transform
-            if False:
-                zscored_val = zscore(self.scale_time_series[i_roi][0:ind_vol_norm])
+            if is_svm:
+                zscored_val = zscore(self.scale_time_series[i_roi][0:ind_vol_norm+1])
+
                 self.scale_time_series[i_roi][ind_vol_norm] = 1 / (1 + np.exp(-zscored_val[-1]))
 
         mean_pos_min = np.mean(np.array(self.pos_min))

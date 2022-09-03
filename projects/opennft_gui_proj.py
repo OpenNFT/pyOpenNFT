@@ -1,4 +1,5 @@
 import enum
+import re
 import time
 import sys
 from pathlib import Path
@@ -9,8 +10,8 @@ import multiprocessing as mp
 
 from multiprocessing import shared_memory
 from PyQt5.uic import loadUi
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QApplication, QWidget
+from PyQt5.QtCore import QTimer, QSettings
+from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 from loguru import logger
 
 import opennft_console_proj
@@ -26,22 +27,14 @@ class ImageViewMode(str, enum.Enum):
 
 
 class OpenNFTManager(QWidget):
+
+    # --------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
 
         self.init_exchange_data()
 
-        # setup button routine
-        self._core_process = opennft_console_proj.OpenNFTCoreProj(self.exchange_data)
-
-        self.config = self._core_process.config
-        self.session = self._core_process.session
-        self.nr_vol = self.exchange_data["nr_vol"]
-        self.nr_rois = self.exchange_data["nr_rois"]
-        self.vol_dim = self.exchange_data["vol_dim"]
-        self.mosaic_dim = self.exchange_data["mosaic_dim"]
-        self.view_form_init()
-
-        self.init_shmem()
+        self.setting_file_name = Path(__file__).absolute().resolve().parent
+        self.tcp_data = dict.fromkeys(["use_tcp_data", "tcp_data_ip", "tcp_data_port"])
 
         if con.use_gui:
             super().__init__(*args, **kwargs)
@@ -69,18 +62,32 @@ class OpenNFTManager(QWidget):
 
             self.mcPlot = self.createMcPlot(self.layoutPlot1)
             self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.createRoiPlots()
-            self.createMusterInfo()
-            self.btnStart.clicked.connect(self.onStart)
             self.guiTimer = QTimer(self)
             self.guiTimer.timeout.connect(self.onCheckGUIUpdated)
+
+            self.pbMoreParameters.setChecked(False)
+
+            self.leFirstFile.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile, self.leFirstFile2))
+            self.leFirstFile2.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile2, self.leFirstFile))
+
+            self.btnChooseSetFile.clicked.connect(self.onChooseSetFile)
+            self.btnChooseSetFile2.clicked.connect(self.onChooseSetFile)
+            self.pbMoreParameters.toggled.connect(self.onShowMoreParameters)
+
+            self.btnSetup.clicked.connect(self.setup)
+            self.btnStart.clicked.connect(self.start)
+
             self.show()
         else:
-            # self.setup()
-            self.onStart()
+            self.setup()
+            self.start()
 
+    # --------------------------------------------------------------------------
     def init_exchange_data(self):
 
         self.exchange_data = mp.Manager().dict()
+
+        self.exchange_data["set_file"] = ""
 
         self.exchange_data["data_ready_flag"] = False
         self.exchange_data["init"] = False
@@ -96,6 +103,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["done_mosaic_templ"] = False
         self.exchange_data["done_orth"] = False
         self.exchange_data["overlay_ready"] = False
+        self.exchange_data["iter_norm_number"] = 0
 
         self.exchange_data["proj_dims"] = None
         self.exchange_data["is_neg"] = False
@@ -103,6 +111,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["cursor_pos"] = (129, 95)
         self.exchange_data["flags_planes"] = projview.ProjectionType.coronal.value
 
+    # --------------------------------------------------------------------------
     def init_shmem(self):
 
         mc_array = np.zeros((self.nr_vol, 6), dtype=np.float32)
@@ -152,11 +161,19 @@ class OpenNFTManager(QWidget):
                                  buffer=self.proj_s_shmem.buf,
                                  order="F")
 
+    # --------------------------------------------------------------------------
     def view_form_init(self):
 
         self._view_form_process = volviewformation.VolViewFormation(self.exchange_data)
         self._view_form_process.start()
 
+    # --------------------------------------------------------------------------
+    def textChangedDual(self, leFrom, leTo):
+        pos = leTo.cursorPosition()
+        leTo.setText(leFrom.text())
+        leTo.setCursorPosition(pos)
+
+    # --------------------------------------------------------------------------
     def createMcPlot(self, layoutPlot):
         mctrotplot = pg.PlotWidget(self)
         mctrotplot.setBackground((255, 255, 255))
@@ -175,6 +192,7 @@ class OpenNFTManager(QWidget):
 
         return mctrotplot
 
+    # --------------------------------------------------------------------------
     def createRoiPlots(self):
         rawroiplot = pg.PlotWidget(self)
         self.layoutPlot2.addWidget(rawroiplot)
@@ -217,6 +235,7 @@ class OpenNFTManager(QWidget):
 
         return plots
 
+    # --------------------------------------------------------------------------
     def createMusterInfo(self):
         # TODO: More general way to use any protocol
         tmpCond = list()
@@ -287,6 +306,7 @@ class OpenNFTManager(QWidget):
             self.musterInfo[nrCondStr[condNumber]] = nrCond[condNumber]
         self.musterInfo['blockLength'] = blockLength
 
+    # --------------------------------------------------------------------------
     def setupRoiPlots(self):
         self.makeRoiPlotLegend()
 
@@ -315,6 +335,7 @@ class OpenNFTManager(QWidget):
         proc.setYRange(-1, 1, padding=0.0)
         norm.setYRange(-1, 1, padding=0.0)
 
+    # --------------------------------------------------------------------------
     def basicSetupPlot(self, plotitem, grid=True):
         # For autoRTQA mode
         if True:
@@ -329,6 +350,7 @@ class OpenNFTManager(QWidget):
         plotitem.setXRange(1, xmax, padding=0.0)
         plotitem.showGrid(x=grid, y=grid, alpha=con.plot_grid_alpha)
 
+    # --------------------------------------------------------------------------
     def makeRoiPlotLegend(self):
         roiNames = []
 
@@ -355,6 +377,7 @@ class OpenNFTManager(QWidget):
 
         self.labelPlotLegend.setText(legendText)
 
+    # --------------------------------------------------------------------------
     def computeMusterPlotData(self, ylim):
         singleY = np.array([ylim[0], ylim[1], ylim[1], ylim[0]])
 
@@ -382,6 +405,7 @@ class OpenNFTManager(QWidget):
             self.musterInfo['xCond' + str(cond + 1)] = xCond
             self.musterInfo['yCond' + str(cond + 1)] = yCond
 
+    # --------------------------------------------------------------------------
     def drawMusterPlot(self, plotitem: pg.PlotItem):
         ylim = con.muster_y_limits
 
@@ -410,6 +434,7 @@ class OpenNFTManager(QWidget):
 
         return muster
 
+    # --------------------------------------------------------------------------
     def drawMcPlots(self, mcPlot, data):
 
         mctrrot = mcPlot.getPlotItem()
@@ -439,6 +464,7 @@ class OpenNFTManager(QWidget):
                 self.drawMcPlots.__dict__['mctrrot'], range(0, 6)):
             pt.setData(x=x, y=data[:, i1])
 
+    # --------------------------------------------------------------------------
     def drawRoiPlots(self, init, data):
 
         iter = data.shape[1]
@@ -458,6 +484,7 @@ class OpenNFTManager(QWidget):
         self.drawGivenRoiPlot(init, self.procRoiPlot, data_proc, data_pos)
         self.drawGivenRoiPlot(init, self.normRoiPlot, data_norm)
 
+    # --------------------------------------------------------------------------
     def drawGivenRoiPlot(self, init, plotwidget: pg.PlotWidget, data, data_pos=None):
         plotitem = plotwidget.getPlotItem()
 
@@ -544,8 +571,38 @@ class OpenNFTManager(QWidget):
             pmi.setData(x=x, y=mi)
             pma.setData(x=x, y=ma)
 
-    def onStart(self):
+    # --------------------------------------------------------------------------
+    def setup(self):
+
+        self._core_process = opennft_console_proj.OpenNFTCoreProj(self.exchange_data)
+
+        self.config = self._core_process.config
+        self.session = self._core_process.session
+        self.nr_vol = self.exchange_data["nr_vol"]
+        self.nr_rois = self.exchange_data["nr_rois"]
+        self.vol_dim = self.exchange_data["vol_dim"]
+        self.mosaic_dim = self.exchange_data["mosaic_dim"]
+        self.view_form_init()
+
+        self.init_shmem()
+
+        self.createMusterInfo()
+
+        self.btnStart.setEnabled(True)
+
+    # --------------------------------------------------------------------------
+    def start(self):
+
         if not self._core_process.is_alive():
+
+            self.cbImageViewMode.setEnabled(True)
+            self.pos_map_thresholds_widget.setEnabled(True)
+            self.neg_map_thresholds_widget.setEnabled(True)
+            self.btnSetup.setEnabled(False)
+            self.btnStart.setEnabled(False)
+            self.btnStop.setEnabled(True)
+            self.pbMoreParameters.setChecked(False)
+
             self.setupRoiPlots()
             print("main starting process")
             self._core_process.start()
@@ -553,6 +610,306 @@ class OpenNFTManager(QWidget):
                 self.guiTimer.start(30)
         else:
             pass
+
+    # --------------------------------------------------------------------------
+    def onChooseSetFile(self):
+        if con.donot_use_qfile_native_dialog:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select 'SET File'", str(self.setting_file_name), 'ini files (*.ini)',
+                options=QFileDialog.DontUseNativeDialog)[0]
+        else:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select 'SET File'", str(self.setting_file_name), 'ini files (*.ini)')[0]
+
+        fname = str(Path(fname))
+        self.chooseSetFile(fname)
+
+    # --------------------------------------------------------------------------
+    def onShowMoreParameters(self, flag: bool):
+        self.stackedWidgetMain.setCurrentIndex(int(flag))
+
+    # --------------------------------------------------------------------------
+    def chooseSetFile(self, fname):
+        if not fname:
+            return
+
+        if not Path(fname).is_file():
+            return
+
+        self.setting_file_name = fname
+
+        self.leSetFile.setText(fname)
+        self.exchange_data["set_file"] = fname
+
+        self.settings = QSettings(fname, QSettings.IniFormat, self)
+        self.loadSettingsFromSetFile()
+
+        self.is_set_file_chosen = True
+        self.btnSetup.setEnabled(True)
+
+    # --------------------------------------------------------------------------
+    def loadSettingsFromSetFile(self):
+
+        # --- top ---
+        self.leProtocolFile.setText(self.settings.value('StimulationProtocol', ''))
+        self.leWorkFolder.setText(self.settings.value('WorkFolder', ''))
+        self.leWatchFolder.setText(self.settings.value('WatchFolder', ''))
+        if (self.settings.value('Type', '')) == 'DCM':
+            self.leRoiAnatFolder.setText(self.settings.value('RoiAnatFolder', ''))
+        else:
+            self.leRoiAnatFolder.setText(self.settings.value('RoiFilesFolder', ''))
+        self.leRoiAnatOperation.setText(self.settings.value('RoiAnatOperation', 'mean(norm_percValues)'))
+        self.leRoiGroupFolder.setText(self.settings.value('RoiGroupFolder', ''))
+        self.leStructBgFile.setText(self.settings.value('StructBgFile', ''))
+        self.leMCTempl.setText(self.settings.value('MCTempl', ''))
+        if (self.settings.value('Prot', '')) == 'ContTask':
+            self.leTaskFolder.setText(self.settings.value('TaskFolder', ''))
+
+        # --- middle ---
+        self.leProjName.setText(self.settings.value('ProjectName', ''))
+        self.leSubjectID.setText(self.settings.value('SubjectID', ''))
+        self.leFirstFile.setText(self.settings.value('FirstFileNameTxt', '001_{Image Series No:06}_{#:06}.dcm'))
+        self.sbNFRunNr.setValue(int(self.settings.value('NFRunNr', '1')))
+        self.sbImgSerNr.setValue(int(self.settings.value('ImgSerNr', '1')))
+        self.sbVolumesNr.setValue(int(self.settings.value('NrOfVolumes')))
+        self.sbSlicesNr.setValue(int(self.settings.value('NrOfSlices')))
+        self.sbTR.setValue(int(self.settings.value('TR')))
+        self.sbSkipVol.setValue(int(self.settings.value('nrSkipVol')))
+        self.sbMatrixSizeX.setValue(int(self.settings.value('MatrixSizeX')))
+        self.sbMatrixSizeY.setValue(int(self.settings.value('MatrixSizeY')))
+
+        # --- bottom left ---
+        self.cbOfflineMode.setChecked(str(self.settings.value('OfflineMode', 'true')).lower() == 'true')
+
+        if self.settings.value('UseTCPData', None) is None:
+            logger.warning('Upgrade settings format from version 1.0.rc0')
+
+        self.cbUseTCPData.setChecked(str(self.settings.value('UseTCPData', 'false')).lower() == 'true')
+        if self.cbUseTCPData.isChecked():
+            self.leTCPDataIP.setText(self.settings.value('TCPDataIP', ''))
+            self.leTCPDataPort.setText(str(self.settings.value('TCPDataPort', '')))
+
+        self.leMaxFeedbackVal.setText(str(self.settings.value('MaxFeedbackVal', '100')))  # FixMe
+        self.leMinFeedbackVal.setText(str(self.settings.value('MinFeedbackVal', '-100')))
+        self.sbFeedbackValDec.setValue(int(self.settings.value('FeedbackValDec', '0')))  # FixMe
+        self.cbNegFeedback.setChecked(str(self.settings.value('NegFeedback', 'false')).lower() == 'true')
+        self.cbFeedbackPlot.setChecked(str(self.settings.value('PlotFeedback', 'true')).lower() == 'true')
+
+        self.leShamFile.setText(self.settings.value('ShamFile', ''))
+
+        self.cbUsePTB.setChecked(str(self.settings.value('UsePTB', 'false')).lower() == 'true')
+        # if not config.USE_PTB_HELPER:
+        #     self.cbUsePTB.setChecked(False)
+        #     self.cbUsePTB.setEnabled(False)
+
+        self.cbScreenId.setCurrentIndex(int(self.settings.value('DisplayFeedbackScreenID', 0)))
+        self.cbDisplayFeedbackFullscreen.setChecked(
+            str(self.settings.value('DisplayFeedbackFullscreen')).lower() == 'true')
+
+        self.cbUseUDPFeedback.setChecked(str(self.settings.value('UseUDPFeedback')).lower() == 'true')
+        self.leUDPFeedbackIP.setText(self.settings.value('UDPFeedbackIP', ''))
+        self.leUDPFeedbackPort.setText(str(self.settings.value('UDPFeedbackPort', '1234')))
+        self.leUDPFeedbackControlChar.setText(str(self.settings.value('UDPFeedbackControlChar', '')))
+        self.cbUDPSendCondition.setChecked(str(self.settings.value('UDPSendCondition')).lower() == 'true')
+
+        # --- bottom right ---
+        idx = self.cbDataType.findText(self.settings.value('DataType', 'DICOM'))
+        if idx >= 0:
+            self.cbDataType.setCurrentIndex(idx)
+        self.cbgetMAT.setChecked(str(self.settings.value('GetMAT')).lower() == 'true')
+        idx = self.cbProt.findText(self.settings.value('Prot', 'Inter'))
+        if idx >= 0:
+            self.cbProt.setCurrentIndex(idx)
+        idx = self.cbType.findText(self.settings.value('Type', 'PSC'))
+        if idx >= 0:
+            self.cbType.setCurrentIndex(idx)
+
+        # --- main viewer ---
+        self.sbTargANG.setValue(float(self.settings.value('TargANG', 0)))
+        self.sbTargRAD.setValue(float(self.settings.value('TargRAD', 0)))
+        self.sbTargDIAM.setValue(float(self.settings.value('TargDIAM', 0.0)))
+        self.leWeightsFile.setText(str(self.settings.value('WeightsFileName', '')))
+
+        self.actualize()
+
+    # --------------------------------------------------------------------------
+    def actualize(self):
+        logger.info("  Actualizing:")
+
+        # --- top ---
+        self.exchange_data['ProtocolFile'] = self.leProtocolFile.text()
+        self.exchange_data['WorkFolder'] = self.leWorkFolder.text()
+        self.exchange_data['WatchFolder'] = self.leWatchFolder.text()
+
+        self.exchange_data['Type'] = self.cbType.currentText()
+        self.exchange_data['RoiAnatOperation'] = self.leRoiAnatOperation.text()
+        self.exchange_data['RoiGroupFolder'] = self.leRoiGroupFolder.text()
+        self.exchange_data['StructBgFile'] = self.leStructBgFile.text()
+        self.exchange_data['MCTempl'] = self.leMCTempl.text()
+
+        # --- middle ---
+        self.exchange_data['ProjectName'] = self.leProjName.text()
+        self.exchange_data['SubjectID'] = self.leSubjectID.text()
+        self.exchange_data['FirstFileNameTxt'] = self.leFirstFile.text()
+        self.exchange_data['ImgSerNr'] = self.sbImgSerNr.value()
+        self.exchange_data['NFRunNr'] = self.sbNFRunNr.value()
+
+        self.exchange_data['NrOfVolumes'] = self.sbVolumesNr.value()
+        self.exchange_data['NrOfSlices'] = self.sbSlicesNr.value()
+        self.exchange_data['TR'] = self.sbTR.value()
+        self.exchange_data['nrSkipVol'] = self.sbSkipVol.value()
+        self.exchange_data['MatrixSizeX'] = self.sbMatrixSizeX.value()
+        self.exchange_data['MatrixSizeY'] = self.sbMatrixSizeY.value()
+
+        # --- bottom left ---
+        self.exchange_data['UseTCPData'] = self.cbUseTCPData.isChecked()
+        if self.exchange_data['UseTCPData']:
+            self.exchange_data['TCPDataIP'] = self.leTCPDataIP.text()
+            self.exchange_data['TCPDataPort'] = int(self.leTCPDataPort.text())
+        self.exchange_data['DisplayFeedbackFullscreen'] = self.cbDisplayFeedbackFullscreen.isChecked()
+
+        # --- bottom right ---
+        self.exchange_data['DataType'] = str(self.cbDataType.currentText())
+        self.exchange_data['Prot'] = str(self.cbProt.currentText())
+        self.exchange_data['Type'] = str(self.cbType.currentText())
+        self.exchange_data['isAutoRTQA'] = con.auto_rtqa
+        self.exchange_data['isRTQA'] = con.use_rtqa
+        self.exchange_data['isIGLM'] = con.use_iglm
+        self.exchange_data['isDicomSiemensXA30'] = con.dicom_siemens_xa30
+        self.exchange_data['useEPITemplate'] = con.use_epi_template
+        self.exchange_data['isZeroPadding'] = con.is_zero_padding
+        self.exchange_data['nrZeroPadVol'] = con.nr_zero_pad_vol
+
+        if self.exchange_data['Prot'] == 'ContTask':
+            self.exchange_data['TaskFolder'] = self.leTaskFolder.text()
+
+        self.exchange_data['MaxFeedbackVal'] = float(self.leMaxFeedbackVal.text())
+        self.exchange_data['MinFeedbackVal'] = float(self.leMinFeedbackVal.text())
+        self.exchange_data['FeedbackValDec'] = self.sbFeedbackValDec.value()
+        self.exchange_data['NegFeedback'] = self.cbNegFeedback.isChecked()
+        self.exchange_data['PlotFeedback'] = self.cbFeedbackPlot.isChecked()
+
+        self.exchange_data['ShamFile'] = self.leShamFile.text()
+
+        # --- main viewer ---
+        self.exchange_data['WeightsFileName'] = self.leWeightsFile.text()
+
+        # Parsing FirstFileNameTxt template and replace it with variables ---
+        fields = {
+            'projectname': self.exchange_data['ProjectName'],
+            'subjectid': self.exchange_data['SubjectID'],
+            'imageseriesno': self.exchange_data['ImgSerNr'],
+            'nfrunno': self.exchange_data['NFRunNr'],
+            '#': 1
+        }
+        template = self.exchange_data['FirstFileNameTxt']
+        template_elements = re.findall(r"\{([A-Za-z0-9_: ]+)\}", template)
+
+        self.exchange_data['FirstFileName'] = self.exchange_data['FirstFileNameTxt']
+
+        for template_element in template_elements:
+            template = template.replace("{%s}" % template_element, "{%s}" % template_element.replace(" ", "").lower())
+
+        self.exchange_data['FirstFileName'] = template.format(**fields)
+
+        # Update GUI information
+        self.leCurrentVolume.setText('%d' % self.exchange_data["iter_norm_number"])
+        self.leFirstFilePath.setText(str(Path(self.exchange_data['WatchFolder'], self.exchange_data['FirstFileName'])))
+
+        filePathStatus = ""
+        if Path(self.exchange_data['WatchFolder']).is_dir():
+            filePathStatus += "MRI Watch Folder exists. "
+        else:
+            filePathStatus += "MRI Watch Folder does not exists. "
+        if Path(self.leFirstFilePath.text()).is_file():
+            filePathStatus += "First file exists. "
+        else:
+            filePathStatus += "First file does not exist. "
+
+        # if Path(self.P['WatchFolder'],self.P['FirstFileName']).is_dir()
+        self.lbFilePathStatus.setText(filePathStatus)
+
+        # Update settings file
+        # --- top ---
+        self.settings.setValue('StimulationProtocol', self.exchange_data['ProtocolFile'])
+        self.settings.setValue('WorkFolder', self.exchange_data['WorkFolder'])
+        self.settings.setValue('WatchFolder', self.exchange_data['WatchFolder'])
+        self.settings.setValue('RoiAnatOperation', self.exchange_data['RoiAnatOperation'])
+        self.settings.setValue('RoiGroupFolder', self.exchange_data['RoiGroupFolder'])
+        self.settings.setValue('StructBgFile', self.exchange_data['StructBgFile'])
+        self.settings.setValue('MCTempl', self.exchange_data['MCTempl'])
+
+        if self.exchange_data['Prot'] == 'ContTask':
+            self.settings.setValue('TaskFolder', self.exchange_data['TaskFolder'])
+
+        # --- middle ---
+        self.settings.setValue('ProjectName', self.exchange_data['ProjectName'])
+        self.settings.setValue('SubjectID', self.exchange_data['SubjectID'])
+        self.settings.setValue('ImgSerNr', self.exchange_data['ImgSerNr'])
+        self.settings.setValue('NFRunNr', self.exchange_data['NFRunNr'])
+
+        self.settings.setValue('FirstFileNameTxt', self.exchange_data['FirstFileNameTxt'])
+        self.settings.setValue('FirstFileName', self.exchange_data['FirstFileName'])
+
+        self.settings.setValue('NrOfVolumes', self.exchange_data['NrOfVolumes'])
+        self.settings.setValue('NrOfSlices', self.exchange_data['NrOfSlices'])
+        self.settings.setValue('TR', self.exchange_data['TR'])
+        self.settings.setValue('nrSkipVol', self.exchange_data['nrSkipVol'])
+        self.settings.setValue('MatrixSizeX', self.exchange_data['MatrixSizeX'])
+        self.settings.setValue('MatrixSizeY', self.exchange_data['MatrixSizeY'])
+
+        # --- bottom left ---
+        self.settings.setValue('OfflineMode', self.cbOfflineMode.isChecked())
+        self.settings.setValue('UseTCPData', self.cbUseTCPData.isChecked())
+        if self.cbUseTCPData.isChecked():
+            self.settings.setValue('TCPDataIP', self.leTCPDataIP.text())
+            self.settings.setValue('TCPDataPort', int(self.leTCPDataPort.text()))
+
+        self.settings.setValue('MaxFeedbackVal', self.exchange_data['MaxFeedbackVal'])
+        self.settings.setValue('MinFeedbackVal', self.exchange_data['MinFeedbackVal'])
+        self.settings.setValue('FeedbackValDec', self.exchange_data['FeedbackValDec'])
+        self.settings.setValue('NegFeedback', self.exchange_data['NegFeedback'])
+        self.settings.setValue('PlotFeedback', self.exchange_data['PlotFeedback'])
+
+        self.settings.setValue('ShamFile', self.exchange_data['ShamFile'])
+
+        self.settings.setValue('UsePTB', self.cbUsePTB.isChecked())
+        self.settings.setValue('DisplayFeedbackScreenID', self.cbScreenId.currentIndex())
+        self.settings.setValue('DisplayFeedbackFullscreen', self.cbDisplayFeedbackFullscreen.isChecked())
+
+        self.settings.setValue('UseUDPFeedback', self.cbUseUDPFeedback.isChecked())
+        self.settings.setValue('UDPFeedbackIP', self.leUDPFeedbackIP.text())
+        self.settings.setValue('UDPFeedbackPort', int(self.leUDPFeedbackPort.text()))
+        self.settings.setValue('UDPFeedbackControlChar', self.leUDPFeedbackControlChar.text())
+        self.settings.setValue('UDPSendCondition', self.cbUDPSendCondition.isChecked())
+
+        # --- bottom right ---
+        self.settings.setValue('DataType', self.exchange_data['DataType'])
+        self.settings.setValue('Prot', self.exchange_data['Prot'])
+        self.settings.setValue('Type', self.exchange_data['Type'])
+
+        self.settings.setValue('WeightsFileName', self.exchange_data['WeightsFileName'])
+
+        # Update config
+        self.tcp_data["use_tcp_data"] = self.cbUseTCPData.isChecked()
+        if self.tcp_data["use_tcp_data"]:
+            # TCP receiver settings
+            self.tcp_data["tcp_data_ip"] = self.leTCPDataIP.text()
+            self.tcp_data["tcp_data_port"] = int(self.leTCPDataPort.text())
+
+        con.USE_SHAM = bool(len(self.exchange_data['ShamFile']))
+
+        con.use_ptb = self.cbUsePTB.isChecked()
+
+        self.use_udp_feedback = self.cbUseUDPFeedback.isChecked()
+        if self.use_udp_feedback:
+            # UDP sender settings
+            self.udp_feedback_ip = self.leUDPFeedbackIP.text()
+            self.udp_feedback_port = int(self.leUDPFeedbackPort.text())
+            self.udp_feedback_controlchar = self.leUDPFeedbackControlChar.text()
+            self.udp_send_condition = self.cbUDPSendCondition.isChecked()
+        else:
+            self.udp_send_condition = False
 
     # --------------------------------------------------------------------------
     def onChangeImageViewMode(self, index):
@@ -580,6 +937,7 @@ class OpenNFTManager(QWidget):
 
         logger.debug('New cursor coords {} for proj "{}" have been received', pos, proj.name)
 
+    # --------------------------------------------------------------------------
     def onCheckGUIUpdated(self):
 
         if not (self.exchange_data is None) or not self.exchange_data["is_stopped"]:
@@ -606,6 +964,7 @@ class OpenNFTManager(QWidget):
                     self.onCheckOrthViewUpdated()
                     self.exchange_data["done_orth"] = False
 
+    # --------------------------------------------------------------------------
     def onCheckMosaicViewUpdated(self):
 
         if self.exchange_data["done_mosaic_templ"]:
@@ -618,6 +977,7 @@ class OpenNFTManager(QWidget):
 
             self.exchange_data["done_mosaic_templ"] = False
 
+    # --------------------------------------------------------------------------
     def onCheckOrthViewUpdated(self):
 
         for proj in projview.ProjectionType:
@@ -631,6 +991,7 @@ class OpenNFTManager(QWidget):
 
             self.orthView.set_background_image(proj, bg_image)
 
+    # --------------------------------------------------------------------------
     def closeEvent(self, event):
         if self._core_process.is_alive():
             self._core_process.join()
@@ -644,6 +1005,7 @@ class OpenNFTManager(QWidget):
         self.close()
         print("main process finished")
 
+    # --------------------------------------------------------------------------
     def close_shmem(self):
 
         self.mc_shmem.close()
