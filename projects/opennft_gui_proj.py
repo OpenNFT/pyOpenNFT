@@ -307,6 +307,11 @@ class OpenNFTManager(QWidget):
         self.musterInfo['blockLength'] = blockLength
 
     # --------------------------------------------------------------------------
+    def setupMcPlots(self):
+        mctrrot = self.mcPlot.getPlotItem()
+        self.basicSetupPlot(mctrrot)
+
+    # --------------------------------------------------------------------------
     def setupRoiPlots(self):
         self.makeRoiPlotLegend()
 
@@ -586,7 +591,11 @@ class OpenNFTManager(QWidget):
 
         self.init_shmem()
 
+        logger.info("  Setup plots...")
         self.createMusterInfo()
+
+        self.setupRoiPlots()
+        self.setupMcPlots()
 
         self.btnStart.setEnabled(True)
 
@@ -603,7 +612,6 @@ class OpenNFTManager(QWidget):
             self.btnStop.setEnabled(True)
             self.pbMoreParameters.setChecked(False)
 
-            self.setupRoiPlots()
             print("main starting process")
             self._core_process.start()
             if con.use_gui:
@@ -913,6 +921,7 @@ class OpenNFTManager(QWidget):
 
     # --------------------------------------------------------------------------
     def onChangeImageViewMode(self, index):
+
         if index == 0:
             stack_index = 0
             mode = ImageViewMode.mosaic
@@ -960,7 +969,6 @@ class OpenNFTManager(QWidget):
             else:
 
                 if self.exchange_data["done_orth"]:
-
                     self.onCheckOrthViewUpdated()
                     self.exchange_data["done_orth"] = False
 
