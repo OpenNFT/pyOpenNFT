@@ -56,13 +56,9 @@ class OpenNFTCoreProj(mp.Process):
                                 session.first_nf_inds,
                                 session.prot_names
                                 )
+
         self.session = session
         self.iteration = nftsession.NftIteration(session)
-
-        if con.iglm_ar1:
-            self.iteration.bas_func = ar_regr(con.a_ar1, session.spm["xX_x"][:, 0:-1])
-        else:
-            self.iteration.bas_func = session.spm["xX_x"][:, 0:-2]
 
         self.iteration.lin_regr = zscore(
             np.array(range(0, config.volumes_nr - config.skip_vol_nr), ndmin=2).transpose())
@@ -138,6 +134,7 @@ class OpenNFTCoreProj(mp.Process):
 
             time_start = time.time()
             self.iteration.process_vol()
+            self.iteration.iglm()
             self.epi_volume[:, :, :] = self.iteration.mr_vol.volume
             self.exchange_data["ready_to_form"] = True
 

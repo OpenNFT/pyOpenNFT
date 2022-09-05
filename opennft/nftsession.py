@@ -8,7 +8,9 @@ from scipy.io import savemat
 from opennft.mrvol import MrVol
 from opennft.mrroi import MrROI
 from opennft.mrtimeseries import MrTimeSeries
-from opennft.utils import get_mosaic_dim, img2d_vol3d
+from opennft.iglm_vol import iglm_vol
+from opennft.utils import get_mosaic_dim, img2d_vol3d, ar_regr, zscore
+from opennft.config import config as con
 
 
 # --------------------------------------------------------------------------
@@ -126,6 +128,41 @@ class NftIteration():
         self.sig_prproc_glm_design = []
         self.lin_regr = []
 
+        if con.iglm_ar1:
+            self.bas_func = ar_regr(con.a_ar1, session.spm["xX_x"][:, 0:-1])
+        else:
+            self.bas_func = session.spm["xX_x"][:, 0:-2]
+
+        self.nr_bas_func = len(self.bas_func[0])
+        if not con.is_regr_iglm:
+
+            self.nr_bas_fct_regr = 1
+
+        else:
+
+            nr_high_pass_regr = len(session.spm["xX_K"]["x0"][0])
+            nr_mot_regr = 6
+
+            is_high_pass = con.is_high_pass
+            is_motion_regr = con.is_motion_regr
+            is_lin_regr = con.is_lin_regr
+
+            if is_high_pass and is_motion_regr and is_lin_regr:
+                self.nr_bas_fct_regr = nr_mot_regr + nr_high_pass_regr + 2
+                # adding 6 head motion, linear, high-pass filter, and constant regressors
+            elif not is_high_pass and is_motion_regr and is_lin_regr:
+                self.nr_bas_fct_regr = nr_mot_regr + 2
+                # adding 6 head motion, linear, and constant regressors
+            elif is_high_pass and not is_motion_regr and is_lin_regr:
+                self.nr_bas_fct_regr = nr_high_pass_regr + 2
+                # dding high-pass filter, linear, and constant regressors
+            elif is_high_pass and not is_motion_regr and not is_lin_regr:
+                self.nr_bas_fct_regr = nr_high_pass_regr + 1
+                # adding high-pass filter, and constant regressors
+            elif not is_high_pass and not is_motion_regr and is_lin_regr:
+                self.nr_bas_fct_regr = 2
+                # adding linear, and constant regressors
+
         # realigment parameters
         self.a0 = []
         self.x1 = []
@@ -133,6 +170,26 @@ class NftIteration():
         self.x3 = []
         self.deg = []
         self.b = []
+
+        n = self.nr_bas_fct_regr + self.nr_bas_func
+        nr_vox_in_vol = self.session.reference_vol.dim.prod()
+        # iGLM parameters
+        self.iglm_params = {
+            "p_val": .01,
+            "t_contr_pos": self.session.pos_contrast,
+            "t_contr_neg": self.session.neg_contrast,
+            "cn": np.zeros((n, n)),
+            "dn": np.zeros((nr_vox_in_vol, n)),
+            "s2n": np.zeros((nr_vox_in_vol, 1)),
+            "tn_pos": np.zeros((nr_vox_in_vol, 1)),
+            "tn_neg": np.zeros((nr_vox_in_vol, 1)),
+            "t_th": np.zeros((self.session.nr_vols, 1)),
+            "dyn_t_th": 0,
+            "spm_mask_th": session.spm["xM_TH"].mean()*np.ones(session.spm["xM_TH"].shape),
+            "stat_map_vect": np.zeros((nr_vox_in_vol, 1)),
+            "stat_map_3d_pos": np.zeros(self.session.reference_vol.dim),
+            "stat_map_3d_neg": np.zeros(self.session.reference_vol.dim)
+        }
 
     # --------------------------------------------------------------------------
     def load_vol(self, file_name, im_type):
@@ -159,6 +216,86 @@ class NftIteration():
 
         self.mr_time_series.preprocessing(self.iter_norm_number, self.bas_func, self.lin_regr, sl_wind,
                                           self.session.vect_end_cond, self.session.offsets[0][0][0] - 1, is_svm)
+
+    # --------------------------------------------------------------------------
+    def iglm(self):
+
+        ind_iglm = self.iter_norm_number
+
+        is_high_pass = con.is_high_pass
+        is_motion_regr = con.is_motion_regr
+        is_lin_regr = con.is_lin_regr
+
+        tmp_regr = np.array([])
+
+        if con.is_regr_iglm:
+            if is_high_pass and is_motion_regr and is_lin_regr:
+
+                tmp_regr = zscore(self.mr_time_series.mc_params[:, 0:ind_iglm + 1]).T
+                tmp_regr = np.hstack((tmp_regr, self.lin_regr[0:ind_iglm + 1]))
+                tmp_regr = np.hstack((tmp_regr, self.session.spm["xX_K"]["x0"][0:ind_iglm + 1, :]))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+            elif not is_high_pass and is_motion_regr and is_lin_regr:
+
+                tmp_regr = zscore(self.mr_time_series.mc_params[:, 0:ind_iglm + 1]).T
+                tmp_regr = np.hstack((tmp_regr, self.lin_regr[0:ind_iglm + 1]))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+
+            elif is_high_pass and not is_motion_regr and is_lin_regr:
+
+                tmp_regr = self.lin_regr[0:ind_iglm + 1]
+                tmp_regr = np.hstack((tmp_regr, self.session.spm["xX_K"]["x0"][0:ind_iglm + 1, :]))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+
+            elif is_high_pass and not is_motion_regr and not is_lin_regr:
+
+                tmp_regr = self.session.spm["xX_K"]["x0"][0:ind_iglm + 1, :]
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+
+            elif not is_high_pass and not is_motion_regr and is_lin_regr:
+
+                tmp_regr = self.lin_regr[0:ind_iglm + 1]
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+
+        else:
+
+            tmp_regr = np.ones((ind_iglm, 1))
+
+        if con.iglm_ar1:
+            tmp_regr = ar_regr(con.a_ar1, tmp_regr)
+
+        bas_fct_regr = np.hstack((self.bas_func[0:ind_iglm + 1, :], tmp_regr))
+
+        t_contr_pos = np.vstack((self.iglm_params["t_contr_pos"], np.zeros((self.nr_bas_fct_regr, 1))))
+        t_contr_neg = np.vstack((self.iglm_params["t_contr_neg"], np.zeros((self.nr_bas_fct_regr, 1))))
+
+        cn = self.iglm_params["cn"]
+        dn = self.iglm_params["dn"]
+        s2n = self.iglm_params["s2n"]
+        tn = {"pos": self.iglm_params["tn_pos"], "neg": self.iglm_params["tn_neg"]}
+        t_contr = {"pos": t_contr_pos, "neg": t_contr_neg}
+        p_val = self.iglm_params["p_val"]
+        dynt_th = self.iglm_params["dyn_t_th"]
+        t_th = self.iglm_params["t_th"]
+        spm_mask_th = self.iglm_params["spm_mask_th"]
+
+
+        idx_act_vox, dynt_th, \
+        t_th, cn, dn, sigma2n, \
+        tn, neg_e2n, bn, e2n = iglm_vol(cn, dn, s2n, tn, self.mr_vol.volume.flatten(order="F"),
+                                       ind_iglm+1, self.nr_bas_func + self.nr_bas_fct_regr,
+                                       t_contr, bas_fct_regr, p_val, dynt_th, t_th, spm_mask_th)
+
+        self.iglm_params["cn"] = cn
+        self.iglm_params["dn"] = dn
+        self.iglm_params["s2n"] = sigma2n
+        self.iglm_params["tn_pos"] = tn["pos"]
+        self.iglm_params["tn_neg"] = tn["neg"]
+        self.iglm_params["dyn_t_th"] = dynt_th
+        self.iglm_params["t_th"] = t_th
+
+
+
 
     # --------------------------------------------------------------------------
     # test function
