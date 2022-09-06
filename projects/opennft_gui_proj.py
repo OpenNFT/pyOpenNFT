@@ -74,6 +74,12 @@ class OpenNFTManager(QWidget):
             self.btnChooseSetFile2.clicked.connect(self.onChooseSetFile)
             self.pbMoreParameters.toggled.connect(self.onShowMoreParameters)
 
+            self.pos_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
+            self.neg_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
+
+            self.exchange_data["pos_thresholds"] = self.pos_map_thresholds_widget.get_thresholds()
+            self.exchange_data["neg_thresholds"] = self.neg_map_thresholds_widget.get_thresholds()
+
             self.btnSetup.clicked.connect(self.setup)
             self.btnStart.clicked.connect(self.start)
 
@@ -96,15 +102,18 @@ class OpenNFTManager(QWidget):
         self.exchange_data["vol_dim"] = 0
         self.exchange_data["mosaic_dim"] = 0
         self.exchange_data["is_ROI"] = con.use_roi
+        self.exchange_data["is_rtqa"] = con.use_rtqa
         self.exchange_data["vol_mat"] = None
         self.exchange_data["is_stopped"] = False
         self.exchange_data["ready_to_form"] = False
         self.exchange_data["view_mode"] = 'mosaic'
         self.exchange_data["done_mosaic_templ"] = False
+        self.exchange_data["done_mosaic_overlay"] = False
         self.exchange_data["done_orth"] = False
         self.exchange_data["overlay_ready"] = False
         self.exchange_data["iter_norm_number"] = 0
 
+        self.exchange_data["auto_thr_pos"] = False
         self.exchange_data["proj_dims"] = None
         self.exchange_data["is_neg"] = False
         self.exchange_data["bg_type"] = "bgEPI"
@@ -127,7 +136,7 @@ class OpenNFTManager(QWidget):
         self.nfb_data = np.ndarray(shape=nfb_array.shape, dtype=nfb_array.dtype, buffer=self.nfb_shmem.buf)
 
         mosaic_array = np.zeros(self.mosaic_dim, dtype=np.float32)
-        self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes * 3, name=con.shmem_file_names[1])
+        self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes*9, name=con.shmem_file_names[1])
         self.mosaic_data = np.ndarray(shape=mosaic_array.shape, dtype=mosaic_array.dtype, buffer=self.mosaic_shmem.buf)
 
         vol_array = np.zeros(self.exchange_data["vol_dim"], dtype=np.float32)
@@ -135,31 +144,23 @@ class OpenNFTManager(QWidget):
         self.epi_data = np.ndarray(shape=vol_array.shape, dtype=vol_array.dtype, buffer=self.epi_shmem.buf)
         self.epi_data[:,:,:] = self._core_process.session.reference_vol.volume
 
-        overlay_array = np.zeros(self.exchange_data["vol_dim"], dtype=np.float32)
-        self.overlay_shmem = shared_memory.SharedMemory(create=True, size=overlay_array.nbytes, name=con.shmem_file_names[3])
-        self.overlay_data = np.ndarray(shape=overlay_array.shape, dtype=overlay_array.dtype, buffer=self.overlay_shmem.buf)
+        stat_dim = 2, self.exchange_data["vol_dim"][0], self.exchange_data["vol_dim"][1], self.exchange_data["vol_dim"][2]
+        stat_array = np.zeros(stat_dim, dtype=np.float32)
+        self.stat_shmem = shared_memory.SharedMemory(create=True, size=stat_array.nbytes, name=con.shmem_file_names[3])
+        self.stat_data = np.ndarray(shape=stat_array.shape, dtype=stat_array.dtype, buffer=self.stat_shmem.buf)
 
         dims = self.exchange_data["proj_dims"]
-        proj_array = np.zeros((dims[0],dims[1]), dtype=np.float32)
+        proj_array = np.zeros((dims[0],dims[1], 9), dtype=np.float32)
         self.proj_t_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[5])
-        self.proj_t = np.ndarray(shape=(dims[0],dims[1]),
-                                 dtype=np.float32,
-                                 buffer=self.proj_t_shmem.buf,
-                                 order="F")
+        self.proj_t = np.ndarray(shape=(dims[0],dims[1], 9), dtype=np.float32, buffer=self.proj_t_shmem.buf, order="F")
 
-        proj_array = np.zeros((dims[0],dims[2]), dtype=np.float32)
+        proj_array = np.zeros((dims[0],dims[2], 9), dtype=np.float32)
         self.proj_c_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[6])
-        self.proj_c = np.ndarray(shape=(dims[0],dims[2]),
-                                 dtype=np.float32,
-                                 buffer=self.proj_c_shmem.buf,
-                                 order="F")
+        self.proj_c = np.ndarray(shape=(dims[0],dims[2], 9), dtype=np.float32, buffer=self.proj_c_shmem.buf, order="F")
 
-        proj_array = np.zeros((dims[1],dims[2]), dtype=np.float32)
+        proj_array = np.zeros((dims[1],dims[2], 9), dtype=np.float32)
         self.proj_s_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[7])
-        self.proj_s = np.ndarray(shape=(dims[1],dims[2]),
-                                 dtype=np.float32,
-                                 buffer=self.proj_s_shmem.buf,
-                                 order="F")
+        self.proj_s = np.ndarray(shape=(dims[1],dims[2], 9), dtype=np.float32, buffer=self.proj_s_shmem.buf, order="F")
 
     # --------------------------------------------------------------------------
     def view_form_init(self):
@@ -586,7 +587,8 @@ class OpenNFTManager(QWidget):
         self.nr_vol = self.exchange_data["nr_vol"]
         self.nr_rois = self.exchange_data["nr_rois"]
         self.vol_dim = self.exchange_data["vol_dim"]
-        self.mosaic_dim = self.exchange_data["mosaic_dim"]
+        self.mosaic_dim = self.exchange_data["mosaic_dim"]+ (1,)
+        self.overlay_dim = self.exchange_data["mosaic_dim"] + (4,)
         self.view_form_init()
 
         self.init_shmem()
@@ -920,6 +922,25 @@ class OpenNFTManager(QWidget):
             self.udp_send_condition = False
 
     # --------------------------------------------------------------------------
+    def onInteractWithMapImage(self):
+        sender = self.sender()
+
+        if sender is self.pos_map_thresholds_widget:
+            self.pos_map_thresholds_widget.auto_thresholds = False
+            self.exchange_data["auto_thr_pos"] = False
+            self.exchange_data["pos_thresholds"] = self.pos_map_thresholds_widget.get_thresholds()
+
+        if sender is self.neg_map_thresholds_widget:
+            self.neg_map_thresholds_widget.auto_thresholds = False
+            self.exchange_data["auto_thr_neg"] = False
+            self.exchange_data["neg_thresholds"] = self.neg_map_thresholds_widget.get_thresholds()
+
+        # if self.imageViewMode == ImageViewMode.mosaic:
+        #     self.updateMosaicViewAsync()
+        # else:
+        #     self.updateOrthViewAsync()
+
+    # --------------------------------------------------------------------------
     def onChangeImageViewMode(self, index):
 
         if index == 0:
@@ -976,7 +997,9 @@ class OpenNFTManager(QWidget):
     def onCheckMosaicViewUpdated(self):
 
         if self.exchange_data["done_mosaic_templ"]:
-            background_image = np.ndarray(shape=self.mosaic_dim, dtype=np.float32, buffer=self.mosaic_shmem.buf)
+            background_image = np.ndarray(shape=self.mosaic_dim,
+                                          dtype=np.float32,
+                                          buffer=self.mosaic_shmem.buf).squeeze()
             if background_image.size > 0:
                 logger.info("Done mosaic template")
                 self.mosaicImageView.set_background_image(background_image)
@@ -985,19 +1008,103 @@ class OpenNFTManager(QWidget):
 
             self.exchange_data["done_mosaic_templ"] = False
 
+        # SNR/Stat map display
+        if self.exchange_data["done_mosaic_overlay"]:
+
+            rgba_pos_map_image = np.zeros(self.mosaic_dim, dtype=np.float32)
+            rgba_pos_map_image = np.ndarray(shape=self.overlay_dim,
+                                            dtype=np.float32,
+                                            offset=rgba_pos_map_image.nbytes+1,
+                                            buffer=self.mosaic_shmem.buf)
+            pos_thr = self.exchange_data["pos_thresholds"]
+            self.pos_map_thresholds_widget.set_thresholds(pos_thr)
+
+            if rgba_pos_map_image is not None:
+                self.mosaicImageView.set_pos_map_image(rgba_pos_map_image)
+
+            if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
+
+                rgba_neg_map_image = np.zeros(self.mosaic_dim, dtype=np.float32)
+                rgba_neg_map_image = np.ndarray(shape=self.overlay_dim,
+                                                dtype=np.float32,
+                                                offset=rgba_neg_map_image.nbytes*4 + 1,
+                                                buffer=self.mosaic_shmem.buf)
+                neg_thr = self.exchange_data["neg_thresholds"]
+                self.neg_map_thresholds_widget.set_thresholds(neg_thr)
+
+                if rgba_neg_map_image is not None:
+                    self.mosaicImageView.set_neg_map_image(rgba_neg_map_image)
+
+            self.exchange_data["done_mosaic_overlay"] = False
+
     # --------------------------------------------------------------------------
     def onCheckOrthViewUpdated(self):
+
+        rgba_pos_map_image = None
+        rgba_neg_map_image = None
+
+        dims = self.exchange_data["proj_dims"]
+        proj_t = np.zeros((dims[0],dims[1], 1), dtype=np.float32)
+        proj_c = np.zeros((dims[0],dims[2], 1), dtype=np.float32)
+        proj_s = np.zeros((dims[1],dims[2], 1), dtype=np.float32)
 
         for proj in projview.ProjectionType:
 
             if proj == projview.ProjectionType.transversal:
-                bg_image = self.proj_t.T
+
+                bg_image = np.ndarray(shape=(dims[0],dims[1], 1),
+                                      dtype=np.float32,
+                                      buffer=self.proj_t_shmem.buf).squeeze().T
+                rgba_pos_map_image = np.ndarray(shape=(dims[0],dims[1], 4),
+                                                dtype=np.float32,
+                                                offset=proj_t.nbytes+1,
+                                                buffer=self.proj_t_shmem.buf)
+                if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
+                    rgba_neg_map_image = np.ndarray(shape=(dims[0],dims[1], 4),
+                                                    dtype=np.float32,
+                                                    offset=proj_t.nbytes*4+1,
+                                                    buffer=self.proj_t_shmem.buf)
             elif proj == projview.ProjectionType.sagittal:
-                bg_image = self.proj_s.T
+
+                bg_image = np.ndarray(shape=(dims[1], dims[2], 1),
+                                      dtype=np.float32,
+                                      buffer=self.proj_s_shmem.buf).squeeze().T
+                rgba_pos_map_image = np.ndarray(shape=(dims[1], dims[2], 4),
+                                                dtype=np.float32,
+                                                offset=proj_s.nbytes + 1,
+                                                buffer=self.proj_s_shmem.buf)
+                if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
+                    rgba_neg_map_image = np.ndarray(shape=(dims[1], dims[2], 4),
+                                                    dtype=np.float32,
+                                                    offset=proj_s.nbytes * 5 + 1,
+                                                    buffer=self.proj_s_shmem.buf)
             elif proj == projview.ProjectionType.coronal:
-                bg_image = self.proj_c.T
+
+                bg_image = np.ndarray(shape=(dims[0], dims[2], 1),
+                                      dtype=np.float32,
+                                      buffer=self.proj_c_shmem.buf).squeeze().T
+                rgba_pos_map_image = np.ndarray(shape=(dims[0], dims[2], 4),
+                                                dtype=np.float32,
+                                                offset=proj_t.nbytes + 1,
+                                                buffer=self.proj_c_shmem.buf)
+                if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
+                    rgba_neg_map_image = np.ndarray(shape=(dims[0], dims[2], 4),
+                                                    dtype=np.float32,
+                                                    offset=proj_t.nbytes * 5 + 1,
+                                                    buffer=self.proj_c_shmem.buf)
 
             self.orthView.set_background_image(proj, bg_image)
+            if rgba_pos_map_image is not None and rgba_pos_map_image.ndim == 3:
+                self.orthView.set_pos_map_image(proj, rgba_pos_map_image)
+            if rgba_neg_map_image is not None and rgba_neg_map_image.ndim == 3:
+                self.orthView.set_neg_map_image(proj, rgba_neg_map_image)
+
+        pos_thr = self.exchange_data["pos_thresholds"]
+        self.pos_map_thresholds_widget.set_thresholds(pos_thr)
+
+        if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
+            neg_thr = self.exchange_data["neg_thresholds"]
+            self.neg_map_thresholds_widget.set_thresholds(neg_thr)
 
     # --------------------------------------------------------------------------
     def closeEvent(self, event):

@@ -24,7 +24,7 @@ muster_y_limits: [-32767, 32768]
 muster_plot_alpha: 50
 donot_use_qfile_native_dialog: False
 
-use_rtqa: True
+use_rtqa: False
 use_iglm: True
 
 dicom_siemens_xa30: False

@@ -9,7 +9,7 @@ from opennft.mrvol import MrVol
 from opennft.mrroi import MrROI
 from opennft.mrtimeseries import MrTimeSeries
 from opennft.iglm_vol import iglm_vol
-from opennft.utils import get_mosaic_dim, img2d_vol3d, ar_regr, zscore
+from opennft.utils import get_mosaic_dim, vol3d_img2d, img2d_vol3d, ar_regr, zscore
 from opennft.config import config as con
 
 
@@ -221,6 +221,7 @@ class NftIteration():
     def iglm(self):
 
         ind_iglm = self.iter_norm_number
+        stat_ready = False
 
         is_high_pass = con.is_high_pass
         is_motion_regr = con.is_motion_regr
@@ -294,7 +295,26 @@ class NftIteration():
         self.iglm_params["dyn_t_th"] = dynt_th
         self.iglm_params["t_th"] = t_th
 
+        dim = self.session.reference_vol.dim
 
+        if idx_act_vox["pos"].size > 0 and np.max(tn["pos"]) > 0:
+            masked_stat_map_vect_pos = tn["pos"][idx_act_vox["pos"]]
+            stat_map_vect = masked_stat_map_vect_pos.squeeze()
+            temp_map = self.iglm_params["stat_map_3d_pos"].flatten(order='F')
+            temp_map[idx_act_vox["pos"]] = stat_map_vect
+            self.iglm_params["stat_map_3d_pos"] = np.reshape(temp_map, dim, order='F')
+            stat_ready = True
+
+        if idx_act_vox["neg"].size > 0 and np.max(tn["neg"]) > 0:
+
+            masked_stat_map_vect_neg = tn["neg"][idx_act_vox["neg"]]
+            stat_map_vect = masked_stat_map_vect_neg.squeeze()
+            temp_map = self.iglm_params["stat_map_3d_neg"].flatten(order='F')
+            temp_map[idx_act_vox["neg"]] = stat_map_vect
+            self.iglm_params["stat_map_3d_neg"] = np.reshape(temp_map, dim, order='F')
+            stat_ready = True
+
+        return stat_ready
 
 
     # --------------------------------------------------------------------------

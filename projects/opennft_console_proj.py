@@ -95,6 +95,10 @@ class OpenNFTCoreProj(mp.Process):
         self.epi_volume = np.ndarray(shape=self.session.reference_vol.dim, dtype=np.float32, buffer=self.epi_shmem.buf,
                                      order="F")
 
+        stat_dim = 2, self.session.reference_vol.dim[0], self.session.reference_vol.dim[1], self.session.reference_vol.dim[2]
+        self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
+        self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
+
     # --------------------------------------------------------------------------
     def run(self):
         # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
@@ -134,9 +138,16 @@ class OpenNFTCoreProj(mp.Process):
 
             time_start = time.time()
             self.iteration.process_vol()
-            self.iteration.iglm()
+            stat_ready = self.iteration.iglm()
+
             self.epi_volume[:, :, :] = self.iteration.mr_vol.volume
             self.exchange_data["ready_to_form"] = True
+
+            if stat_ready:
+                self.stat_volume[0,:,:,:] = self.iteration.iglm_params["stat_map_3d_pos"]
+                if self.exchange_data["is_neg"]:
+                    self.stat_volume[1,:,:,:] = self.iteration.iglm_params["stat_map_3d_neg"]
+                self.exchange_data["overlay_ready"] = True
 
             self.iteration.process_time_series()
             self.nfb_calc.nfb_calc()
@@ -165,4 +176,8 @@ class OpenNFTCoreProj(mp.Process):
 
         self.mc_shmem.close()
         self.epi_shmem.close()
+        self.ts_shmem.close()
+        self.nfb_shmem.close()
+        self.stat_shmem.close()
+
         print("calc process finished")
