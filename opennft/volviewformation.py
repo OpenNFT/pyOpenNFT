@@ -121,7 +121,7 @@ class VolViewFormation(mp.Process):
                                 neg_overlay_vol = self.stat_volume[1, :, :, :].squeeze()
                                 neg_overlay_img = vol3d_img2d(neg_overlay_vol, self.xdim, self.ydim,
                                                               self.img2d_dimx, self.img2d_dimy, self.dim)
-                                neg_mosaic_overlay = (neg_overlay_img / np.max(neg_overlay_img)) * 255
+                                neg_overlay_img = (neg_overlay_img / np.max(neg_overlay_img)) * 255
 
                         if self.exchange_data["auto_thr_pos"]:
                             pos_thr = self.thr_calculator(overlay_img)

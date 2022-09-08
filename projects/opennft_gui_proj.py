@@ -125,6 +125,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["elapsed_time"] = 0
 
         self.exchange_data["auto_thr_pos"] = True
+        self.exchange_data["auto_thr_neg"] = False
         self.exchange_data["proj_dims"] = None
         self.exchange_data["is_neg"] = False
         self.exchange_data["bg_type"] = "bgEPI"
@@ -1019,6 +1020,8 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def onChangeNegMapVisible(self):
         is_visible = self.negMapCheckBox.isChecked()
+
+        self.exchange_data["is_neg"] = is_visible
 
         self.mosaicImageView.set_neg_map_visible(is_visible)
         self.orthView.set_neg_map_visible(is_visible)
