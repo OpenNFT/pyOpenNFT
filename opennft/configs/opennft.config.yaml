@@ -23,6 +23,7 @@ roi_plot_width: 2.0
 muster_y_limits: [-32767, 32768]
 muster_plot_alpha: 50
 donot_use_qfile_native_dialog: False
+use_sleep_in_stop: False
 
 use_rtqa: False
 use_iglm: True

@@ -72,7 +72,7 @@ class OpenNFTCoreProj(mp.Process):
         self.exchange_data["nr_vol"] = self.session.config.volumes_nr - self.session.config.skip_vol_nr
         self.exchange_data["nr_rois"] = self.session.nr_rois
         self.exchange_data["vol_dim"] = self.session.reference_vol.dim
-        self.exchange_data["mosaic_dim"] = tuple([self.session.img2d_dimx, self.session.img2d_dimy])
+        self.exchange_data["mosaic_dim"] = self.session.img2d_dimy, self.session.img2d_dimx
         self.exchange_data["vol_mat"] = self.session.reference_vol.mat
         self.exchange_data["roi_names"] = self.session.roi_names
         self.exchange_data["iter_norm_number"] = self.iteration.iter_norm_number
@@ -167,9 +167,9 @@ class OpenNFTCoreProj(mp.Process):
             self.exchange_data["data_ready_flag"] = True
 
             self.iteration.iter_number += 1
-            elapsed_time = time.time() - time_start
+            self.exchange_data["elapsed_time"] = time.time() - time_start
 
-            logger.info('{} {:.4f} {}', "Elapsed time: ", elapsed_time, 's')
+            logger.info('{} {:.4f} {}', "Elapsed time: ", self.exchange_data["elapsed_time"], 's')
 
         self.iteration.save_time_series()
         self.nfb_calc.nfb_save()
