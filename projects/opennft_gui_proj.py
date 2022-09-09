@@ -13,6 +13,7 @@ from PyQt5.uic import loadUi
 from PyQt5.QtCore import QTimer, QSettings
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog
 from loguru import logger
+from scipy.io import savemat
 
 import opennft_console_proj
 from opennft import mosaicview, projview, mapimagewidget, volviewformation, LegacyNftConfigLoader
@@ -153,13 +154,13 @@ class OpenNFTManager(QWidget):
 
         vol_array = np.zeros(self.exchange_data["vol_dim"], dtype=np.float32)
         self.epi_shmem = shared_memory.SharedMemory(create=True, size=vol_array.nbytes, name=con.shmem_file_names[2])
-        self.epi_data = np.ndarray(shape=vol_array.shape, dtype=vol_array.dtype, buffer=self.epi_shmem.buf)
+        self.epi_data = np.ndarray(shape=vol_array.shape, dtype=vol_array.dtype, buffer=self.epi_shmem.buf, order='F')
         self.epi_data[:,:,:] = self._core_process.session.reference_vol.volume
 
         stat_dim = 2, self.exchange_data["vol_dim"][0], self.exchange_data["vol_dim"][1], self.exchange_data["vol_dim"][2]
         stat_array = np.zeros(stat_dim, dtype=np.float32)
         self.stat_shmem = shared_memory.SharedMemory(create=True, size=stat_array.nbytes, name=con.shmem_file_names[3])
-        self.stat_data = np.ndarray(shape=stat_array.shape, dtype=stat_array.dtype, buffer=self.stat_shmem.buf)
+        self.stat_data = np.ndarray(shape=stat_array.shape, dtype=stat_array.dtype, buffer=self.stat_shmem.buf, order='F')
 
         dims = self.exchange_data["proj_dims"]
         proj_array = np.zeros((dims[1],dims[0], 9), dtype=np.float32)
@@ -1202,8 +1203,6 @@ class OpenNFTManager(QWidget):
         rgba_pos_map_image = None
         rgba_neg_map_image = None
 
-        dims = self.exchange_data["proj_dims"]
-
         for proj in projview.ProjectionType:
 
             if proj == projview.ProjectionType.transversal:
@@ -1212,6 +1211,8 @@ class OpenNFTManager(QWidget):
                 rgba_pos_map_image = self.proj_t[:,:,1:5]
                 if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
                     rgba_neg_map_image = self.proj_t[:,:,5:9]
+
+                savemat("transversal.mat", {"bg": bg_image, "pos": rgba_pos_map_image})
 
             elif proj == projview.ProjectionType.sagittal:
 
@@ -1269,8 +1270,8 @@ class OpenNFTManager(QWidget):
         self.mosaic_shmem.unlink()
         self.epi_shmem.close()
         self.epi_shmem.unlink()
-        # self.stat_shmem.close()
-        # self.stat_shmem.unlink()
+        self.stat_shmem.close()
+        self.stat_shmem.unlink()
         self.proj_t_shmem.close()
         self.proj_t_shmem.unlink()
         self.proj_c_shmem.close()

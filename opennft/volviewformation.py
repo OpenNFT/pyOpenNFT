@@ -64,9 +64,9 @@ class VolViewFormation(mp.Process):
                                      buffer=self.epi_shmem.buf,
                                      order="F")
 
-        stat_dim = 2, self.dim[0], self.dim[1], self.dim[2]
+        stat_dim = tuple(self.dim) + (2,)
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
-        self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
+        self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order='F')
 
         dims = self.exchange_data["proj_dims"]
         self.proj_t_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[5])
@@ -112,13 +112,16 @@ class VolViewFormation(mp.Process):
                                                       self.img2d_dimx, self.img2d_dimy, self.dim)
                             overlay_img = (overlay_img / np.max(overlay_img)) * 255
                         else:
-                            overlay_vol = self.stat_volume[0, :, :, :].squeeze()
+                            overlay_vol = self.stat_volume[:, :, :, 0].squeeze()
+
+                            # overlay_vol = loadmat('stat_vol_from_matlab.mat')['pos_vol']
+
                             overlay_img = vol3d_img2d(overlay_vol, self.xdim, self.ydim,
                                                       self.img2d_dimx, self.img2d_dimy, self.dim)
                             overlay_img = (overlay_img / np.max(overlay_img)) * 255
 
                             if self.exchange_data["is_neg"]:
-                                neg_overlay_vol = self.stat_volume[1, :, :, :].squeeze()
+                                neg_overlay_vol = self.stat_volume[:, :, :, 1].squeeze()
                                 neg_overlay_img = vol3d_img2d(neg_overlay_vol, self.xdim, self.ydim,
                                                               self.img2d_dimx, self.img2d_dimy, self.dim)
                                 neg_overlay_img = (neg_overlay_img / np.max(neg_overlay_img)) * 255

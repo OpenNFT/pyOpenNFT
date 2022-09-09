@@ -279,7 +279,8 @@ class NftIteration():
         dynt_th = self.iglm_params["dyn_t_th"]
         t_th = self.iglm_params["t_th"]
         spm_mask_th = self.iglm_params["spm_mask_th"]
-
+        self.iglm_params["stat_map_3d_pos"] = np.zeros(self.session.reference_vol.dim)
+        self.iglm_params["stat_map_3d_neg"] = np.zeros(self.session.reference_vol.dim)
 
         idx_act_vox, dynt_th, \
         t_th, cn, dn, sigma2n, \
