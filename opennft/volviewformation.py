@@ -7,6 +7,8 @@ import cv2
 import pydicom
 from scipy import linalg
 from rtspm import spm_imatrix, spm_matrix, spm_slice_vol
+
+from opennft.mrvol import MrVol
 from opennft.utils import img2d_vol3d, vol3d_img2d, get_mosaic_dim
 from opennft.mapimagewidget import MapImageThresholdsCalculator, RgbaMapImage, Thresholds
 from opennft.config import config as con
@@ -30,11 +32,9 @@ class VolViewFormation(mp.Process):
 
         self.xdim, self.ydim, self.img2d_dimx, self.img2d_dimy = get_mosaic_dim(self.dim)
 
-        # if not (self.exchange_data["anat_volume"] is None):
-        #     anat_name = self.exchange_data["anat_volume"]
-        #     anat_data = nib.load(anat_name, mmap=False)
-        #     self.anat_volume = np.array(anat_data.get_fdata(), order="F")
-        #     self.mat_anat = anat_data.affine
+        # if not (self.exchange_data["StructBgFile"] is None):
+        #     self.anat_volume = MrVol()
+        #     self.anat_volume.load_vol(self.exchange_data["StructBgFile"], 'nii')
 
         # ROIs
         if self.exchange_data["is_ROI"]:
@@ -63,6 +63,12 @@ class VolViewFormation(mp.Process):
                                      dtype=np.float32,
                                      buffer=self.epi_shmem.buf,
                                      order="F")
+
+        self.anat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[10])
+        self.anat_volume = np.ndarray(shape=self.exchange_data["anat_dim"],
+                                      dtype=np.float32,
+                                      buffer=self.anat_shmem.buf,
+                                      order="F")
 
         stat_dim = tuple(self.dim) + (2,)
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
@@ -145,6 +151,7 @@ class VolViewFormation(mp.Process):
                                 neg_thr = self.exchange_data["neg_thresholds"]
                             self.mosaic_template[:, :, 5:9] = self.neg_image(neg_overlay_img, neg_thr, 1.0)
 
+                        self.exchange_data["overlay_ready"] = False
                         self.exchange_data["done_mosaic_overlay"] = True
 
 
@@ -158,7 +165,7 @@ class VolViewFormation(mp.Process):
                         mat = self.mat_epi
                     else:
                         back_volume = self.anat_volume
-                        mat = self.mat_anat
+                        mat = self.exchange_data["anat_mat"]
 
                     ROI_vols = []
                     ROI_mats = []

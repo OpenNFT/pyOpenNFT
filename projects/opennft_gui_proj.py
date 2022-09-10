@@ -19,6 +19,8 @@ import opennft_console_proj
 from opennft import mosaicview, projview, mapimagewidget, volviewformation, LegacyNftConfigLoader
 from opennft import colors as col
 from opennft.config import config as con
+from opennft.mrvol import MrVol
+
 
 class ImageViewMode(str, enum.Enum):
     mosaic = 'mosaic'
@@ -115,6 +117,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["is_ROI"] = con.use_roi
         self.exchange_data["is_rtqa"] = con.use_rtqa
         self.exchange_data["vol_mat"] = None
+        self.exchange_data["anat_mat"] = None
         self.exchange_data["is_stopped"] = False
         self.exchange_data["ready_to_form"] = False
         self.exchange_data["view_mode"] = 'mosaic'
@@ -141,39 +144,56 @@ class OpenNFTManager(QWidget):
         self.mc_data = np.ndarray(shape=mc_array.shape, dtype=mc_array.dtype, buffer=self.mc_shmem.buf)
 
         time_series_array = np.zeros((5, self.nr_vol, self.nr_rois), dtype=np.float32)
-        self.ts_shmem = shared_memory.SharedMemory(create=True, size=time_series_array.nbytes, name=con.shmem_file_names[8])
-        self.ts_data = np.ndarray(shape=time_series_array.shape, dtype=time_series_array.dtype, buffer=self.ts_shmem.buf)
+        self.ts_shmem = shared_memory.SharedMemory(create=True, size=time_series_array.nbytes,
+                                                   name=con.shmem_file_names[8])
+        self.ts_data = np.ndarray(shape=time_series_array.shape, dtype=time_series_array.dtype,
+                                  buffer=self.ts_shmem.buf)
 
         nfb_array = np.zeros((1, self.nr_vol), dtype=np.float32)
         self.nfb_shmem = shared_memory.SharedMemory(create=True, size=nfb_array.nbytes, name=con.shmem_file_names[9])
         self.nfb_data = np.ndarray(shape=nfb_array.shape, dtype=nfb_array.dtype, buffer=self.nfb_shmem.buf)
 
-        mosaic_array = np.zeros(self.mosaic_dim+(9,), dtype=np.float32)
-        self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes*9, name=con.shmem_file_names[1])
+        mosaic_array = np.zeros(self.mosaic_dim + (9,), dtype=np.float32)
+        self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes * 9,
+                                                       name=con.shmem_file_names[1])
         self.mosaic_data = np.ndarray(shape=mosaic_array.shape, dtype=mosaic_array.dtype, buffer=self.mosaic_shmem.buf)
 
         vol_array = np.zeros(self.exchange_data["vol_dim"], dtype=np.float32)
         self.epi_shmem = shared_memory.SharedMemory(create=True, size=vol_array.nbytes, name=con.shmem_file_names[2])
         self.epi_data = np.ndarray(shape=vol_array.shape, dtype=vol_array.dtype, buffer=self.epi_shmem.buf, order='F')
-        self.epi_data[:,:,:] = self._core_process.session.reference_vol.volume
+        self.epi_data[:, :, :] = self._core_process.session.reference_vol.volume
 
-        stat_dim = 2, self.exchange_data["vol_dim"][0], self.exchange_data["vol_dim"][1], self.exchange_data["vol_dim"][2]
+        anat_vol = MrVol()
+        anat_vol.load_vol(self.exchange_data["StructBgFile"], 'nii')
+        self.anat_shmem = shared_memory.SharedMemory(create=True, size=anat_vol.volume.nbytes,
+                                                     name=con.shmem_file_names[10])
+        self.anat_data = np.ndarray(shape=anat_vol.dim, dtype=anat_vol.volume.dtype, buffer=self.anat_shmem.buf,
+                                    order='F')
+        self.anat_data[:, :, :] = anat_vol.volume
+        self.exchange_data["anat_mat"] = anat_vol.mat
+        self.exchange_data["anat_dim"] = anat_vol.dim
+
+        stat_dim = tuple(self.exchange_data["vol_dim"]) + (2,)
         stat_array = np.zeros(stat_dim, dtype=np.float32)
         self.stat_shmem = shared_memory.SharedMemory(create=True, size=stat_array.nbytes, name=con.shmem_file_names[3])
-        self.stat_data = np.ndarray(shape=stat_array.shape, dtype=stat_array.dtype, buffer=self.stat_shmem.buf, order='F')
+        self.stat_data = np.ndarray(shape=stat_array.shape, dtype=stat_array.dtype, buffer=self.stat_shmem.buf,
+                                    order='F')
 
         dims = self.exchange_data["proj_dims"]
-        proj_array = np.zeros((dims[1],dims[0], 9), dtype=np.float32)
-        self.proj_t_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[5])
-        self.proj_t = np.ndarray(shape=(dims[1],dims[0], 9), dtype=np.float32, buffer=self.proj_t_shmem.buf)
+        proj_array = np.zeros((dims[1], dims[0], 9), dtype=np.float32)
+        self.proj_t_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes,
+                                                       name=con.shmem_file_names[5])
+        self.proj_t = np.ndarray(shape=(dims[1], dims[0], 9), dtype=np.float32, buffer=self.proj_t_shmem.buf)
 
-        proj_array = np.zeros((dims[2],dims[0], 9), dtype=np.float32)
-        self.proj_c_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[6])
-        self.proj_c = np.ndarray(shape=(dims[2],dims[0], 9), dtype=np.float32, buffer=self.proj_c_shmem.buf)
+        proj_array = np.zeros((dims[2], dims[0], 9), dtype=np.float32)
+        self.proj_c_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes,
+                                                       name=con.shmem_file_names[6])
+        self.proj_c = np.ndarray(shape=(dims[2], dims[0], 9), dtype=np.float32, buffer=self.proj_c_shmem.buf)
 
-        proj_array = np.zeros((dims[2],dims[1], 9), dtype=np.float32)
-        self.proj_s_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes, name=con.shmem_file_names[7])
-        self.proj_s = np.ndarray(shape=(dims[2],dims[1], 9), dtype=np.float32, buffer=self.proj_s_shmem.buf)
+        proj_array = np.zeros((dims[2], dims[1], 9), dtype=np.float32)
+        self.proj_s_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes,
+                                                       name=con.shmem_file_names[7])
+        self.proj_s = np.ndarray(shape=(dims[2], dims[1], 9), dtype=np.float32, buffer=self.proj_s_shmem.buf)
 
     # --------------------------------------------------------------------------
     def view_form_init(self):
@@ -260,7 +280,7 @@ class OpenNFTManager(QWidget):
 
         if not ('BAS' in self.session.prot_names):  # implicit baseline
             # self.P['ProtCond'][0] - 0 is for Baseline indexes
-            tmpCond.insert(0, np.array([[t[n] for t in self.session.prot_cond[0]] for n in (0,-1)]).T)
+            tmpCond.insert(0, np.array([[t[n] for t in self.session.prot_cond[0]] for n in (0, -1)]).T)
             nrCond.insert(0, tmpCond[0].shape[0])
 
         c = 1
@@ -488,16 +508,16 @@ class OpenNFTManager(QWidget):
 
         iter = data.shape[1]
 
-        data_raw = np.array(data[0,:,:].squeeze().T, ndmin=2)
-        data_proc = np.array(data[1,:,:].squeeze().T, ndmin=2)
-        data_norm = np.array(data[2,:,:].squeeze().T, ndmin=2)
-        data_pos = np.array(data[3:5,:,:], ndmin=2)
+        data_raw = np.array(data[0, :, :].squeeze().T, ndmin=2)
+        data_proc = np.array(data[1, :, :].squeeze().T, ndmin=2)
+        data_norm = np.array(data[2, :, :].squeeze().T, ndmin=2)
+        data_pos = np.array(data[3:5, :, :], ndmin=2)
 
         if self.config.plot_feedback:
             if iter == 1:
                 data_norm = np.hstack((data_norm, self.nfb_data[:, 0:iter]))
             else:
-                data_norm = np.vstack((data_norm, self.nfb_data[:,0:iter]))
+                data_norm = np.vstack((data_norm, self.nfb_data[:, 0:iter]))
 
         self.drawGivenRoiPlot(init, self.rawRoiPlot, data_raw)
         self.drawGivenRoiPlot(init, self.procRoiPlot, data_proc, data_pos)
@@ -535,8 +555,8 @@ class OpenNFTManager(QWidget):
 
         if self.config.prot != 'InterBlock':
             if plotwidget == self.procRoiPlot:
-                posMin = np.array(data_pos[0,:,:].squeeze(), ndmin=2).T
-                posMax = np.array(data_pos[1,:,:].squeeze(), ndmin=2).T
+                posMin = np.array(data_pos[0, :, :].squeeze(), ndmin=2).T
+                posMax = np.array(data_pos[1, :, :].squeeze(), ndmin=2).T
                 # inds = list(self.selectedRoi)
                 # inds.append(len(posMin) - 1)
                 # posMin = posMin[inds]
@@ -657,7 +677,6 @@ class OpenNFTManager(QWidget):
         #     self.btnStart.setEnabled(True)
         #     self.btnSetup.setEnabled(False)
         #     self.btnPlugins.setEnabled(False)
-
 
         if con.use_sleep_in_stop:
             time.sleep(2)
@@ -1083,7 +1102,7 @@ class OpenNFTManager(QWidget):
         #         self.view_form_input["rtQA_volume"] = self.rtqa_output["snr_vol"]
         #     else:
         #         self.view_form_input["rtQA_volume"] = self.rtqa_output["cnr_vol"]
-        
+
         if is_rtqa_volume:
             self.exchange_data["is_neg"] = False
         else:
@@ -1131,11 +1150,10 @@ class OpenNFTManager(QWidget):
         if not (self.exchange_data is None) or not self.exchange_data["is_stopped"]:
 
             if self.exchange_data["data_ready_flag"]:
-
                 self.drawMcPlots(self.init, self.mcPlot, self.mc_data)
 
                 iter_norm_number = self.exchange_data["iter_norm_number"]
-                data = self.ts_data[:,:iter_norm_number,:]
+                data = self.ts_data[:, :iter_norm_number, :]
                 self.drawRoiPlots(self.init, data)
 
                 # if self.init:
@@ -1167,7 +1185,7 @@ class OpenNFTManager(QWidget):
     def onCheckMosaicViewUpdated(self):
 
         if self.exchange_data["done_mosaic_templ"]:
-            background_image = self.mosaic_data[:,:,0].squeeze()
+            background_image = self.mosaic_data[:, :, 0].squeeze()
             if background_image.size > 0:
                 logger.info("Done mosaic template")
                 self.mosaicImageView.set_background_image(background_image)
@@ -1179,7 +1197,7 @@ class OpenNFTManager(QWidget):
         # rtQA/Stat map display
         if self.exchange_data["done_mosaic_overlay"]:
 
-            rgba_pos_map_image = self.mosaic_data[:,:,1:5]
+            rgba_pos_map_image = self.mosaic_data[:, :, 1:5]
             pos_thr = self.exchange_data["pos_thresholds"]
             self.pos_map_thresholds_widget.set_thresholds(pos_thr)
 
@@ -1188,7 +1206,7 @@ class OpenNFTManager(QWidget):
 
             if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
 
-                rgba_neg_map_image = self.mosaic_data[:,:,5:9]
+                rgba_neg_map_image = self.mosaic_data[:, :, 5:9]
                 neg_thr = self.exchange_data["neg_thresholds"]
                 self.neg_map_thresholds_widget.set_thresholds(neg_thr)
 
@@ -1207,26 +1225,24 @@ class OpenNFTManager(QWidget):
 
             if proj == projview.ProjectionType.transversal:
 
-                bg_image = self.proj_t[:,:,0].squeeze()
-                rgba_pos_map_image = self.proj_t[:,:,1:5]
+                bg_image = self.proj_t[:, :, 0].squeeze()
+                rgba_pos_map_image = self.proj_t[:, :, 1:5]
                 if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
-                    rgba_neg_map_image = self.proj_t[:,:,5:9]
-
-                savemat("transversal.mat", {"bg": bg_image, "pos": rgba_pos_map_image})
+                    rgba_neg_map_image = self.proj_t[:, :, 5:9]
 
             elif proj == projview.ProjectionType.sagittal:
 
-                bg_image = self.proj_s[:,:,0].squeeze()
-                rgba_pos_map_image = self.proj_s[:,:,1:5]
+                bg_image = self.proj_s[:, :, 0].squeeze()
+                rgba_pos_map_image = self.proj_s[:, :, 1:5]
                 if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
-                    rgba_neg_map_image =  self.proj_s[:,:,5:9]
+                    rgba_neg_map_image = self.proj_s[:, :, 5:9]
 
             elif proj == projview.ProjectionType.coronal:
 
-                bg_image = self.proj_c[:,:,0].squeeze()
-                rgba_pos_map_image =  self.proj_c[:,:,1:5]
+                bg_image = self.proj_c[:, :, 0].squeeze()
+                rgba_pos_map_image = self.proj_c[:, :, 1:5]
                 if not self.exchange_data["is_rtqa"] and self.negMapCheckBox.isChecked():
-                    rgba_neg_map_image =  self.proj_c[:,:,5:9]
+                    rgba_neg_map_image = self.proj_c[:, :, 5:9]
 
             self.orthView.set_background_image(proj, bg_image)
             if rgba_pos_map_image is not None and rgba_pos_map_image.ndim == 3:

@@ -141,13 +141,13 @@ class OpenNFTCoreProj(mp.Process):
             stat_ready = self.iteration.iglm()
 
             self.epi_volume[:, :, :] = self.iteration.mr_vol.volume
-            self.exchange_data["ready_to_form"] = True
-
             if stat_ready:
                 self.stat_volume[:,:,:,0] = self.iteration.iglm_params["stat_map_3d_pos"]
                 if self.exchange_data["is_neg"]:
                     self.stat_volume[:,:,:,1] = self.iteration.iglm_params["stat_map_3d_neg"]
                 self.exchange_data["overlay_ready"] = True
+
+            self.exchange_data["ready_to_form"] = True
 
             self.iteration.process_time_series()
             self.nfb_calc.nfb_calc()

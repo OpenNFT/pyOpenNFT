@@ -15,6 +15,7 @@ shmem_file_names:
   - orth_view_s
   - time_series
   - nfb
+  - anat_volume
 use_gui: True
 use_roi: False
 max_roi_name_length: 6
