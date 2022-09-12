@@ -19,6 +19,7 @@ import pyqtgraph as pg
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
+from opennft.config import config as con
 from opennft import constants as cons
 
 
@@ -98,9 +99,9 @@ class ProjectionImageView(pg.ViewBox):
     def set_neg_map_opacity(self, value):
         self._neg_map_imitem.setOpacity(value)
 
-    def set_roi(self, roi_bounds, selectedRoi):
+    def set_roi(self, roi_bounds, selected_roi):
         self._clear_roi()
-        colors = np.array(config.ROI_PLOT_COLORS)[selectedRoi]
+        colors = np.array(cons.ROI_PLOT_COLORS)[selected_roi]
 
         for region_bounds, c in zip(roi_bounds, colors):
             for piece_coords in region_bounds:
@@ -113,7 +114,7 @@ class ProjectionImageView(pg.ViewBox):
                 x = coords[:, 0]
                 x = np.append(x, x[0])
 
-                pen = pg.mkPen(color=c, width=config.ROI_PLOT_WIDTH)
+                pen = pg.mkPen(color=c, width=cons.ROI_PLOT_WIDTH)
                 item = pg.PlotCurveItem(x=x, y=y, pen=pen)
 
                 self._roi_plotdataitems.append(item)
@@ -269,8 +270,8 @@ class ProjectionsWidget(QtWidgets.QWidget):
         for view in self._proj_views.values():
             view.set_neg_map_opacity(value)
 
-    def set_roi(self, proj: ProjectionType, roi_bounds, selectedRoi):
-        self._proj_views[proj].set_roi(roi_bounds, selectedRoi)
+    def set_roi(self, proj: ProjectionType, roi_bounds, selected_roi):
+        self._proj_views[proj].set_roi(roi_bounds, selected_roi)
 
     def clear(self):
         for view in self._proj_views.values():

@@ -2,22 +2,19 @@ from multiprocessing import shared_memory
 
 import numpy as np
 import multiprocessing as mp
-import nibabel as nib
 import cv2
-import pydicom
 from scipy import linalg
 from rtspm import spm_imatrix, spm_matrix, spm_slice_vol
 
 from opennft.mrvol import MrVol
-from opennft.utils import img2d_vol3d, vol3d_img2d, get_mosaic_dim
+from opennft.utils import vol3d_img2d, get_mosaic_dim
 from opennft.mapimagewidget import MapImageThresholdsCalculator, RgbaMapImage, Thresholds
 from opennft.config import config as con
-from loguru import logger
 
 
 class VolViewFormation(mp.Process):
 
-    def __init__(self, service_data):
+    def __init__(self, service_data, ROI_vols, ROI_mats):
         mp.Process.__init__(self)
         self.str_param = dict([])
 
@@ -32,17 +29,13 @@ class VolViewFormation(mp.Process):
 
         self.xdim, self.ydim, self.img2d_dimx, self.img2d_dimy = get_mosaic_dim(self.dim)
 
-        # if not (self.exchange_data["StructBgFile"] is None):
-        #     self.anat_volume = MrVol()
-        #     self.anat_volume.load_vol(self.exchange_data["StructBgFile"], 'nii')
+        if not (self.exchange_data["StructBgFile"] is None):
+            self.anat_volume = MrVol()
+            self.anat_volume.load_vol(self.exchange_data["StructBgFile"], 'nii')
 
         # ROIs
-        if self.exchange_data["is_ROI"]:
-            self.ROI_vols = np.array(self.exchange_data["ROI_vols"], order='F')
-            self.ROI_mats = np.array(self.exchange_data["ROI_mats"], order='F')
-        else:
-            self.ROI_vols = []
-            self.ROI_mats = []
+        self.ROI_vols = ROI_vols
+        self.ROI_mats = ROI_mats
 
         self.prepare_orth_view(self.mat_epi, self.dim)
 
@@ -63,12 +56,6 @@ class VolViewFormation(mp.Process):
                                      dtype=np.float32,
                                      buffer=self.epi_shmem.buf,
                                      order="F")
-
-        self.anat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[10])
-        self.anat_volume = np.ndarray(shape=self.exchange_data["anat_dim"],
-                                      dtype=np.float32,
-                                      buffer=self.anat_shmem.buf,
-                                      order="F")
 
         stat_dim = tuple(self.dim) + (2,)
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
@@ -164,11 +151,15 @@ class VolViewFormation(mp.Process):
                         back_volume = self.epi_volume
                         mat = self.mat_epi
                     else:
-                        back_volume = self.anat_volume
-                        mat = self.exchange_data["anat_mat"]
+                        back_volume = self.anat_volume.volume
+                        mat = self.anat_volume.mat
 
-                    ROI_vols = []
-                    ROI_mats = []
+                    if con.use_roi:
+                        ROI_vols = self.ROI_vols
+                        ROI_mats = self.ROI_mats
+                    else:
+                        ROI_vols = []
+                        ROI_mats = []
 
                     cursor_pos = self.exchange_data["cursor_pos"]
                     flags_planes = self.exchange_data["flags_planes"]
@@ -185,10 +176,10 @@ class VolViewFormation(mp.Process):
                     [self.proj_t[:, :, 0], self.proj_c[:, :, 0], self.proj_s[:, :, 0],
                      overlay_t, overlay_c, overlay_s,
                      neg_overlay_t, neg_overlay_c, neg_overlay_s,
-                     ROI_t, ROI_c, ROI_s
+                     self.exchange_data["ROI_t"], self.exchange_data["ROI_c"], self.exchange_data["ROI_s"]
                      ] = self.update_orth_view(back_volume, mat,
-                                               self.stat_volume[0, :, :, :].squeeze(),
-                                               self.stat_volume[1, :, :, :].squeeze(),
+                                               self.stat_volume[:, :, :, 0].squeeze(),
+                                               self.stat_volume[:, :, :, 1].squeeze(),
                                                ROI_vols, ROI_mats, flags)
 
                     pos_maps_values = np.array(overlay_t.ravel(), dtype=np.uint8)
@@ -352,9 +343,9 @@ class VolViewFormation(mp.Process):
                 m = np.array(np.linalg.solve(self.str_param['space'], self.str_param['premul']) @ mat, order='F')
                 temp_t, temp_c, temp_s = self.get_orth_vol(coord_param, vol, m)
 
-                ROI_t[j] = self.roi_boundaries(temp_t)
-                ROI_c[j] = self.roi_boundaries(temp_c)
-                ROI_s[j] = self.roi_boundaries(temp_s)
+                ROI_t[j] = self.roi_boundaries(temp_t.T)
+                ROI_c[j] = self.roi_boundaries(temp_c.T)
+                ROI_s[j] = self.roi_boundaries(temp_s.T)
 
         return back_imgt, back_imgc, back_imgs, overlay_imgt, overlay_imgc, overlay_imgs, neg_overlay_imgt, neg_overlay_imgc, neg_overlay_imgs, ROI_t, ROI_c, ROI_s
 
