@@ -12,6 +12,7 @@ from opennft.filewatcher import FileWatcher
 from opennft.nfbcalc import Nfb
 from opennft import LegacyNftConfigLoader
 from opennft.utils import ar_regr, zscore
+from opennft import eventrecorder as erd
 
 import opennft.nftsession as nftsession
 from opennft.config import config as con
@@ -32,6 +33,8 @@ class OpenNFTCoreProj(mp.Process):
         self.exchange_data = service_dict
         self.init_data()
         self.init_exchange_data()
+        self.recorder = erd.EventRecorder()
+        self.recorder.initialize(self.config.volumes_nr)
 
     def init_data(self):
 
@@ -108,10 +111,22 @@ class OpenNFTCoreProj(mp.Process):
 
         fw = FileWatcher()
         fw_path = Path(self.config.watch_dir)
-        fw.start_watching(False, fw_path, self.config.first_file_name, self.config.first_file_name, file_ext="dcm")
+        fw.start_watching(not self.exchange_data['offline'], fw_path, self.config.first_file_name, self.config.first_file_name,
+                          file_ext="dcm", event_recorder=self.recorder)
 
         for vol_filename in fw:
             # main loop iteration
+
+            if not self.exchange_data['offline']:
+                while vol_filename is None:
+                    time.sleep(1)
+                    break
+                if vol_filename is None:
+                    logger.info('Waiting for a file...')
+                    continue
+            elif vol_filename is None:
+                break
+
 
             logger.info(f"Got scan file: {vol_filename}")
 
@@ -137,42 +152,69 @@ class OpenNFTCoreProj(mp.Process):
             self.exchange_data["iter_norm_number"] = self.iteration.iter_norm_number
 
             time_start = time.time()
+
+            # t2
+            self.recorder.recordEvent(erd.Times.t2, self.iteration.iter_number, time.time())
             self.iteration.process_vol()
             stat_ready = self.iteration.iglm()
 
+            # t3
+            self.recorder.recordEvent(erd.Times.t3, self.iteration.iter_number, time.time())
+
             self.epi_volume[:, :, :] = self.iteration.mr_vol.volume
             if stat_ready:
-                self.stat_volume[:,:,:,0] = self.iteration.iglm_params["stat_map_3d_pos"]
+                self.stat_volume[:, :, :, 0] = self.iteration.iglm_params["stat_map_3d_pos"]
                 if self.exchange_data["is_neg"]:
-                    self.stat_volume[:,:,:,1] = self.iteration.iglm_params["stat_map_3d_neg"]
+                    self.stat_volume[:, :, :, 1] = self.iteration.iglm_params["stat_map_3d_neg"]
                 self.exchange_data["overlay_ready"] = True
 
             self.exchange_data["ready_to_form"] = True
 
             self.iteration.process_time_series()
+
+            # t4
+            self.recorder.recordEvent(erd.Times.t4, self.iteration.iter_number, time.time())
+
             self.nfb_calc.nfb_calc()
+
+            # t5
+            self.recorder.recordEvent(erd.Times.t5, self.iteration.iter_number, time.time())
 
             iter_number = self.iteration.iter_norm_number
             self.mc_data[iter_number, :] = self.iteration.mr_time_series.mc_params[:, -1].T
             for i in range(self.session.nr_rois):
                 if self.config.prot != 'InterBlock':
-                    self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.disp_raw_time_series[i][iter_number].T
+                    self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.disp_raw_time_series[i][
+                        iter_number].T
                 else:
                     self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.raw_time_series[i][iter_number]
                 self.ts_data[1, iter_number, i] = self.iteration.mr_time_series.kalman_proc_time_series[i][iter_number]
                 self.ts_data[2, iter_number, i] = self.iteration.mr_time_series.scale_time_series[i][iter_number]
                 self.ts_data[3, iter_number, i] = self.iteration.mr_time_series.output_pos_min[i][iter_number]
                 self.ts_data[4, iter_number, i] = self.iteration.mr_time_series.output_pos_max[i][iter_number]
-            self.nfb_data[0,iter_number] = self.nfb_calc.disp_values[iter_number] / self.config.max_feedback_val
+            self.nfb_data[0, iter_number] = self.nfb_calc.disp_values[iter_number] / self.config.max_feedback_val
             self.exchange_data["data_ready_flag"] = True
 
-            self.iteration.iter_number += 1
             self.exchange_data["elapsed_time"] = time.time() - time_start
 
             logger.info('{} {:.4f} {}', "Elapsed time: ", self.exchange_data["elapsed_time"], 's')
 
-        self.iteration.save_time_series()
-        self.nfb_calc.nfb_save()
+            # d0
+            self.recorder.recordEvent(erd.Times.d0, self.iteration.iter_number, self.exchange_data["elapsed_time"])
+            self.iteration.iter_number += 1
+
+            if not self.exchange_data['offline'] and self.iteration.iter_number == self.config.volumes_nr:
+                logger.info('Last iteration {} reached...', self.iteration.iter_number)
+                fw.stop()
+                break
+
+        self.iteration.save_time_series(self.config.work_dir / ('NF_Data_' + str(self.config.nf_run_nr)))
+        self.nfb_calc.nfb_save(self.config.work_dir / ('NF_Data_' + str(self.config.nf_run_nr)))
+
+        if self.iteration.iter_norm_number > 1:
+            path = self.config.work_dir / ('NF_Data_' + str(self.config.nf_run_nr))
+            fname = path / ('pyTimeVectors_' + str(self.config.nf_run_nr).zfill(2) + '.txt')
+            self.recorder.savetxt(str(fname))
 
         self.mc_shmem.close()
         self.epi_shmem.close()

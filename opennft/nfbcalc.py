@@ -175,9 +175,11 @@ class Nfb():
                 self.display_data["reward"] = ''
                 self.display_data["disp_value"] = self.disp_value
 
-    def nfb_save(self):
+    def nfb_save(self, save_path):
 
-        savemat("py_disp_values.mat", {"disp_values": self.disp_values,
-                                       "vect_end_cond": self.session.vect_end_cond,
-                                       "norm_perc_values": self.norm_perc_values
-                                       })
+        path = save_path / "py_disp_values.mat"
+
+        savemat(str(path), {"disp_values": self.disp_values,
+                            "vect_end_cond": self.session.vect_end_cond,
+                            "norm_perc_values": self.norm_perc_values
+                            })

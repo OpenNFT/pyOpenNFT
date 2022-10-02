@@ -39,7 +39,7 @@ class MrVol():
             self.mat = mat
 
         elif vol_type == "dcm":
-            self.volume = np.array(pydicom.dcmread(file_path).pixel_array, order='F')
+            self.volume = np.array(pydicom.dcmread(file_path, force=True).pixel_array, order='F')
 
     # --------------------------------------------------------------------------
     def realign(self, iteration, a0, x1, x2, x3, deg, b):

@@ -185,7 +185,7 @@ class NftIteration():
             "tn_neg": np.zeros((nr_vox_in_vol, 1)),
             "t_th": np.zeros((self.session.nr_vols, 1)),
             "dyn_t_th": 0,
-            "spm_mask_th": session.spm["xM_TH"].mean()*np.ones(session.spm["xM_TH"].shape),
+            "spm_mask_th": session.spm["xM_TH"].mean() * np.ones(session.spm["xM_TH"].shape),
             "stat_map_vect": np.zeros((nr_vox_in_vol, 1)),
             "stat_map_3d_pos": np.zeros(self.session.reference_vol.dim),
             "stat_map_3d_neg": np.zeros(self.session.reference_vol.dim)
@@ -235,28 +235,28 @@ class NftIteration():
                 tmp_regr = zscore(self.mr_time_series.mc_params[:, 0:ind_iglm + 1]).T
                 tmp_regr = np.hstack((tmp_regr, self.lin_regr[0:ind_iglm + 1]))
                 tmp_regr = np.hstack((tmp_regr, self.session.spm["xX_K"]["x0"][0:ind_iglm + 1, :]))
-                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm + 1, 1))))
             elif not is_high_pass and is_motion_regr and is_lin_regr:
 
                 tmp_regr = zscore(self.mr_time_series.mc_params[:, 0:ind_iglm + 1]).T
                 tmp_regr = np.hstack((tmp_regr, self.lin_regr[0:ind_iglm + 1]))
-                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm + 1, 1))))
 
             elif is_high_pass and not is_motion_regr and is_lin_regr:
 
                 tmp_regr = self.lin_regr[0:ind_iglm + 1]
                 tmp_regr = np.hstack((tmp_regr, self.session.spm["xX_K"]["x0"][0:ind_iglm + 1, :]))
-                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm + 1, 1))))
 
             elif is_high_pass and not is_motion_regr and not is_lin_regr:
 
                 tmp_regr = self.session.spm["xX_K"]["x0"][0:ind_iglm + 1, :]
-                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm + 1, 1))))
 
             elif not is_high_pass and not is_motion_regr and is_lin_regr:
 
                 tmp_regr = self.lin_regr[0:ind_iglm + 1]
-                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm+1, 1))))
+                tmp_regr = np.hstack((tmp_regr, np.ones((ind_iglm + 1, 1))))
 
         else:
 
@@ -285,8 +285,8 @@ class NftIteration():
         idx_act_vox, dynt_th, \
         t_th, cn, dn, sigma2n, \
         tn, neg_e2n, bn, e2n = iglm_vol(cn, dn, s2n, tn, self.mr_vol.volume.flatten(order="F"),
-                                       ind_iglm+1, self.nr_bas_func + self.nr_bas_fct_regr,
-                                       t_contr, bas_fct_regr, p_val, dynt_th, t_th, spm_mask_th)
+                                        ind_iglm + 1, self.nr_bas_func + self.nr_bas_fct_regr,
+                                        t_contr, bas_fct_regr, p_val, dynt_th, t_th, spm_mask_th)
 
         self.iglm_params["cn"] = cn
         self.iglm_params["dn"] = dn
@@ -307,7 +307,6 @@ class NftIteration():
             stat_ready = True
 
         if idx_act_vox["neg"].size > 0 and np.max(tn["neg"]) > 0:
-
             masked_stat_map_vect_neg = tn["neg"][idx_act_vox["neg"]]
             stat_map_vect = masked_stat_map_vect_neg.squeeze()
             temp_map = self.iglm_params["stat_map_3d_neg"].flatten(order='F')
@@ -317,23 +316,23 @@ class NftIteration():
 
         return stat_ready
 
-
     # --------------------------------------------------------------------------
-    # test function
-    def save_time_series(self):
+    def save_time_series(self, save_path):
         if len(self.mr_time_series.mc_params) == 0:
             logger.info(f"Empty data, nothing to save")
             return
 
-        savemat("py_time_series.mat", {"raw_time_series": self.mr_time_series.raw_time_series[0],
-                                       "raw_time_series_ar1": self.mr_time_series.raw_time_series_ar1[0],
-                                       "kalman_proc_time_series": self.mr_time_series.kalman_proc_time_series[0],
-                                       "glm_time_series": self.mr_time_series.glm_time_series[0],
-                                       "scale_time_series": self.mr_time_series.scale_time_series[0],
-                                       "x": self.mr_time_series.mc_params[0, :],
-                                       "y": self.mr_time_series.mc_params[1, :],
-                                       "z": self.mr_time_series.mc_params[2, :],
-                                       "pitch": self.mr_time_series.mc_params[3, :],
-                                       "roll": self.mr_time_series.mc_params[4, :],
-                                       "yaw": self.mr_time_series.mc_params[5, :],
-                                       })
+        path = save_path / "py_time_series.mat"
+
+        savemat(str(path), {"raw_time_series": self.mr_time_series.raw_time_series[0],
+                            "raw_time_series_ar1": self.mr_time_series.raw_time_series_ar1[0],
+                            "kalman_proc_time_series": self.mr_time_series.kalman_proc_time_series[0],
+                            "glm_time_series": self.mr_time_series.glm_time_series[0],
+                            "scale_time_series": self.mr_time_series.scale_time_series[0],
+                            "x": self.mr_time_series.mc_params[0, :],
+                            "y": self.mr_time_series.mc_params[1, :],
+                            "z": self.mr_time_series.mc_params[2, :],
+                            "pitch": self.mr_time_series.mc_params[3, :],
+                            "roll": self.mr_time_series.mc_params[4, :],
+                            "yaw": self.mr_time_series.mc_params[5, :],
+                            })

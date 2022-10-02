@@ -63,7 +63,6 @@ class LegacyNftConfig(BaseModel):
     udp_feedback_control_char: Optional[str] = Field(alias='UDPFeedbackControlChar')
     udp_send_condition: Optional[bool] = Field(alias='UDPSendCondition')
     min_feedback_val: int = Field(alias='MinFeedbackVal')
-    resting_state: bool = Field(alias='RestingState')
     sham_file: Optional[Path] = Field(alias='ShamFile')
 
 

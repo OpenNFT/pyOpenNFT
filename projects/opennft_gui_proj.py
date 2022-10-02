@@ -9,17 +9,17 @@ import pyqtgraph as pg
 import multiprocessing as mp
 
 from multiprocessing import shared_memory
+
+from PyQt5.QtGui import QPalette, QIcon
 from PyQt5.uic import loadUi
 from PyQt5.QtCore import QTimer, QSettings
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
 from loguru import logger
 
 import opennft_console_proj
-from opennft import mosaicview, projview, mapimagewidget, volviewformation
+from opennft import mosaicview, projview, mapimagewidget, volviewformation, setting_utils, config
 from opennft.config import config as con
 from opennft import constants as cons
-from opennft.mrvol import MrVol
-
 
 class ImageViewMode(str, enum.Enum):
     mosaic = 'mosaic'
@@ -38,11 +38,17 @@ class OpenNFTManager(QWidget):
         self.tcp_data = dict.fromkeys(["use_tcp_data", "tcp_data_ip", "tcp_data_port"])
 
         self.orthViewInitialize = False
+        self._core_process = None
+        self._view_form_process = None
+        self.reset_done = False
 
         if con.use_gui:
             super().__init__(*args, **kwargs)
 
-            loadUi('opennft.ui', self)
+            loadUi(setting_utils.get_ui_file('opennft.ui'), self)
+            self.setWindowIcon(QIcon(str(config.OpenNFT_ICON)))
+
+            pg.setConfigOption('foreground', self.palette().color(QPalette.Foreground))
             self.plotBgColor = (255, 255, 255)
 
             self.mosaicImageView = mosaicview.MosaicImageViewWidget(self)
@@ -59,53 +65,74 @@ class OpenNFTManager(QWidget):
             self.layoutNegMapThresholds.addWidget(self.neg_map_thresholds_widget)
             self.neg_map_thresholds_widget.setEnabled(False)
 
-            self.cbImageViewMode.currentIndexChanged.connect(self.onChangeImageViewMode)
-            self.orthView.cursorPositionChanged.connect(self.onChangeOrthViewCursorPosition)
+            self.settingFileName = config.ROOT_PATH
+            self.appSettings = QSettings(
+                str(setting_utils.get_app_settings_file()), QSettings.IniFormat, self)
+            self.settings = QSettings('', QSettings.IniFormat)
+            self.readAppSettings()
 
-            self.mcPlot = self.createMcPlot(self.layoutPlot1)
-            self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.createRoiPlots()
-            self.tsTimer = QTimer(self)
-            self.mosaicTimer = QTimer(self)
-            self.orthViewTimer = QTimer(self)
-            self.tsTimer.timeout.connect(self.onCheckTimeSeriesUpdated)
-            self.mosaicTimer.timeout.connect(self.onCheckMosaicViewUpdated)
-            self.orthViewTimer.timeout.connect(self.onCheckOrthViewUpdated)
-
-            self.currentCursorPos = (129, 95)
-            self.currentProjection = projview.ProjectionType.coronal
-
-            self.pbMoreParameters.setChecked(False)
-
-            self.leFirstFile.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile, self.leFirstFile2))
-            self.leFirstFile2.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile2, self.leFirstFile))
-
-            self.btnChooseSetFile.clicked.connect(self.onChooseSetFile)
-            self.btnChooseSetFile2.clicked.connect(self.onChooseSetFile)
-            self.pbMoreParameters.toggled.connect(self.onShowMoreParameters)
-
-            self.pos_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
-            self.neg_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
-
-            self.exchange_data["pos_thresholds"] = self.pos_map_thresholds_widget.get_thresholds()
-            self.exchange_data["neg_thresholds"] = self.neg_map_thresholds_widget.get_thresholds()
-
-            self.posMapCheckBox.toggled.connect(self.onChangePosMapVisible)
-            self.negMapCheckBox.toggled.connect(self.onChangeNegMapVisible)
-
-            self.sliderMapsAlpha.valueChanged.connect(lambda v: self.mosaicImageView.set_pos_map_opacity(v / 100.0))
-            self.sliderMapsAlpha.valueChanged.connect(lambda v: self.mosaicImageView.set_neg_map_opacity(v / 100.0))
-            self.sliderMapsAlpha.valueChanged.connect(lambda v: self.orthView.set_pos_map_opacity(v / 100.0))
-            self.sliderMapsAlpha.valueChanged.connect(lambda v: self.orthView.set_neg_map_opacity(v / 100.0))
-
-            self.btnSetup.clicked.connect(self.setup)
-            self.btnStart.clicked.connect(self.start)
-            self.btnStop.clicked.connect(self.stop)
+            self.initialize_ui()
 
             self.init = False
             self.show()
         else:
             self.setup()
             self.start()
+
+    def initialize_ui(self):
+
+        top_size = int(self.height() * 0.7)
+        bottom_size = self.height() - top_size
+        h_sizes = [top_size, bottom_size]
+        self.splitterMainVer.setSizes(h_sizes)
+
+        w_sizes = [self.width() // 2] * 2
+        self.splitterMainHor.setSizes(w_sizes)
+
+        self.cbImageViewMode.currentIndexChanged.connect(self.onChangeImageViewMode)
+        self.orthView.cursorPositionChanged.connect(self.onChangeOrthViewCursorPosition)
+
+        self.mcPlot = self.createMcPlot(self.layoutPlot1)
+        self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.createRoiPlots()
+        self.tsTimer = QTimer(self)
+        self.mosaicTimer = QTimer(self)
+        self.orthViewTimer = QTimer(self)
+        self.tsTimer.timeout.connect(self.onCheckTimeSeriesUpdated)
+        self.mosaicTimer.timeout.connect(self.onCheckMosaicViewUpdated)
+        self.orthViewTimer.timeout.connect(self.onCheckOrthViewUpdated)
+
+        self.currentCursorPos = (129, 95)
+        self.currentProjection = projview.ProjectionType.coronal
+
+        self.pbMoreParameters.setChecked(False)
+
+        self.leFirstFile.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile, self.leFirstFile2))
+        self.leFirstFile2.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile2, self.leFirstFile))
+
+        self.btnChooseSetFile.clicked.connect(self.onChooseSetFile)
+        self.btnChooseSetFile2.clicked.connect(self.onChooseSetFile)
+        self.pbMoreParameters.toggled.connect(self.onShowMoreParameters)
+
+        self.pos_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
+        self.neg_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
+
+        self.exchange_data["pos_thresholds"] = self.pos_map_thresholds_widget.get_thresholds()
+        self.exchange_data["neg_thresholds"] = self.neg_map_thresholds_widget.get_thresholds()
+
+        self.posMapCheckBox.toggled.connect(self.onChangePosMapVisible)
+        self.negMapCheckBox.toggled.connect(self.onChangeNegMapVisible)
+
+        self.sliderMapsAlpha.valueChanged.connect(lambda v: self.mosaicImageView.set_pos_map_opacity(v / 100.0))
+        self.sliderMapsAlpha.valueChanged.connect(lambda v: self.mosaicImageView.set_neg_map_opacity(v / 100.0))
+        self.sliderMapsAlpha.valueChanged.connect(lambda v: self.orthView.set_pos_map_opacity(v / 100.0))
+        self.sliderMapsAlpha.valueChanged.connect(lambda v: self.orthView.set_neg_map_opacity(v / 100.0))
+
+        self.btnSetup.clicked.connect(self.setup)
+        self.btnStart.clicked.connect(self.start)
+        self.btnStop.clicked.connect(self.stop)
+
+        self.onChangePosMapVisible()
+        self.onChangeNegMapVisible()
 
     # --------------------------------------------------------------------------
     def init_exchange_data(self):
@@ -512,16 +539,16 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def drawRoiPlots(self, init, data, iter):
 
-        data_raw = np.array(data[0, :, self.selected_roi].squeeze(), ndmin=2)
-        data_proc = np.array(data[1, :, self.selected_roi].squeeze(), ndmin=2)
-        data_norm = np.array(data[2, :, self.selected_roi].squeeze(), ndmin=2)
+        data_raw = np.array(data[0, :, self.selected_roi], ndmin=2)
+        data_proc = np.array(data[1, :, self.selected_roi], ndmin=2)
+        data_norm = np.array(data[2, :, self.selected_roi], ndmin=2)
         data_pos = np.array(data[3:5, :, self.selected_roi], ndmin=2)
 
         if self.config.plot_feedback:
-            if iter == 1:
-                data_norm = np.hstack((data_norm, self.nfb_data[:, 0:iter]))
-            else:
-                data_norm = np.vstack((data_norm, self.nfb_data[:, 0:iter]))
+            # if iter == 1:
+            #     data_norm = np.hstack((data_norm, self.nfb_data[:, 0:iter]))
+            # else:
+            data_norm = np.vstack((data_norm, self.nfb_data[:, 0:iter]))
 
         self.drawGivenRoiPlot(init, self.rawRoiPlot, data_raw)
         self.drawGivenRoiPlot(init, self.procRoiPlot, data_proc, data_pos)
@@ -559,12 +586,15 @@ class OpenNFTManager(QWidget):
 
         if self.config.prot != 'InterBlock':
             if plotwidget == self.procRoiPlot:
-                posMin = np.array(data_pos[0, :, :].squeeze(), ndmin=2).T
-                posMax = np.array(data_pos[1, :, :].squeeze(), ndmin=2).T
-                inds = list(self.selected_roi)
-                inds.append(len(posMin) - 1)
-                posMin = posMin[inds]
-                posMax = posMax[inds]
+                posMin = data_pos[0, :, :].T
+                posMax = data_pos[1, :, :].T
+                # inds = list(self.selected_roi)
+                # if len(posMin) > 0:
+                #     inds.append(len(posMin) - 1)
+                # else:
+                #     inds.append(0)
+                # posMin = posMin[inds]
+                # posMax = posMax[inds]
 
                 self.drawMinMaxProcRoiPlot(
                     init, posMin, posMax)
@@ -617,6 +647,12 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def setup(self):
 
+        if not self.reset_done:
+            self.reset()
+
+        self.actualize()
+        self.exchange_data['offline'] = self.cbOfflineMode.isChecked()
+        self.exchange_data['is_stopped'] = False
         self._core_process = opennft_console_proj.OpenNFTCoreProj(self.exchange_data)
 
         self.config = self._core_process.config
@@ -692,7 +728,7 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def stop(self):
 
-        if self._core_process.is_alive():
+        if not self._core_process is None and self._core_process.is_alive():
             self._core_process.terminate()
 
         self.exchange_data["is_stopped"] = True
@@ -743,10 +779,12 @@ class OpenNFTManager(QWidget):
     def reset(self):
         self.exchange_data["is_stopped"] = True
 
-        if self._core_process.is_alive():
-            self._core_process.terminate()
-        if self._view_form_process.is_alive():
-            self._view_form_process.terminate()
+        if self._core_process is not None:
+            if self._core_process.is_alive():
+                self._core_process.terminate()
+        if self._view_form_process is not None:
+            if self._view_form_process.is_alive():
+                self._view_form_process.terminate()
         self._core_process = None
         self._view_form_process = None
 
@@ -1264,7 +1302,7 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def onCheckOrthViewUpdated(self):
 
-        if self.exchange_data["view_mode"] != ImageViewMode.mosaic:
+        if self.exchange_data["view_mode"] != ImageViewMode.mosaic and self.exchange_data["done_orth"]:
 
             rgba_pos_map_image = None
             rgba_neg_map_image = None
@@ -1324,9 +1362,55 @@ class OpenNFTManager(QWidget):
             self.orthViewInitialize = False
 
     # --------------------------------------------------------------------------
+    def readAppSettings(self):
+        self.appSettings.beginGroup('UI')
+
+        self.restoreGeometry(self.appSettings.value(
+            'WindowGeometry', self.saveGeometry()))
+        self.splitterMainVer.restoreState(self.appSettings.value(
+            'SplitterMainVerState', self.splitterMainVer.saveState()))
+        self.splitterMainHor.restoreState(self.appSettings.value(
+            'SplitterMainHorState', self.splitterMainHor.saveState()))
+
+        self.appSettings.endGroup()
+
+        self.appSettings.beginGroup('Params')
+
+        # if not config.AUTO_RTQA:
+        self.settingFileName = self.appSettings.value(
+            'SettingFileName', self.settingFileName)
+            # if self.settingFileName == str(config.AUTO_RTQA_SETTINGS):
+            #     self.settingFileName = ''
+        # else:
+        #     self.settingFileName = str(config.AUTO_RTQA_SETTINGS)
+
+        self.appSettings.endGroup()
+
+        self.chooseSetFile(self.settingFileName)
+
+    # --------------------------------------------------------------------------
+    def writeAppSettings(self):
+        self.appSettings.beginGroup('UI')
+        self.appSettings.setValue('WindowGeometry', self.saveGeometry())
+        self.appSettings.setValue('SplitterMainVerState', self.splitterMainVer.saveState())
+        self.appSettings.setValue('SplitterMainHorState', self.splitterMainHor.saveState())
+        self.appSettings.endGroup()
+
+        self.appSettings.beginGroup('Params')
+        self.appSettings.setValue('SettingFileName', self.settingFileName)
+
+        self.appSettings.endGroup()
+
+    # --------------------------------------------------------------------------
     def closeEvent(self, event):
 
-        self.exchange_data["is_stopped"] = True
+        self.writeAppSettings()
+        self.tsTimer.stop()
+        self.orthViewTimer.stop()
+        self.mosaicTimer.stop()
+        self.stop()
+        self.hide()
+
         if self._core_process.is_alive():
             self._core_process.join()
         if self._view_form_process.is_alive():
