@@ -86,6 +86,8 @@ class NftSession():
 
             bas_offsets.append(inds)
 
+        inds = bas_inds[np.where(bas_inds > self.offsets[0][-1][1])[0]]
+        bas_offsets.append(inds)
         bas_offsets = np.array(bas_offsets, ndmin=2)
         self.prot_cond[0] = bas_offsets
 
