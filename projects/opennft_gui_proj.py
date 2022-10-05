@@ -10,11 +10,12 @@ import multiprocessing as mp
 
 from multiprocessing import shared_memory
 
-from PyQt5.QtGui import QPalette, QIcon
+from PyQt5.QtGui import QPalette, QIcon, QRegExpValidator
 from PyQt5.uic import loadUi
-from PyQt5.QtCore import QTimer, QSettings
+from PyQt5.QtCore import QTimer, QSettings, QRegExp
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
 from loguru import logger
+from pyniexp.connection import Udp
 
 import opennft_console_proj
 from opennft import mosaicview, projview, mapimagewidget, volviewformation, setting_utils, config
@@ -41,6 +42,7 @@ class OpenNFTManager(QWidget):
         self._core_process = None
         self._view_form_process = None
         self.reset_done = False
+        self.f_fin_nfb = False
 
         if con.use_gui:
             super().__init__(*args, **kwargs)
@@ -113,6 +115,11 @@ class OpenNFTManager(QWidget):
         self.btnChooseSetFile2.clicked.connect(self.onChooseSetFile)
         self.pbMoreParameters.toggled.connect(self.onShowMoreParameters)
 
+        ipv4_regexp = QRegExp(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
+
+        self.leUDPFeedbackIP.setValidator(QRegExpValidator(ipv4_regexp, self))
+        self.cbUseUDPFeedback.stateChanged.connect(self.onChangeUseUDPFeedback)
+
         self.pos_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
         self.neg_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
 
@@ -133,6 +140,7 @@ class OpenNFTManager(QWidget):
 
         self.onChangePosMapVisible()
         self.onChangeNegMapVisible()
+        self.onChangeUseUDPFeedback()
 
     # --------------------------------------------------------------------------
     def init_exchange_data(self):
@@ -141,6 +149,7 @@ class OpenNFTManager(QWidget):
 
         self.exchange_data["set_file"] = ""
 
+        self.exchange_data["vvf_run"] = True
         self.exchange_data["data_ready_flag"] = False
         self.exchange_data["init"] = False
         self.exchange_data["nr_vol"] = 0
@@ -239,6 +248,15 @@ class OpenNFTManager(QWidget):
         pos = leTo.cursorPosition()
         leTo.setText(leFrom.text())
         leTo.setCursorPosition(pos)
+
+    # --------------------------------------------------------------------------
+    def onChangeUseUDPFeedback(self):
+        self.leUDPFeedbackIP.setEnabled(self.cbUseUDPFeedback.isChecked())
+        self.leUDPFeedbackPort.setEnabled(self.cbUseUDPFeedback.isChecked())
+        self.leUDPFeedbackControlChar.setEnabled(self.cbUseUDPFeedback.isChecked())
+        self.cbUDPSendCondition.setEnabled(self.cbUseUDPFeedback.isChecked())
+        if not (self.cbUseUDPFeedback.isChecked()):
+            self.cbUDPSendCondition.setChecked(False)
 
     # --------------------------------------------------------------------------
     def createMcPlot(self, layoutPlot):
@@ -653,6 +671,8 @@ class OpenNFTManager(QWidget):
         self.actualize()
         self.exchange_data['offline'] = self.cbOfflineMode.isChecked()
         self.exchange_data['is_stopped'] = False
+        self.exchange_data["vvf_run"] = True
+        self.exchange_data["use_udp_feedback"] = self.cbUseUDPFeedback.isChecked()
         self._core_process = opennft_console_proj.OpenNFTCoreProj(self.exchange_data)
 
         self.config = self._core_process.config
@@ -715,9 +735,17 @@ class OpenNFTManager(QWidget):
             self.btnStop.setEnabled(True)
             self.pbMoreParameters.setChecked(False)
             self.init = True
+            self.f_fin_nfb = True
+
+            if self.use_udp_feedback:
+                self.exchange_data['udp_feedback_ip'] = self.udp_feedback_ip
+                self.exchange_data['udp_feedback_port'] = self.udp_feedback_port
+                self.exchange_data['udp_feedback_controlchar'] = self.udp_feedback_controlchar
+                self.exchange_data['udp_send_condition'] = self.udp_send_condition
 
             print("main starting process")
             self._core_process.start()
+
             if con.use_gui:
                 self.tsTimer.start(30)
                 self.mosaicTimer.start(30)
@@ -761,12 +789,9 @@ class OpenNFTManager(QWidget):
         #     fname = path / ('TimeVectors_' + str(self.P['NFRunNr']).zfill(2) + '.txt')
         #     self.recorder.savetxt(str(fname))
 
-        # if self.fFinNFB:
-        #     for i in range(len(self.plugins)):
-        #         self.plugins[i].finalize()
-        #     self.finalizeUdpSender()
-        #     self.nfbFinStarted = self.eng.nfbSave(self.iteration, nargout=0, background=True)
-        #     self.fFinNFB = False
+        if self.f_fin_nfb:
+            self._core_process.finalize_udp_sender()
+            self.f_fin_nfb = False
 
         # if self.recorder.records.shape[0] > 2:
         #     if self.recorder.records[0, erd.Times.d0] > 0:
@@ -778,6 +803,7 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def reset(self):
         self.exchange_data["is_stopped"] = True
+        self.exchange_data["vvf_run"] = False
 
         if self._core_process is not None:
             if self._core_process.is_alive():
@@ -800,6 +826,7 @@ class OpenNFTManager(QWidget):
         self.orthView.clear()
 
         self.reset_done = True
+        self.f_fin_nfb = False
 
     # --------------------------------------------------------------------------
     def onChooseSetFile(self):
@@ -1087,10 +1114,6 @@ class OpenNFTManager(QWidget):
             self.tcp_data["tcp_data_ip"] = self.leTCPDataIP.text()
             self.tcp_data["tcp_data_port"] = int(self.leTCPDataPort.text())
 
-        con.USE_SHAM = bool(len(self.exchange_data['ShamFile']))
-
-        con.use_ptb = self.cbUsePTB.isChecked()
-
         self.use_udp_feedback = self.cbUseUDPFeedback.isChecked()
         if self.use_udp_feedback:
             # UDP sender settings
@@ -1134,6 +1157,10 @@ class OpenNFTManager(QWidget):
         self.mosaicImageView.set_pos_map_visible(is_visible)
         self.orthView.set_pos_map_visible(is_visible)
 
+        if self.exchange_data["is_stopped"]:
+            self.updateMosaicViewAsync()
+            self.updateOrthViewAsync()
+
     # --------------------------------------------------------------------------
     def onChangeNegMapVisible(self):
         is_visible = self.negMapCheckBox.isChecked()
@@ -1142,6 +1169,10 @@ class OpenNFTManager(QWidget):
 
         self.mosaicImageView.set_neg_map_visible(is_visible)
         self.orthView.set_neg_map_visible(is_visible)
+
+        if self.exchange_data["is_stopped"]:
+            self.updateMosaicViewAsync()
+            self.updateOrthViewAsync()
 
     # --------------------------------------------------------------------------
     def onInteractWithMapImage(self):
@@ -1159,8 +1190,10 @@ class OpenNFTManager(QWidget):
 
         if self.exchange_data["view_mode"] == ImageViewMode.mosaic:
             self.updateMosaicViewAsync()
+            self.onCheckMosaicViewUpdated()
         else:
             self.updateOrthViewAsync()
+            self.onCheckOrthViewUpdated()
 
     # --------------------------------------------------------------------------
     def onChangeImageViewMode(self, index):
@@ -1205,6 +1238,10 @@ class OpenNFTManager(QWidget):
         else:
             self.exchange_data["is_neg"] = self.negMapCheckBox.isChecked()
 
+        if self.exchange_data["is_stopped"]:
+            self.exchange_data["ready_to_form"] = True
+            self.exchange_data["overlay_ready"] = True
+
     # --------------------------------------------------------------------------
     def updateOrthViewAsync(self):
 
@@ -1231,6 +1268,10 @@ class OpenNFTManager(QWidget):
         else:
             self.exchange_data["is_neg"] = self.negMapCheckBox.isChecked()
 
+        if self.exchange_data["is_stopped"]:
+            self.exchange_data["ready_to_form"] = True
+            self.exchange_data["overlay_ready"] = True
+
         # self.view_form_input["ready"] = True
 
     # --------------------------------------------------------------------------
@@ -1240,6 +1281,7 @@ class OpenNFTManager(QWidget):
 
         logger.info('New cursor coords {} for proj "{}" have been received', pos, proj.name)
         self.updateOrthViewAsync()
+        self.onCheckOrthViewUpdated()
 
     # --------------------------------------------------------------------------
     def onCheckTimeSeriesUpdated(self):

@@ -6,12 +6,13 @@ from loguru import logger
 import multiprocessing as mp
 from multiprocessing import shared_memory
 import numpy as np
+from pyniexp.connection import Udp
 from rtspm import spm_setup
 
 from opennft.filewatcher import FileWatcher
 from opennft.nfbcalc import Nfb
 from opennft import LegacyNftConfigLoader
-from opennft.utils import ar_regr, zscore
+from opennft.utils import zscore
 from opennft import eventrecorder as erd
 
 import opennft.nftsession as nftsession
@@ -20,6 +21,7 @@ from opennft.config import config as con
 
 class OpenNFTCoreProj(mp.Process):
 
+    # --------------------------------------------------------------------------
     def __init__(self, service_dict):
 
         super().__init__()
@@ -29,13 +31,16 @@ class OpenNFTCoreProj(mp.Process):
         self.config = None
         self.simulation_protocol = None
         self.nfb_calc = None
+        self.udp_send_condition = False
 
         self.exchange_data = service_dict
         self.init_data()
         self.init_exchange_data()
+        self.use_udp_feedback = self.exchange_data["use_udp_feedback"]
         self.recorder = erd.EventRecorder()
         self.recorder.initialize(self.config.volumes_nr)
 
+    # --------------------------------------------------------------------------
     def init_data(self):
 
         config_path = Path().resolve()
@@ -70,6 +75,7 @@ class OpenNFTCoreProj(mp.Process):
         self.simulation_protocol = simulation_protocol
         self.nfb_calc = Nfb(session, self.iteration)
 
+    # --------------------------------------------------------------------------
     def init_exchange_data(self):
 
         self.exchange_data["nr_vol"] = self.session.config.volumes_nr - self.session.config.skip_vol_nr
@@ -80,6 +86,7 @@ class OpenNFTCoreProj(mp.Process):
         self.exchange_data["roi_names"] = self.session.roi_names
         self.exchange_data["iter_norm_number"] = self.iteration.iter_norm_number
 
+    # --------------------------------------------------------------------------
     def init_shmem(self):
 
         nr_vol = self.session.config.volumes_nr - self.session.config.skip_vol_nr
@@ -103,8 +110,41 @@ class OpenNFTCoreProj(mp.Process):
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
 
     # --------------------------------------------------------------------------
+    def init_udp_sender(self, udp_feedback_ip, udp_feedback_port, udp_feedback_controlchar, udp_send_condition):
+
+        self.udp_send_condition = udp_send_condition
+
+        if not self.use_udp_feedback:
+            return
+
+        self.udp_sender = Udp(
+            IP=udp_feedback_ip,
+            port=udp_feedback_port,
+            control_signal=udp_feedback_controlchar,
+            encoding='UTF-8'
+        )
+        self.udp_sender.connect_for_sending()
+        self.udp_sender.sending_time_stamp = True
+
+        self.udp_cond_for_contrast = self.session.prot_names
+        if self.udp_cond_for_contrast[0] != 'BAS':
+            self.udp_cond_for_contrast.insert(0, 'BAS')
+
+    # --------------------------------------------------------------------------
+    def finalize_udp_sender(self):
+        if not self.use_udp_feedback:
+            return
+        self.udp_sender.close()
+
+    # --------------------------------------------------------------------------
     def run(self):
         # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
+
+        if self.use_udp_feedback:
+            self.init_udp_sender(self.exchange_data['udp_feedback_ip'],
+                                 self.exchange_data['udp_feedback_port'],
+                                 self.exchange_data['udp_feedback_controlchar'],
+                                 self.exchange_data['udp_send_condition'])
 
         self.init_shmem()
         print("calc process started")
@@ -139,6 +179,16 @@ class OpenNFTCoreProj(mp.Process):
                 self.iteration.iter_norm_number = self.iteration.iter_number - self.session.config.skip_vol_nr
                 self.nfb_calc.nfb_init()
 
+                if self.config.type in ['PSC', 'Corr']:
+                    if self.iteration.iter_number > self.config.skip_vol_nr and self.udp_send_condition:
+                        self.udp_sender.send_data(
+                            self.udp_cond_for_contrast[int(self.nfb_calc.condition - 1)])
+
+                elif self.config.type == 'SVM':
+                    if self.nfb_calc.display_data and self.use_udp_feedback:
+                        logger.info('Sending by UDP - instrValue = ')  # + str(self.displayData['instrValue'])
+                        # self.udp_sender.send_data(self.displayData['instrValue'])
+
             self.iteration.load_vol(vol_filename, "dcm")
 
             self.iteration.pre_iter = self.iteration.iter_number
@@ -164,8 +214,7 @@ class OpenNFTCoreProj(mp.Process):
             self.epi_volume[:, :, :] = self.iteration.mr_vol.volume
             if stat_ready:
                 self.stat_volume[:, :, :, 0] = self.iteration.iglm_params["stat_map_3d_pos"]
-                if self.exchange_data["is_neg"]:
-                    self.stat_volume[:, :, :, 1] = self.iteration.iglm_params["stat_map_3d_neg"]
+                self.stat_volume[:, :, :, 1] = self.iteration.iglm_params["stat_map_3d_neg"]
                 self.exchange_data["overlay_ready"] = True
 
             self.exchange_data["ready_to_form"] = True
@@ -179,6 +228,11 @@ class OpenNFTCoreProj(mp.Process):
 
             # t5
             self.recorder.recordEvent(erd.Times.t5, self.iteration.iter_number, time.time())
+
+            if self.nfb_calc.display_data:
+                if self.use_udp_feedback:
+                    logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
+                    self.udp_sender.send_data(float(self.nfb_calc.display_data['disp_value']))
 
             iter_number = self.iteration.iter_norm_number
             self.mc_data[iter_number, :] = self.iteration.mr_time_series.mc_params[:, -1].T
@@ -221,5 +275,7 @@ class OpenNFTCoreProj(mp.Process):
         self.ts_shmem.close()
         self.nfb_shmem.close()
         self.stat_shmem.close()
+
+        self.exchange_data['is_stopped'] = True
 
         print("calc process finished")

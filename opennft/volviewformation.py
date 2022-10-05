@@ -83,7 +83,7 @@ class VolViewFormation(mp.Process):
 
         np.seterr(divide='ignore', invalid='ignore')
 
-        while not self.exchange_data["is_stopped"]:
+        while self.exchange_data["vvf_run"]:
 
             if self.exchange_data["ready_to_form"]:
 
@@ -106,9 +106,6 @@ class VolViewFormation(mp.Process):
                             overlay_img = (overlay_img / np.max(overlay_img)) * 255
                         else:
                             overlay_vol = self.stat_volume[:, :, :, 0].squeeze()
-
-                            # overlay_vol = loadmat('stat_vol_from_matlab.mat')['pos_vol']
-
                             overlay_img = vol3d_img2d(overlay_vol, self.xdim, self.ydim,
                                                       self.img2d_dimx, self.img2d_dimy, self.dim)
                             overlay_img = (overlay_img / np.max(overlay_img)) * 255
@@ -140,7 +137,6 @@ class VolViewFormation(mp.Process):
 
                         self.exchange_data["overlay_ready"] = False
                         self.exchange_data["done_mosaic_overlay"] = True
-
 
                 else:
 
