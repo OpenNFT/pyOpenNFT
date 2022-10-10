@@ -15,10 +15,10 @@ from PyQt5.uic import loadUi
 from PyQt5.QtCore import QTimer, QSettings, QRegExp
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
 from loguru import logger
-from pyniexp.connection import Udp
 
 import opennft_console_proj
 from opennft import mosaicview, projview, mapimagewidget, volviewformation, setting_utils, config
+from opennft._logging import logging_setup
 from opennft.config import config as con
 from opennft import constants as cons
 
@@ -49,6 +49,10 @@ class OpenNFTManager(QWidget):
 
             loadUi(setting_utils.get_ui_file('opennft.ui'), self)
             self.setWindowIcon(QIcon(str(config.OpenNFT_ICON)))
+
+            self.frameParams.setEnabled(True)
+            self.frameShortParams.setEnabled(True)
+            self.btnSetup.setEnabled(True)
 
             pg.setConfigOption('foreground', self.palette().color(QPalette.Foreground))
             self.plotBgColor = (255, 255, 255)
@@ -81,6 +85,7 @@ class OpenNFTManager(QWidget):
             self.setup()
             self.start()
 
+    # --------------------------------------------------------------------------
     def initialize_ui(self):
 
         top_size = int(self.height() * 0.7)
@@ -886,6 +891,7 @@ class OpenNFTManager(QWidget):
         self.leProjName.setText(self.settings.value('ProjectName', ''))
         self.leSubjectID.setText(self.settings.value('SubjectID', ''))
         self.leFirstFile.setText(self.settings.value('FirstFileNameTxt', '001_{Image Series No:06}_{#:06}.dcm'))
+        self.leFirstFile2.setText(self.settings.value('FirstFileNameTxt', '001_{Image Series No:06}_{#:06}.dcm'))
         self.sbNFRunNr.setValue(int(self.settings.value('NFRunNr', '1')))
         self.sbImgSerNr.setValue(int(self.settings.value('ImgSerNr', '1')))
         self.sbVolumesNr.setValue(int(self.settings.value('NrOfVolumes')))
@@ -1419,8 +1425,8 @@ class OpenNFTManager(QWidget):
         self.appSettings.beginGroup('Params')
 
         # if not config.AUTO_RTQA:
-        self.settingFileName = self.appSettings.value(
-            'SettingFileName', self.settingFileName)
+        self.setting_file_name = self.appSettings.value(
+            'SettingFileName', self.setting_file_name)
             # if self.settingFileName == str(config.AUTO_RTQA_SETTINGS):
             #     self.settingFileName = ''
         # else:
@@ -1428,7 +1434,7 @@ class OpenNFTManager(QWidget):
 
         self.appSettings.endGroup()
 
-        self.chooseSetFile(self.settingFileName)
+        self.chooseSetFile(self.setting_file_name)
 
     # --------------------------------------------------------------------------
     def writeAppSettings(self):
@@ -1439,7 +1445,7 @@ class OpenNFTManager(QWidget):
         self.appSettings.endGroup()
 
         self.appSettings.beginGroup('Params')
-        self.appSettings.setValue('SettingFileName', self.settingFileName)
+        self.appSettings.setValue('SettingFileName', self.setting_file_name)
 
         self.appSettings.endGroup()
 
@@ -1453,12 +1459,14 @@ class OpenNFTManager(QWidget):
         self.stop()
         self.hide()
 
-        if self._core_process.is_alive():
-            self._core_process.join()
-        if self._view_form_process.is_alive():
-            self._view_form_process.join()
+        if self._core_process is not None:
+            if self._core_process.is_alive():
+                self._core_process.terminate()
+            self.close_shmem()
+        if self._view_form_process is not None:
+            if self._view_form_process.is_alive():
+                self._view_form_process.terminate()
 
-        self.close_shmem()
 
         self.exchange_data = None
         self.close()
@@ -1488,6 +1496,21 @@ class OpenNFTManager(QWidget):
 
 
 if __name__ == '__main__':
+
+    mp.set_start_method('spawn')
+
+    # Override default exception hook to show any exceptions on PyQt5 slots
+    # excepthook.set_hook()
+
     app = QApplication(sys.argv)
+
+    app.setApplicationName(config.APP_NAME)
+    app.setOrganizationName(config.APP_NAME)
+    # app.setApplicationVersion(__version__)
+
+    config.MATLAB_NAME_SUFFIX = '_{}'.format(setting_utils.generate_random_number_string())
+
+    # logging_setup()
+
     w = OpenNFTManager()
     sys.exit(app.exec_())

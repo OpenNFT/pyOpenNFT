@@ -140,10 +140,8 @@ class VolViewFormation(mp.Process):
 
                 else:
 
-                    flags = [self.exchange_data["bg_type"], self.exchange_data["is_neg"], self.exchange_data["is_ROI"]]
-
                     # background
-                    if flags[0] == "bgEPI":
+                    if self.exchange_data["bg_type"] == "bgEPI":
                         back_volume = self.epi_volume
                         mat = self.mat_epi
                     else:
@@ -176,7 +174,7 @@ class VolViewFormation(mp.Process):
                      ] = self.update_orth_view(back_volume, mat,
                                                self.stat_volume[:, :, :, 0].squeeze(),
                                                self.stat_volume[:, :, :, 1].squeeze(),
-                                               ROI_vols, ROI_mats, flags)
+                                               ROI_vols, ROI_mats)
 
                     pos_maps_values = np.array(overlay_t.ravel(), dtype=np.uint8)
                     pos_maps_values = np.append(pos_maps_values, overlay_c.ravel())
@@ -242,7 +240,7 @@ class VolViewFormation(mp.Process):
         # Display modes: [Background + Stat + ROIs, Background + Stat, Background + ROIs]
         self.str_param['mode_displ'] = np.array([0, 0, 1])
 
-    def update_orth_view(self, vol, mat, overlay_vol, neg_overlay_vol, ROI_vols, ROI_mats, flags):
+    def update_orth_view(self, vol, mat, overlay_vol, neg_overlay_vol, ROI_vols, ROI_mats):
 
         bb = self.str_param['bb']
         dims = np.squeeze(np.round(np.diff(bb, axis=0).T + 1))
@@ -301,7 +299,7 @@ class VolViewFormation(mp.Process):
         back_imgc = ((back_imgc / np.max(back_imgc)) * 255).T
         back_imgs = ((back_imgs / np.max(back_imgs)) * 255).T
 
-        if flags[0] != "bgEPI":
+        if self.exchange_data["bg_type"] != "bgEPI":
             m = np.array(np.linalg.solve(self.str_param['space'], self.str_param['premul']) @ self.mat_epi, order='F')
 
         overlay_imgt, overlay_imgc, overlay_imgs = self.get_orth_vol(coord_param, overlay_vol, m)
@@ -312,7 +310,7 @@ class VolViewFormation(mp.Process):
         overlay_imgc = ((overlay_imgc / np.max(overlay_imgc)) * 255).T
         overlay_imgs = ((overlay_imgs / np.max(overlay_imgs)) * 255).T
 
-        if flags[1]:
+        if self.exchange_data["is_neg"]:
             neg_overlay_imgt, neg_overlay_imgc, neg_overlay_imgs = self.get_orth_vol(coord_param, neg_overlay_vol, m)
             neg_overlay_imgt = np.nan_to_num(neg_overlay_imgt)
             neg_overlay_imgc = np.nan_to_num(neg_overlay_imgc)
@@ -331,7 +329,7 @@ class VolViewFormation(mp.Process):
         ROI_c = [None] * nrROIs
         ROI_s = [None] * nrROIs
 
-        if bool(self.str_param["mode_displ"]) and flags[2]:
+        if bool(self.str_param["mode_displ"]) and self.exchange_data["is_ROI"]:
 
             for j in range(nrROIs):
                 vol = np.array(np.squeeze(ROI_vols[j, :, :, :]), order='F')

@@ -2,6 +2,7 @@
 import pyqtgraph as pg
 
 APP_NAME = 'opennft'
+LOG_LEVEL = 'DEBUG'
 
 ENVVAR_PREFIX = 'ONFT'
 

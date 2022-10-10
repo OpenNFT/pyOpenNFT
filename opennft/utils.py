@@ -69,6 +69,9 @@ def zscore(x):
     np.seterr(divide='ignore', invalid='ignore')
     dim = np.nonzero(np.array(x.shape) != 1)[0]
 
+    if len(x) == 1:
+        return np.array([0])
+
     if dim.size:
         dim = dim[0]
     else:
