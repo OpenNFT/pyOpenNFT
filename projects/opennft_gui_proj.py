@@ -15,12 +15,14 @@ from PyQt5.uic import loadUi
 from PyQt5.QtCore import QTimer, QSettings, QRegExp
 from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
 from loguru import logger
+from scipy.io import loadmat
 
 import opennft_console_proj
 from opennft import mosaicview, projview, mapimagewidget, volviewformation, setting_utils, config
 from opennft._logging import logging_setup
 from opennft.config import config as con
 from opennft import constants as cons
+
 
 class ImageViewMode(str, enum.Enum):
     mosaic = 'mosaic'
@@ -41,7 +43,7 @@ class OpenNFTManager(QWidget):
         self.orthViewInitialize = False
         self._core_process = None
         self._view_form_process = None
-        self.reset_done = False
+        self.reset_done = True
         self.f_fin_nfb = False
 
         if con.use_gui:
@@ -82,6 +84,8 @@ class OpenNFTManager(QWidget):
             self.init = False
             self.show()
         else:
+
+            self.chooseSetFile(config.PKG_CONFIG_DIR / 'auto_config.ini')
             self.setup()
             self.start()
 
@@ -108,8 +112,9 @@ class OpenNFTManager(QWidget):
         self.mosaicTimer.timeout.connect(self.onCheckMosaicViewUpdated)
         self.orthViewTimer.timeout.connect(self.onCheckOrthViewUpdated)
 
-        self.currentCursorPos = (129, 95)
-        self.currentProjection = projview.ProjectionType.coronal
+        self.currentCursorPos = self.exchange_data["cursor_pos"]
+        self.currentProjection = self.exchange_data["flags_planes"]
+        self.orthViewInitialize = True
 
         self.pbMoreParameters.setChecked(False)
 
@@ -237,7 +242,7 @@ class OpenNFTManager(QWidget):
     def view_form_init(self):
 
         if con.use_roi:
-            ROI_vols = np.zeros(((self.nr_rois,)+tuple(self.session.rois[0].dim)))
+            ROI_vols = np.zeros(((self.nr_rois,) + tuple(self.session.rois[0].dim)))
             ROI_mats = np.zeros((self.nr_rois, 4, 4))
             for i_roi in range(self.nr_rois):
                 ROI_vols[i_roi, :, :, :] = self.session.rois[i_roi].volume
@@ -673,11 +678,16 @@ class OpenNFTManager(QWidget):
         if not self.reset_done:
             self.reset()
 
-        self.actualize()
-        self.exchange_data['offline'] = self.cbOfflineMode.isChecked()
+        if con.use_gui:
+            self.actualize()
+            self.exchange_data['offline'] = self.cbOfflineMode.isChecked()
+            self.exchange_data["use_udp_feedback"] = self.cbUseUDPFeedback.isChecked()
+        else:
+            self.exchange_data['offline'] = None
+            self.exchange_data["use_udp_feedback"] = None
+
         self.exchange_data['is_stopped'] = False
         self.exchange_data["vvf_run"] = True
-        self.exchange_data["use_udp_feedback"] = self.cbUseUDPFeedback.isChecked()
         self._core_process = opennft_console_proj.OpenNFTCoreProj(self.exchange_data)
 
         self.config = self._core_process.config
@@ -688,59 +698,60 @@ class OpenNFTManager(QWidget):
         self.mosaic_dim = self.exchange_data["mosaic_dim"]
         self.overlay_dim = self.exchange_data["mosaic_dim"] + (4,)
 
-        self.roi_dict = dict()
-        self.selected_roi = []
-        roi_menu = QMenu()
-        roi_menu.triggered.connect(self.onRoiChecked)
-        self.roiSelectorBtn.setMenu(roi_menu)
-        nrROIs = int(self.nr_rois)
-        for i in range(nrROIs):
-            # if self.P['isRTQA'] and i + 1 == nrROIs:
-            #     roi = 'Whole brain ROI'
-            # else:
-            roi = 'ROI_{}'.format(i + 1)
-            roi_action = roi_menu.addAction(roi)
-            roi_action.setCheckable(True)
-            if not (self.exchange_data["is_rtqa"] and i + 1 == nrROIs):
-                roi_action.setChecked(True)
-                self.roi_dict[roi] = True
-                self.selected_roi.append(i)
+        if con.use_gui:
+            self.orthViewInitialize = True
 
-        action = roi_menu.addAction("All")
-        action.setCheckable(False)
+            self.roi_dict = dict()
+            self.selected_roi = []
+            roi_menu = QMenu()
+            roi_menu.triggered.connect(self.onRoiChecked)
+            self.roiSelectorBtn.setMenu(roi_menu)
+            nrROIs = int(self.nr_rois)
+            for i in range(nrROIs):
+                # if self.P['isRTQA'] and i + 1 == nrROIs:
+                #     roi = 'Whole brain ROI'
+                # else:
+                roi = 'ROI_{}'.format(i + 1)
+                roi_action = roi_menu.addAction(roi)
+                roi_action.setCheckable(True)
+                if not (self.exchange_data["is_rtqa"] and i + 1 == nrROIs):
+                    roi_action.setChecked(True)
+                    self.roi_dict[roi] = True
+                    self.selected_roi.append(i)
 
-        action = roi_menu.addAction("None")
-        action.setCheckable(False)
+            action = roi_menu.addAction("All")
+            action.setCheckable(False)
 
-        self.roiSelectorBtn.setEnabled(True)
+            action = roi_menu.addAction("None")
+            action.setCheckable(False)
 
-        self.view_form_init()
+            self.roiSelectorBtn.setEnabled(True)
 
-        self.init_shmem()
-        self._view_form_process.start()
+            self.view_form_init()
+            self.init_shmem()
+            self._view_form_process.start()
 
-        logger.info("  Setup plots...")
-        self.createMusterInfo()
+            logger.info("  Setup plots...")
+            self.createMusterInfo()
 
-        self.setupRoiPlots()
-        self.setupMcPlots()
+            self.setupRoiPlots()
+            self.setupMcPlots()
 
-        self.btnStart.setEnabled(True)
+            self.btnStart.setEnabled(True)
+
+        else:
+
+            self.use_udp_feedback = self.exchange_data["use_udp_feedback"]
+            if self.use_udp_feedback:
+                self.exchange_data['udp_feedback_ip'] = self.session.config.udp_feedback_address
+                self.exchange_data['udp_feedback_port'] = self.session.config.udp_feedback_port
+                self.exchange_data['udp_feedback_controlchar'] = self.session.config.udp_feedback_control
+                self.exchange_data['udp_send_condition'] = self.session.config.udp_send_condition
 
     # --------------------------------------------------------------------------
     def start(self):
 
         if not self._core_process.is_alive():
-
-            self.cbImageViewMode.setEnabled(True)
-            self.pos_map_thresholds_widget.setEnabled(True)
-            self.neg_map_thresholds_widget.setEnabled(True)
-            self.btnSetup.setEnabled(False)
-            self.btnStart.setEnabled(False)
-            self.btnStop.setEnabled(True)
-            self.pbMoreParameters.setChecked(False)
-            self.init = True
-            self.f_fin_nfb = True
 
             if self.use_udp_feedback:
                 self.exchange_data['udp_feedback_ip'] = self.udp_feedback_ip
@@ -752,6 +763,18 @@ class OpenNFTManager(QWidget):
             self._core_process.start()
 
             if con.use_gui:
+                self.cbImageViewMode.setEnabled(True)
+                self.cbImageViewMode.setCurrentIndex(0)
+                self.stackedWidgetImages.setCurrentIndex(0)
+                self.pos_map_thresholds_widget.setEnabled(True)
+                self.neg_map_thresholds_widget.setEnabled(True)
+                self.btnSetup.setEnabled(False)
+                self.btnStart.setEnabled(False)
+                self.btnStop.setEnabled(True)
+                self.pbMoreParameters.setChecked(False)
+                self.init = True
+                self.f_fin_nfb = True
+
                 self.tsTimer.start(30)
                 self.mosaicTimer.start(30)
                 self.orthViewTimer.start(30)
@@ -860,14 +883,15 @@ class OpenNFTManager(QWidget):
 
         self.setting_file_name = fname
 
-        self.leSetFile.setText(fname)
         self.exchange_data["set_file"] = fname
 
-        self.settings = QSettings(fname, QSettings.IniFormat, self)
-        self.loadSettingsFromSetFile()
+        if con.use_gui:
+            self.settings = QSettings(fname, QSettings.IniFormat, self)
+            self.leSetFile.setText(fname)
+            self.loadSettingsFromSetFile()
+            self.btnSetup.setEnabled(True)
 
         self.is_set_file_chosen = True
-        self.btnSetup.setEnabled(True)
 
     # --------------------------------------------------------------------------
     def loadSettingsFromSetFile(self):
@@ -1261,7 +1285,7 @@ class OpenNFTManager(QWidget):
 
         # if not self.view_form_input["ready"]:
         self.exchange_data["cursor_pos"] = self.currentCursorPos
-        self.exchange_data["flags_planes"] = self.currentProjection.value
+        self.exchange_data["flags_planes"] = self.currentProjection
         self.exchange_data["bg_type"] = bgType
         self.exchange_data["is_rtqa"] = is_rtqa_volume
         # if self.windowRTQA:
@@ -1283,7 +1307,7 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def onChangeOrthViewCursorPosition(self, pos, proj):
         self.currentCursorPos = pos
-        self.currentProjection = proj
+        self.currentProjection = proj.value
 
         logger.info('New cursor coords {} for proj "{}" have been received', pos, proj.name)
         self.updateOrthViewAsync()
@@ -1295,10 +1319,9 @@ class OpenNFTManager(QWidget):
         if not (self.exchange_data is None) or not self.exchange_data["is_stopped"]:
 
             if self.exchange_data["data_ready_flag"]:
-
                 iter_norm_number = self.exchange_data["iter_norm_number"]
 
-                self.drawMcPlots(self.init, self.mcPlot, self.mc_data[:iter_norm_number,:])
+                self.drawMcPlots(self.init, self.mcPlot, self.mc_data[:iter_norm_number, :])
 
                 data = self.ts_data[:, :iter_norm_number, :]
                 self.drawRoiPlots(self.init, data, iter_norm_number)
@@ -1427,8 +1450,8 @@ class OpenNFTManager(QWidget):
         # if not config.AUTO_RTQA:
         self.setting_file_name = self.appSettings.value(
             'SettingFileName', self.setting_file_name)
-            # if self.settingFileName == str(config.AUTO_RTQA_SETTINGS):
-            #     self.settingFileName = ''
+        # if self.settingFileName == str(config.AUTO_RTQA_SETTINGS):
+        #     self.settingFileName = ''
         # else:
         #     self.settingFileName = str(config.AUTO_RTQA_SETTINGS)
 
@@ -1467,7 +1490,6 @@ class OpenNFTManager(QWidget):
             if self._view_form_process.is_alive():
                 self._view_form_process.terminate()
 
-
         self.exchange_data = None
         self.close()
         print("main process finished")
@@ -1496,7 +1518,6 @@ class OpenNFTManager(QWidget):
 
 
 if __name__ == '__main__':
-
     mp.set_start_method('spawn')
 
     # Override default exception hook to show any exceptions on PyQt5 slots

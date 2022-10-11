@@ -19,7 +19,6 @@ import pyqtgraph as pg
 from PyQt5 import QtCore
 from PyQt5 import QtWidgets
 
-from opennft.config import config as con
 from opennft import constants as cons
 
 
@@ -196,7 +195,6 @@ class ProjectionImageView(pg.ViewBox):
 
 
 class ProjectionsWidget(QtWidgets.QWidget):
-
     cursorPositionChanged = QtCore.pyqtSignal(tuple, ProjectionType)
 
     def __init__(self, parent=None, *args, **kwargs):
