@@ -31,6 +31,7 @@ class OpenNFTCoreProj(mp.Process):
         self.config = None
         self.simulation_protocol = None
         self.nfb_calc = None
+        self.udp_sender = None
         self.udp_send_condition = False
 
         self.exchange_data = service_dict
@@ -139,7 +140,9 @@ class OpenNFTCoreProj(mp.Process):
     def finalize_udp_sender(self):
         if not self.use_udp_feedback:
             return
-        self.udp_sender.close()
+        if self.udp_sender is not None:
+            self.udp_sender.close()
+        self.use_udp_feedback = False
 
     # --------------------------------------------------------------------------
     def run(self):
@@ -163,6 +166,9 @@ class OpenNFTCoreProj(mp.Process):
 
         for vol_filename in fw:
             # main loop iteration
+
+            if self.exchange_data['close_udp']:
+                self.finalize_udp_sender()
 
             if not self.exchange_data['offline']:
                 while vol_filename is None:
@@ -190,9 +196,9 @@ class OpenNFTCoreProj(mp.Process):
                         self.udp_sender.send_data(
                             self.udp_cond_for_contrast[int(self.nfb_calc.condition - 1)])
 
-                elif self.config.type == 'SVM':
-                    if self.nfb_calc.display_data and self.use_udp_feedback:
-                        logger.info('Sending by UDP - instrValue = ')  # + str(self.displayData['instrValue'])
+                # elif self.config.type == 'SVM':
+                #     if self.nfb_calc.display_data and self.use_udp_feedback:
+                #         logger.info('Sending by UDP - instrValue = ')  # + str(self.displayData['instrValue'])
                         # self.udp_sender.send_data(self.displayData['instrValue'])
 
             self.iteration.load_vol(vol_filename, "dcm")
@@ -239,8 +245,17 @@ class OpenNFTCoreProj(mp.Process):
 
             if self.nfb_calc.display_data:
                 if self.use_udp_feedback:
-                    logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
-                    self.udp_sender.send_data(float(self.nfb_calc.display_data['disp_value']))
+                    # logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
+                    # self.udp_sender.send_data(float(self.nfb_calc.display_data['disp_value']))
+
+                    cond = self.nfb_calc.condition
+                    if cond == 2:
+                        val = 'N ' + str(self.nfb_calc.display_data["disp_value"])
+                    else:
+                        val = 'B ' + str(self.nfb_calc.display_data["disp_value"])
+
+                    logger.info('Sending by UDP - dispValue = {}', val)
+                    self.udp_sender.send_data(val)
 
             iter_number = self.iteration.iter_norm_number
 

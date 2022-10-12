@@ -188,6 +188,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["bg_type"] = "bgEPI"
         self.exchange_data["cursor_pos"] = (129, 95)
         self.exchange_data["flags_planes"] = projview.ProjectionType.coronal.value
+        self.exchange_data['close_udp'] = False
 
     # --------------------------------------------------------------------------
     def init_shmem(self):
@@ -697,6 +698,7 @@ class OpenNFTManager(QWidget):
         self.vol_dim = self.exchange_data["vol_dim"]
         self.mosaic_dim = self.exchange_data["mosaic_dim"]
         self.overlay_dim = self.exchange_data["mosaic_dim"] + (4,)
+        self.exchange_data['close_udp'] = False
 
         if con.use_gui:
             self.orthViewInitialize = True
@@ -787,6 +789,10 @@ class OpenNFTManager(QWidget):
         if con.use_sleep_in_stop:
             time.sleep(2)
 
+        if self.f_fin_nfb:
+            self.exchange_data['close_udp'] = True
+            self.f_fin_nfb = False
+
         if not self._core_process is None and self._core_process.is_alive():
             self._core_process.terminate()
 
@@ -816,10 +822,6 @@ class OpenNFTManager(QWidget):
         #     path = Path(self.P['nfbDataFolder'])
         #     fname = path / ('TimeVectors_' + str(self.P['NFRunNr']).zfill(2) + '.txt')
         #     self.recorder.savetxt(str(fname))
-
-        if self.f_fin_nfb:
-            self._core_process.finalize_udp_sender()
-            self.f_fin_nfb = False
 
         # if self.recorder.records.shape[0] > 2:
         #     if self.recorder.records[0, erd.Times.d0] > 0:

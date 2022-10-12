@@ -163,17 +163,23 @@ class Nfb():
                     norm_perc_values[i_roi] = scale_time_series[i_roi][ind_vol_norm]
 
                 tmp_fb_val = norm_perc_values.mean()
-                self.disp_value = np.round(max_fb_value * tmp_fb_val, decimals=fb_val_dec)
+                tmp_tmp_fbVal = np.round(max_fb_value * tmp_fb_val, decimals=fb_val_dec)
+                self.disp_value = 100 + tmp_tmp_fbVal * (0-50)/100
 
                 self.norm_perc_values.append(norm_perc_values)
                 self.disp_values[ind_vol_norm] = self.disp_value
 
-                self.vect_nfbs[ind_vol_norm] = tmp_fb_val
-                self.block_nf = block_nf
-                self.first_nf = first_nf
+            else:
 
-                self.display_data["reward"] = ''
-                self.display_data["disp_value"] = self.disp_value
+                tmp_fb_val = 0
+                self.display_data["disp_value"] = 100
+
+            self.vect_nfbs[ind_vol_norm] = tmp_fb_val
+            self.block_nf = block_nf
+            self.first_nf = first_nf
+
+            self.display_data["reward"] = ''
+            self.display_data["disp_value"] = self.disp_value
 
     def nfb_save(self, save_path):
 
