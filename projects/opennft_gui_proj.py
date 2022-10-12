@@ -784,6 +784,9 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def stop(self):
 
+        if con.use_sleep_in_stop:
+            time.sleep(2)
+
         if not self._core_process is None and self._core_process.is_alive():
             self._core_process.terminate()
 
@@ -802,9 +805,6 @@ class OpenNFTManager(QWidget):
         #     self.btnStart.setEnabled(True)
         #     self.btnSetup.setEnabled(False)
         #     self.btnPlugins.setEnabled(False)
-
-        if con.use_sleep_in_stop:
-            time.sleep(2)
 
         self.reset_done = False
 
@@ -826,6 +826,8 @@ class OpenNFTManager(QWidget):
         #         logger.info("Average elapsed time: {:.4f} s".format(
         #             np.sum(self.recorder.records[1:, erd.Times.d0]) / self.recorder.records[0, erd.Times.d0]))
 
+        self.tsTimer.stop()
+
         logger.info('Finished.')
 
     # --------------------------------------------------------------------------
@@ -835,6 +837,8 @@ class OpenNFTManager(QWidget):
 
         if self._core_process is not None:
             if self._core_process.is_alive():
+                self.mosaicTimer.stop()
+                self.orthViewTimer.stop()
                 self._core_process.terminate()
         if self._view_form_process is not None:
             if self._view_form_process.is_alive():
@@ -853,8 +857,13 @@ class OpenNFTManager(QWidget):
         self.mosaicImageView.clear()
         self.orthView.clear()
 
+        self.cbImageViewMode.setCurrentIndex(0)
+        self.stackedWidgetImages.setCurrentIndex(0)
+
         self.reset_done = True
         self.f_fin_nfb = False
+
+        self.close_shmem()
 
     # --------------------------------------------------------------------------
     def onChooseSetFile(self):
@@ -1330,6 +1339,9 @@ class OpenNFTManager(QWidget):
                 #     self.init = False
 
                 self.exchange_data["data_ready_flag"] = False
+
+        if self.exchange_data['is_stopped']:
+            self.stop()
 
         self.leElapsedTime.setText('{:.4f}'.format(self.exchange_data["elapsed_time"]))
         self.leCurrentVolume.setText('%d' % self.exchange_data["iter_norm_number"])
