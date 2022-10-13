@@ -88,7 +88,7 @@ class NftSession():
 
         inds = bas_inds[np.where(bas_inds > self.offsets[0][-1][1])[0]]
         bas_offsets.append(inds)
-        bas_offsets = np.array(bas_offsets, ndmin=2)
+        # bas_offsets = np.array(bas_offsets, ndmin=2)
         self.prot_cond[0] = bas_offsets
 
         # Contrast and Conditions For Contrast
@@ -324,7 +324,13 @@ class NftIteration():
             logger.info(f"Empty data, nothing to save")
             return
 
+        if not save_path.is_dir():
+            save_path.mkdir(exist_ok=True)
+
         path = save_path / "py_time_series.mat"
+
+        if not path.is_file():
+            path.touch(exist_ok=True)
 
         savemat(str(path), {"raw_time_series": self.mr_time_series.raw_time_series[0],
                             "raw_time_series_ar1": self.mr_time_series.raw_time_series_ar1[0],

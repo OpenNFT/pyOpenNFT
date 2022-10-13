@@ -183,7 +183,13 @@ class Nfb():
 
     def nfb_save(self, save_path):
 
+        if not save_path.is_dir():
+            save_path.mkdir(exist_ok=True)
+
         path = save_path / "py_disp_values.mat"
+
+        if not path.is_file():
+            path.touch(exist_ok=True)
 
         savemat(str(path), {"disp_values": self.disp_values,
                             "vect_end_cond": self.session.vect_end_cond,

@@ -43,8 +43,9 @@ class OpenNFTManager(QWidget):
         self.orthViewInitialize = False
         self._core_process = None
         self._view_form_process = None
-        self.reset_done = True
+        self.reset_done = False
         self.f_fin_nfb = False
+        self.shmem_init = False
 
         if con.use_gui:
             super().__init__(*args, **kwargs)
@@ -124,6 +125,25 @@ class OpenNFTManager(QWidget):
         self.btnChooseSetFile.clicked.connect(self.onChooseSetFile)
         self.btnChooseSetFile2.clicked.connect(self.onChooseSetFile)
         self.pbMoreParameters.toggled.connect(self.onShowMoreParameters)
+
+        self.btnChooseProtocolFile.clicked.connect(self.onChooseProtocolFile)
+
+        self.btnChhoseWeghts.clicked.connect(self.onChooseWeightsFile)
+
+        self.btnChooseRoiAnatFolder.clicked.connect(
+            lambda: self.onChooseFolder('RoiAnatFolder', self.leRoiAnatFolder))
+
+        self.btnChooseRoiGroupFolder.clicked.connect(
+            lambda: self.onChooseFolder('RoiGroupFolder', self.leRoiGroupFolder))
+
+        self.btnChooseStructBgFile.clicked.connect(self.onChooseStructBgFile)
+
+        self.btnMCTempl.clicked.connect(self.onChooseMCTemplFile)
+
+        self.btnChooseWorkFolder.clicked.connect(
+            lambda: self.onChooseFolder('WorkFolder', self.leWorkFolder))
+        self.btnChooseWatchFolder.clicked.connect(
+            lambda: self.onChooseFolder('WatchFolder', self.leWatchFolder))
 
         ipv4_regexp = QRegExp(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
 
@@ -238,6 +258,8 @@ class OpenNFTManager(QWidget):
         self.proj_s_shmem = shared_memory.SharedMemory(create=True, size=proj_array.nbytes,
                                                        name=con.shmem_file_names[7])
         self.proj_s = np.ndarray(shape=(dims[2], dims[1], 9), dtype=np.float32, buffer=self.proj_s_shmem.buf)
+
+        self.shmem_init = True
 
     # --------------------------------------------------------------------------
     def view_form_init(self):
@@ -679,6 +701,7 @@ class OpenNFTManager(QWidget):
         if not self.reset_done:
             self.reset()
 
+
         if con.use_gui:
             self.actualize()
             self.exchange_data['offline'] = self.cbOfflineMode.isChecked()
@@ -749,6 +772,8 @@ class OpenNFTManager(QWidget):
                 self.exchange_data['udp_feedback_port'] = self.session.config.udp_feedback_port
                 self.exchange_data['udp_feedback_controlchar'] = self.session.config.udp_feedback_control
                 self.exchange_data['udp_send_condition'] = self.session.config.udp_send_condition
+
+        self.reset_done = False
 
     # --------------------------------------------------------------------------
     def start(self):
@@ -879,6 +904,102 @@ class OpenNFTManager(QWidget):
 
         fname = str(Path(fname))
         self.chooseSetFile(fname)
+
+    # --------------------------------------------------------------------------
+    def onChooseWeightsFile(self):
+        if con.donot_use_qfile_native_dialog:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select 'Weights File'", self.leWeightsFile.text(), 'all files (*.*)',
+                options=QFileDialog.DontUseNativeDialog)[0]
+        else:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select 'Weights File'", self.leWeightsFile.text(), 'all files (*.*)')[0]
+
+        fname = str(Path(fname))
+        self.chooseWeightsFile(fname)
+
+    # --------------------------------------------------------------------------
+    def chooseWeightsFile(self, fname):
+        if not fname:
+            return
+
+        if not Path(fname).is_file():
+            return
+
+        self.leWeightsFile.setText(fname)
+        # self.P['WeightsFileName'] = fname
+
+    # --------------------------------------------------------------------------
+    def onChooseProtocolFile(self):
+        fname = self.leProtocolFile.text()
+        if con.donot_use_qfile_native_dialog:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select Protocol File", fname, 'JPRT files (*.*)', options=QFileDialog.DontUseNativeDialog)[0]
+        else:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select Protocol File", fname, 'JPRT files (*.*)')[0]
+
+        fname = str(Path(fname))
+        if fname:
+            self.leProtocolFile.setText(fname)
+            # self.P['ProtocolFile'] = fname
+
+    # --------------------------------------------------------------------------
+    def onChooseStructBgFile(self):
+        if con.donot_use_qfile_native_dialog:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select Structural File", str(config.ROOT_PATH), 'Template files (*.nii)',
+                options=QFileDialog.DontUseNativeDialog)[0]
+        else:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select Structural File", str(config.ROOT_PATH), 'Template files (*.nii)')[0]
+
+        fname = str(Path(fname))
+        if fname:
+            self.leStructBgFile.setText(fname)
+            # self.P['StructBgFile'] = fname
+
+    # --------------------------------------------------------------------------
+    def onChooseMCTemplFile(self):
+        if con.donot_use_qfile_native_dialog:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select MCTempl File", str(config.ROOT_PATH), 'Template files (*.nii)',
+                options=QFileDialog.DontUseNativeDialog)[0]
+        else:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select MCTempl File", str(config.ROOT_PATH), 'Template files (*.nii)')[0]
+
+        fname = str(Path(fname))
+        if fname:
+            # if config.AUTO_RTQA and config.USE_EPI_TEMPLATE:
+            #     self.leMCTempl3.setText(fname)
+            # else:
+            self.leMCTempl.setText(fname)
+            # self.P['MCTempl'] = fname
+
+    # --------------------------------------------------------------------------
+    def onChooseFolder(self, name, le):
+        dname = QFileDialog.getExistingDirectory(
+            self, "Select '{}' directory".format(name), str(config.ROOT_PATH))
+        dname = str(Path(dname))
+        if dname:
+            le.setText(dname)
+            # self.P[name] = dname
+
+    # --------------------------------------------------------------------------
+    def onChooseFile(self, name, le):
+        if con.donot_use_qfile_native_dialog:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select '{}' directory".format(name), str(config.ROOT_PATH), 'Any file (*.*)',
+                options=QFileDialog.DontUseNativeDialog)[0]
+        else:
+            fname = QFileDialog.getOpenFileName(
+                self, "Select '{}' directory".format(name), str(config.ROOT_PATH), 'Any file (*.*)')[0]
+
+        fname = str(Path(fname))
+        if fname:
+            le.setText(fname)
+            # self.P[name] = fname
 
     # --------------------------------------------------------------------------
     def onShowMoreParameters(self, flag: bool):
@@ -1511,24 +1632,26 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def close_shmem(self):
 
-        self.mc_shmem.close()
-        self.mc_shmem.unlink()
-        self.mosaic_shmem.close()
-        self.mosaic_shmem.unlink()
-        self.epi_shmem.close()
-        self.epi_shmem.unlink()
-        self.stat_shmem.close()
-        self.stat_shmem.unlink()
-        self.proj_t_shmem.close()
-        self.proj_t_shmem.unlink()
-        self.proj_c_shmem.close()
-        self.proj_c_shmem.unlink()
-        self.proj_s_shmem.close()
-        self.proj_s_shmem.unlink()
-        self.nfb_shmem.close()
-        self.nfb_shmem.unlink()
-        self.ts_shmem.close()
-        self.ts_shmem.unlink()
+        if self.shmem_init:
+
+            self.mc_shmem.close()
+            self.mc_shmem.unlink()
+            self.mosaic_shmem.close()
+            self.mosaic_shmem.unlink()
+            self.epi_shmem.close()
+            self.epi_shmem.unlink()
+            self.stat_shmem.close()
+            self.stat_shmem.unlink()
+            self.proj_t_shmem.close()
+            self.proj_t_shmem.unlink()
+            self.proj_c_shmem.close()
+            self.proj_c_shmem.unlink()
+            self.proj_s_shmem.close()
+            self.proj_s_shmem.unlink()
+            self.nfb_shmem.close()
+            self.nfb_shmem.unlink()
+            self.ts_shmem.close()
+            self.ts_shmem.unlink()
 
 
 if __name__ == '__main__':
