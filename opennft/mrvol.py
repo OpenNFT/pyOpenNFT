@@ -69,7 +69,6 @@ class MrVol():
 
         [r, a0, x1, x2, x3, deg, b, _] = spm_realign_rt(r, flags_spm_realign, ind_vol + 1, 1, a0, x1, x2, x3, deg, b)
 
-        # перезаписывать или хранить?
         self.volume = r[1]["Vol"]
         self.mat = r[1]["mat"]
         self.dim = r[1]["dim"]
@@ -81,7 +80,6 @@ class MrVol():
         flags_spm_reslice = dict({'quality': .9, 'fwhm': 5, 'sep': 4, 'interp': 4,
                                   'wrap': np.zeros((3, 1)), 'mask': 1, 'mean': 0, 'which': 2})
 
-        # перезаписывать или хранить?
         self.volume = spm_reslice_rt(r, flags_spm_reslice)
 
     def smooth(self):
@@ -91,7 +89,6 @@ class MrVol():
 
         gkernel = np.array([5, 5, 5]) / dicom_info_vox
 
-        # перезаписывать или хранить?
         self.volume = spm_smooth(self.volume, gkernel)
 
 

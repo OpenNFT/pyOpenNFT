@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
+import nibabel as nib
 
 from pathlib import Path
 from loguru import logger
@@ -87,7 +88,8 @@ class NftSession():
             bas_offsets.append(inds)
 
         inds = bas_inds[np.where(bas_inds > self.offsets[0][-1][1])[0]]
-        bas_offsets.append(inds)
+        if len(inds) > 0:
+            bas_offsets.append(inds)
         # bas_offsets = np.array(bas_offsets, ndmin=2)
         self.prot_cond[0] = bas_offsets
 
@@ -317,6 +319,27 @@ class NftIteration():
             stat_ready = True
 
         return stat_ready
+
+    # --------------------------------------------------------------------------
+    def save_stat_vols(self, save_path):
+        if len(self.mr_time_series.mc_params) == 0:
+            logger.info(f"Empty data, nothing to save")
+            return
+
+        if not save_path.is_dir():
+            save_path.mkdir(exist_ok=True)
+
+        path_pos = save_path / "py_stat_pos.nii"
+        path_neg = save_path / "py_stat_neg.nii"
+
+        if not path_pos.is_file():
+            path_pos.touch(exist_ok=True)
+
+        if not path_neg.is_file():
+            path_neg.touch(exist_ok=True)
+
+        nib.save(nib.Nifti1Image(self.iglm_params["stat_map_3d_pos"], self.session.reference_vol.mat), path_pos)
+        nib.save(nib.Nifti1Image(self.iglm_params["stat_map_3d_neg"], self.session.reference_vol.mat), path_neg)
 
     # --------------------------------------------------------------------------
     def save_time_series(self, save_path):

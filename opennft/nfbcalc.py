@@ -139,6 +139,7 @@ class Nfb():
 
                 tmp_fb_val = 0
                 self.disp_value = 0
+                self.norm_perc_values.append(np.zeros((nr_rois, 1)))
 
             self.vect_nfbs[ind_vol_norm] = tmp_fb_val
             self.block_nf = block_nf
@@ -172,7 +173,8 @@ class Nfb():
             else:
 
                 tmp_fb_val = 0
-                self.display_data["disp_value"] = 100
+                self.norm_perc_values.append(np.zeros((nr_rois, 1)))
+                self.disp_value = 100
 
             self.vect_nfbs[ind_vol_norm] = tmp_fb_val
             self.block_nf = block_nf

@@ -21,11 +21,11 @@ class NewFileEventHandler(FileSystemEventHandler):
     def on_created(self, event):
         # if not event.is_directory and event.src_path.endswith(self.filepat):
         if not event.is_directory and fnmatch.fnmatch(os.path.basename(event.src_path), self.filepat):
-            if self.recorder is None:
-                pass
-            else:
-                # t1
-                self.recorder.recordEvent(erd.Times.t1, 0, time.time())
+            # if self.recorder is None:
+            #     pass
+            # else:
+            #     # t1
+            #     self.recorder.recordEvent(erd.Times.t1, 0, time.time())
             self.fq.put(event.src_path)
 
 
