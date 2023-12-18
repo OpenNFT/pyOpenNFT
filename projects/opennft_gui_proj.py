@@ -10,10 +10,10 @@ import multiprocessing as mp
 
 from multiprocessing import shared_memory
 
-from PyQt5.QtGui import QPalette, QIcon, QRegExpValidator
-from PyQt5.uic import loadUi
-from PyQt5.QtCore import QTimer, QSettings, QRegExp
-from PyQt5.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
+from PyQt6.QtGui import QPalette, QIcon, QRegularExpressionValidator
+from PyQt6.uic import loadUi
+from PyQt6.QtCore import QTimer, QSettings, QRegularExpression
+from PyQt6.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
 from loguru import logger
 from scipy.io import loadmat
 
@@ -57,7 +57,7 @@ class OpenNFTManager(QWidget):
             self.frameShortParams.setEnabled(True)
             self.btnSetup.setEnabled(True)
 
-            pg.setConfigOption('foreground', self.palette().color(QPalette.Foreground))
+            pg.setConfigOption('foreground', QPalette.windowText(self.palette()).color())
             self.plotBgColor = (255, 255, 255)
 
             self.mosaicImageView = mosaicview.MosaicImageViewWidget(self)
@@ -76,8 +76,8 @@ class OpenNFTManager(QWidget):
 
             self.settingFileName = config.ROOT_PATH
             self.appSettings = QSettings(
-                str(setting_utils.get_app_settings_file()), QSettings.IniFormat, self)
-            self.settings = QSettings('', QSettings.IniFormat)
+                str(setting_utils.get_app_settings_file()), QSettings.Format.IniFormat, self)
+            self.settings = QSettings('', QSettings.Format.IniFormat)
             self.readAppSettings()
 
             self.initialize_ui()
@@ -145,9 +145,9 @@ class OpenNFTManager(QWidget):
         self.btnChooseWatchFolder.clicked.connect(
             lambda: self.onChooseFolder('WatchFolder', self.leWatchFolder))
 
-        ipv4_regexp = QRegExp(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
+        ipv4_regexp = QRegularExpression(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
 
-        self.leUDPFeedbackIP.setValidator(QRegExpValidator(ipv4_regexp, self))
+        self.leUDPFeedbackIP.setValidator(QRegularExpressionValidator(ipv4_regexp, self))
         self.cbUseUDPFeedback.stateChanged.connect(self.onChangeUseUDPFeedback)
 
         self.pos_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
@@ -470,7 +470,7 @@ class OpenNFTManager(QWidget):
             xmax = self.nr_vol
 
         plotitem.disableAutoRange(axis=pg.ViewBox.XAxis)
-        plotitem.setXRange(1, xmax, padding=0.0)
+        plotitem.setXRange(1, xmax-1, padding=0.0)
         plotitem.showGrid(x=grid, y=grid, alpha=cons.PLOT_GRID_ALPHA)
 
     # --------------------------------------------------------------------------
@@ -1018,7 +1018,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["set_file"] = fname
 
         if con.use_gui:
-            self.settings = QSettings(fname, QSettings.IniFormat, self)
+            self.settings = QSettings(fname, QSettings.Format.IniFormat, self)
             self.leSetFile.setText(fname)
             self.loadSettingsFromSetFile()
             self.btnSetup.setEnabled(True)
@@ -1671,4 +1671,4 @@ if __name__ == '__main__':
     # logging_setup()
 
     w = OpenNFTManager()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())

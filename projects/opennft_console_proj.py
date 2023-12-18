@@ -6,7 +6,7 @@ from loguru import logger
 import multiprocessing as mp
 from multiprocessing import shared_memory
 import numpy as np
-from pyniexp.connection import Udp
+# from pyniexp.connection import Udp
 from rtspm import spm_setup
 
 from opennft.filewatcher import FileWatcher
@@ -31,18 +31,18 @@ class OpenNFTCoreProj(mp.Process):
         self.config = None
         self.simulation_protocol = None
         self.nfb_calc = None
-        self.udp_sender = None
-        self.udp_send_condition = False
+        # self.udp_sender = None
+        # self.udp_send_condition = False
 
         self.exchange_data = service_dict
         self.init_data()
         self.init_exchange_data()
-        if self.exchange_data["use_udp_feedback"] is None:
-            self.use_udp_feedback = self.config.use_udp_feedback
-            self.exchange_data['offline'] = self.config.offline_mode
-            self.exchange_data["use_udp_feedback"] = self.config.use_udp_feedback
-        else:
-            self.use_udp_feedback = self.exchange_data["use_udp_feedback"]
+        # if self.exchange_data["use_udp_feedback"] is None:
+        #     self.use_udp_feedback = self.config.use_udp_feedback
+        #     self.exchange_data['offline'] = self.config.offline_mode
+        #     self.exchange_data["use_udp_feedback"] = self.config.use_udp_feedback
+        # else:
+        #     self.use_udp_feedback = self.exchange_data["use_udp_feedback"]
         self.recorder = erd.EventRecorder()
         self.recorder.initialize(self.config.volumes_nr)
 
@@ -116,43 +116,43 @@ class OpenNFTCoreProj(mp.Process):
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
 
     # --------------------------------------------------------------------------
-    def init_udp_sender(self, udp_feedback_ip, udp_feedback_port, udp_feedback_controlchar, udp_send_condition):
-
-        self.udp_send_condition = udp_send_condition
-
-        if not self.use_udp_feedback:
-            return
-
-        self.udp_sender = Udp(
-            IP=udp_feedback_ip,
-            port=udp_feedback_port,
-            control_signal=udp_feedback_controlchar,
-            encoding='UTF-8'
-        )
-        self.udp_sender.connect_for_sending()
-        self.udp_sender.sending_time_stamp = True
-
-        self.udp_cond_for_contrast = self.session.prot_names
-        if self.udp_cond_for_contrast[0] != 'BAS':
-            self.udp_cond_for_contrast.insert(0, 'BAS')
+    # def init_udp_sender(self, udp_feedback_ip, udp_feedback_port, udp_feedback_controlchar, udp_send_condition):
+    #
+    #     self.udp_send_condition = udp_send_condition
+    #
+    #     if not self.use_udp_feedback:
+    #         return
+    #
+    #     self.udp_sender = Udp(
+    #         IP=udp_feedback_ip,
+    #         port=udp_feedback_port,
+    #         control_signal=udp_feedback_controlchar,
+    #         encoding='UTF-8'
+    #     )
+    #     self.udp_sender.connect_for_sending()
+    #     self.udp_sender.sending_time_stamp = True
+    #
+    #     self.udp_cond_for_contrast = self.session.prot_names
+    #     if self.udp_cond_for_contrast[0] != 'BAS':
+    #         self.udp_cond_for_contrast.insert(0, 'BAS')
 
     # --------------------------------------------------------------------------
-    def finalize_udp_sender(self):
-        if not self.use_udp_feedback:
-            return
-        if self.udp_sender is not None:
-            self.udp_sender.close()
-        self.use_udp_feedback = False
+    # def finalize_udp_sender(self):
+    #     if not self.use_udp_feedback:
+    #         return
+    #     if self.udp_sender is not None:
+    #         self.udp_sender.close()
+    #     self.use_udp_feedback = False
 
     # --------------------------------------------------------------------------
     def run(self):
         # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
 
-        if self.use_udp_feedback:
-            self.init_udp_sender(self.exchange_data['udp_feedback_ip'],
-                                 self.exchange_data['udp_feedback_port'],
-                                 self.exchange_data['udp_feedback_controlchar'],
-                                 self.exchange_data['udp_send_condition'])
+        # if self.use_udp_feedback:
+        #     self.init_udp_sender(self.exchange_data['udp_feedback_ip'],
+        #                          self.exchange_data['udp_feedback_port'],
+        #                          self.exchange_data['udp_feedback_controlchar'],
+        #                          self.exchange_data['udp_send_condition'])
 
         if con.use_gui:
             self.init_shmem()
@@ -167,8 +167,8 @@ class OpenNFTCoreProj(mp.Process):
         for vol_filename in fw:
             # main loop iteration
 
-            if self.exchange_data['close_udp']:
-                self.finalize_udp_sender()
+            # if self.exchange_data['close_udp']:
+            #     self.finalize_udp_sender()
 
             if not self.exchange_data['offline']:
                 while vol_filename is None:
@@ -191,10 +191,10 @@ class OpenNFTCoreProj(mp.Process):
                 self.iteration.iter_norm_number = self.iteration.iter_number - self.session.config.skip_vol_nr
                 self.nfb_calc.nfb_init()
 
-                if self.config.type in ['PSC', 'Corr']:
-                    if self.iteration.iter_number > self.config.skip_vol_nr and self.udp_send_condition:
-                        self.udp_sender.send_data(
-                            self.udp_cond_for_contrast[int(self.nfb_calc.condition - 1)])
+                # if self.config.type in ['PSC', 'Corr']:
+                #     if self.iteration.iter_number > self.config.skip_vol_nr and self.udp_send_condition:
+                #         self.udp_sender.send_data(
+                #             self.udp_cond_for_contrast[int(self.nfb_calc.condition - 1)])
 
                 # elif self.config.type == 'SVM':
                 #     if self.nfb_calc.display_data and self.use_udp_feedback:
@@ -244,19 +244,19 @@ class OpenNFTCoreProj(mp.Process):
             # t5
             self.recorder.recordEvent(erd.Times.t5, self.iteration.iter_number+1, time.time())
 
-            if self.nfb_calc.display_data:
-                if self.use_udp_feedback:
-                    # logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
-                    # self.udp_sender.send_data(float(self.nfb_calc.display_data['disp_value']))
-
-                    cond = self.nfb_calc.condition
-                    if cond == 2:
-                        val = 'N ' + str(self.nfb_calc.display_data["disp_value"])
-                    else:
-                        val = 'B ' + str(self.nfb_calc.display_data["disp_value"])
-
-                    logger.info('Sending by UDP - dispValue = {}', val)
-                    self.udp_sender.send_data(val)
+            # if self.nfb_calc.display_data:
+            #     if self.use_udp_feedback:
+            #         # logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
+            #         # self.udp_sender.send_data(float(self.nfb_calc.display_data['disp_value']))
+            #
+            #         cond = self.nfb_calc.condition
+            #         if cond == 2:
+            #             val = 'N ' + str(self.nfb_calc.display_data["disp_value"])
+            #         else:
+            #             val = 'B ' + str(self.nfb_calc.display_data["disp_value"])
+            #
+            #         logger.info('Sending by UDP - dispValue = {}', val)
+            #         self.udp_sender.send_data(val)
 
             iter_number = self.iteration.iter_norm_number
 

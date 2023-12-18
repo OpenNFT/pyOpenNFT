@@ -165,7 +165,7 @@ class Nfb():
 
                 tmp_fb_val = norm_perc_values.mean()
                 tmp_tmp_fbVal = np.round(max_fb_value * tmp_fb_val, decimals=fb_val_dec)
-                self.disp_value = 100 + tmp_tmp_fbVal * (0-50)/100
+                self.disp_value = tmp_tmp_fbVal
 
                 self.norm_perc_values.append(norm_perc_values)
                 self.disp_values[ind_vol_norm] = self.disp_value
