@@ -115,7 +115,7 @@ class NftSession():
 
 
 # --------------------------------------------------------------------------
-class NftIteration():
+class NftIteration:
     """Iteration contains data like main_loop_data
     """
 

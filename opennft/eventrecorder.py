@@ -62,7 +62,7 @@ class EventRecorder(object):
         self.records = np.zeros((NrOfVolumes + 1, timeVectorLength), dtype=np.float64)
 
     # --------------------------------------------------------------------------
-    def recordEvent(self, position: Times, eventNumber, value=None):
+    def record_event(self, position: Times, eventNumber, value=None):
         eventNumber = int(eventNumber)
 
         if not value:
@@ -74,7 +74,7 @@ class EventRecorder(object):
         self.records[0, position] = eventNumber
 
     # --------------------------------------------------------------------------
-    def recordEventDuration(self, position: Times, eventNumber, duration):
+    def record_event_duration(self, position: Times, eventNumber, duration):
         eventNumber = int(eventNumber)
 
         if eventNumber <= 0:
@@ -84,11 +84,11 @@ class EventRecorder(object):
         self.records[0, position] = eventNumber
 
     # --------------------------------------------------------------------------
-    def getLastEvent(self, iteration=None):
+    def get_last_event(self, iteration=None):
         if iteration is None:
             iteration = [iteration for iteration, item in enumerate(self.records) if any(item != 0)][-1]
         return [index for index, item in enumerate(self.records[iteration]) if item == max(self.records[iteration])][-1]
 
     # --------------------------------------------------------------------------
-    def savetxt(self, filename):
+    def save_txt(self, filename):
         np.savetxt(filename, self.records)

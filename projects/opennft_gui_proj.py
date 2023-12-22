@@ -78,7 +78,7 @@ class OpenNFTManager(QWidget):
             self.appSettings = QSettings(
                 str(setting_utils.get_app_settings_file()), QSettings.Format.IniFormat, self)
             self.settings = QSettings('', QSettings.Format.IniFormat)
-            self.readAppSettings()
+            self.read_app_settings()
 
             self.initialize_ui()
 
@@ -86,7 +86,7 @@ class OpenNFTManager(QWidget):
             self.show()
         else:
 
-            self.chooseSetFile(config.PKG_CONFIG_DIR / 'auto_config.ini')
+            self.choose_set_file(config.PKG_CONFIG_DIR / 'auto_config.ini')
             self.setup()
             self.start()
 
@@ -101,17 +101,17 @@ class OpenNFTManager(QWidget):
         w_sizes = [self.width() // 2] * 2
         self.splitterMainHor.setSizes(w_sizes)
 
-        self.cbImageViewMode.currentIndexChanged.connect(self.onChangeImageViewMode)
-        self.orthView.cursorPositionChanged.connect(self.onChangeOrthViewCursorPosition)
+        self.cbImageViewMode.currentIndexChanged.connect(self.on_change_image_view_mode)
+        self.orthView.cursorPositionChanged.connect(self.on_change_orth_view_cursor_position)
 
-        self.mcPlot = self.createMcPlot(self.layoutPlot1)
-        self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.createRoiPlots()
+        self.mcPlot = self.create_mc_plot(self.layoutPlot1)
+        self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.create_roi_plots()
         self.tsTimer = QTimer(self)
         self.mosaicTimer = QTimer(self)
         self.orthViewTimer = QTimer(self)
-        self.tsTimer.timeout.connect(self.onCheckTimeSeriesUpdated)
-        self.mosaicTimer.timeout.connect(self.onCheckMosaicViewUpdated)
-        self.orthViewTimer.timeout.connect(self.onCheckOrthViewUpdated)
+        self.tsTimer.timeout.connect(self.on_check_time_series_updated)
+        self.mosaicTimer.timeout.connect(self.on_check_mosaic_view_updated)
+        self.orthViewTimer.timeout.connect(self.on_check_orth_view_updated)
 
         self.currentCursorPos = self.exchange_data["cursor_pos"]
         self.currentProjection = self.exchange_data["flags_planes"]
@@ -119,45 +119,45 @@ class OpenNFTManager(QWidget):
 
         self.pbMoreParameters.setChecked(False)
 
-        self.leFirstFile.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile, self.leFirstFile2))
-        self.leFirstFile2.textChanged.connect(lambda: self.textChangedDual(self.leFirstFile2, self.leFirstFile))
+        self.leFirstFile.textChanged.connect(lambda: self.text_changed_dual(self.leFirstFile, self.leFirstFile2))
+        self.leFirstFile2.textChanged.connect(lambda: self.text_changed_dual(self.leFirstFile2, self.leFirstFile))
 
-        self.btnChooseSetFile.clicked.connect(self.onChooseSetFile)
-        self.btnChooseSetFile2.clicked.connect(self.onChooseSetFile)
-        self.pbMoreParameters.toggled.connect(self.onShowMoreParameters)
+        self.btnChooseSetFile.clicked.connect(self.on_choose_set_file)
+        self.btnChooseSetFile2.clicked.connect(self.on_choose_set_file)
+        self.pbMoreParameters.toggled.connect(self.on_show_more_parameters)
 
-        self.btnChooseProtocolFile.clicked.connect(self.onChooseProtocolFile)
+        self.btnChooseProtocolFile.clicked.connect(self.on_choose_protocol_file)
 
-        self.btnChhoseWeghts.clicked.connect(self.onChooseWeightsFile)
+        self.btnChhoseWeghts.clicked.connect(self.on_choose_weights_file)
 
         self.btnChooseRoiAnatFolder.clicked.connect(
-            lambda: self.onChooseFolder('RoiAnatFolder', self.leRoiAnatFolder))
+            lambda: self.on_choose_folder('RoiAnatFolder', self.leRoiAnatFolder))
 
         self.btnChooseRoiGroupFolder.clicked.connect(
-            lambda: self.onChooseFolder('RoiGroupFolder', self.leRoiGroupFolder))
+            lambda: self.on_choose_folder('RoiGroupFolder', self.leRoiGroupFolder))
 
-        self.btnChooseStructBgFile.clicked.connect(self.onChooseStructBgFile)
+        self.btnChooseStructBgFile.clicked.connect(self.on_choose_struct_bg_file)
 
-        self.btnMCTempl.clicked.connect(self.onChooseMCTemplFile)
+        self.btnMCTempl.clicked.connect(self.on_choose_mc_templ_file)
 
         self.btnChooseWorkFolder.clicked.connect(
-            lambda: self.onChooseFolder('WorkFolder', self.leWorkFolder))
+            lambda: self.on_choose_folder('WorkFolder', self.leWorkFolder))
         self.btnChooseWatchFolder.clicked.connect(
-            lambda: self.onChooseFolder('WatchFolder', self.leWatchFolder))
+            lambda: self.on_choose_folder('WatchFolder', self.leWatchFolder))
 
         ipv4_regexp = QRegularExpression(r"[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}")
 
         self.leUDPFeedbackIP.setValidator(QRegularExpressionValidator(ipv4_regexp, self))
-        self.cbUseUDPFeedback.stateChanged.connect(self.onChangeUseUDPFeedback)
+        self.cbUseUDPFeedback.stateChanged.connect(self.on_change_use_udp_feedback)
 
-        self.pos_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
-        self.neg_map_thresholds_widget.thresholds_manually_changed.connect(self.onInteractWithMapImage)
+        self.pos_map_thresholds_widget.thresholds_manually_changed.connect(self.on_interact_with_map_image)
+        self.neg_map_thresholds_widget.thresholds_manually_changed.connect(self.on_interact_with_map_image)
 
         self.exchange_data["pos_thresholds"] = self.pos_map_thresholds_widget.get_thresholds()
         self.exchange_data["neg_thresholds"] = self.neg_map_thresholds_widget.get_thresholds()
 
-        self.posMapCheckBox.toggled.connect(self.onChangePosMapVisible)
-        self.negMapCheckBox.toggled.connect(self.onChangeNegMapVisible)
+        self.posMapCheckBox.toggled.connect(self.on_change_pos_map_visible)
+        self.negMapCheckBox.toggled.connect(self.on_change_neg_map_visible)
 
         self.sliderMapsAlpha.valueChanged.connect(lambda v: self.mosaicImageView.set_pos_map_opacity(v / 100.0))
         self.sliderMapsAlpha.valueChanged.connect(lambda v: self.mosaicImageView.set_neg_map_opacity(v / 100.0))
@@ -168,9 +168,9 @@ class OpenNFTManager(QWidget):
         self.btnStart.clicked.connect(self.start)
         self.btnStop.clicked.connect(self.stop)
 
-        self.onChangePosMapVisible()
-        self.onChangeNegMapVisible()
-        self.onChangeUseUDPFeedback()
+        self.on_change_pos_map_visible()
+        self.on_change_neg_map_visible()
+        self.on_change_use_udp_feedback()
 
     # --------------------------------------------------------------------------
     def init_exchange_data(self):
@@ -277,13 +277,13 @@ class OpenNFTManager(QWidget):
         self._view_form_process = volviewformation.VolViewFormation(self.exchange_data, ROI_vols, ROI_mats)
 
     # --------------------------------------------------------------------------
-    def textChangedDual(self, leFrom, leTo):
+    def text_changed_dual(self, leFrom, leTo):
         pos = leTo.cursorPosition()
         leTo.setText(leFrom.text())
         leTo.setCursorPosition(pos)
 
     # --------------------------------------------------------------------------
-    def onChangeUseUDPFeedback(self):
+    def on_change_use_udp_feedback(self):
         self.leUDPFeedbackIP.setEnabled(self.cbUseUDPFeedback.isChecked())
         self.leUDPFeedbackPort.setEnabled(self.cbUseUDPFeedback.isChecked())
         self.leUDPFeedbackControlChar.setEnabled(self.cbUseUDPFeedback.isChecked())
@@ -292,7 +292,7 @@ class OpenNFTManager(QWidget):
             self.cbUDPSendCondition.setChecked(False)
 
     # --------------------------------------------------------------------------
-    def createMcPlot(self, layoutPlot):
+    def create_mc_plot(self, layoutPlot):
         mctrotplot = pg.PlotWidget(self)
         mctrotplot.setBackground((255, 255, 255))
         layoutPlot.addWidget(mctrotplot)
@@ -311,7 +311,7 @@ class OpenNFTManager(QWidget):
         return mctrotplot
 
     # --------------------------------------------------------------------------
-    def createRoiPlots(self):
+    def create_roi_plots(self):
         rawroiplot = pg.PlotWidget(self)
         self.layoutPlot2.addWidget(rawroiplot)
 
@@ -354,7 +354,7 @@ class OpenNFTManager(QWidget):
         return plots
 
     # --------------------------------------------------------------------------
-    def createMusterInfo(self):
+    def create_muster_info(self):
         # TODO: More general way to use any protocol
         tmpCond = list()
         nrCond = list()
@@ -411,7 +411,7 @@ class OpenNFTManager(QWidget):
             removeIntervals(tmpCond[0], remCond)
             removeIntervals(tmpCond[1], remCond)
 
-        # To break drawMusterPlot() at given length of conditions,
+        # To break draw_muster_plot() at given length of conditions,
         # i.e., to avoid plotting some of them as for DCM feedback type
         condTotal = 2 if self.config.prot == 'InterBlock' else len(tmpCond)
 
@@ -425,13 +425,13 @@ class OpenNFTManager(QWidget):
         self.musterInfo['blockLength'] = blockLength
 
     # --------------------------------------------------------------------------
-    def setupMcPlots(self):
+    def setup_mc_plots(self):
         mctrrot = self.mcPlot.getPlotItem()
-        self.basicSetupPlot(mctrrot)
+        self.basic_setup_plot(mctrrot)
 
     # --------------------------------------------------------------------------
-    def setupRoiPlots(self):
-        self.makeRoiPlotLegend()
+    def setup_roi_plots(self):
+        self.make_roi_plot_legend()
 
         rawTimeSeries = self.rawRoiPlot.getPlotItem()
         proc = self.procRoiPlot.getPlotItem()
@@ -447,19 +447,19 @@ class OpenNFTManager(QWidget):
         else:
             grid = False
 
-        self.basicSetupPlot(rawTimeSeries, grid)
-        self.basicSetupPlot(proc, grid)
-        self.basicSetupPlot(norm, grid)
+        self.basic_setup_plot(rawTimeSeries, grid)
+        self.basic_setup_plot(proc, grid)
+        self.basic_setup_plot(norm, grid)
 
-        self.drawMusterPlot(rawTimeSeries)
-        self.drawMusterPlot(proc)
-        self.drawMusterPlot(norm)
+        self.draw_muster_plot(rawTimeSeries)
+        self.draw_muster_plot(proc)
+        self.draw_muster_plot(norm)
         rawTimeSeries.setYRange(-1, 1, padding=0.0)
         proc.setYRange(-1, 1, padding=0.0)
         norm.setYRange(-1, 1, padding=0.0)
 
     # --------------------------------------------------------------------------
-    def basicSetupPlot(self, plotitem, grid=True):
+    def basic_setup_plot(self, plotitem, grid=True):
         # For autoRTQA mode
         if True:
             lastInds = np.zeros((self.musterInfo['condTotal'],))
@@ -470,11 +470,11 @@ class OpenNFTManager(QWidget):
             xmax = self.nr_vol
 
         plotitem.disableAutoRange(axis=pg.ViewBox.XAxis)
-        plotitem.setXRange(1, xmax-1, padding=0.0)
+        plotitem.setXRange(1, xmax - 1, padding=0.0)
         plotitem.showGrid(x=grid, y=grid, alpha=cons.PLOT_GRID_ALPHA)
 
     # --------------------------------------------------------------------------
-    def makeRoiPlotLegend(self):
+    def make_roi_plot_legend(self):
         roiNames = []
 
         for roiName in self.exchange_data["roi_names"]:
@@ -501,7 +501,7 @@ class OpenNFTManager(QWidget):
         self.labelPlotLegend.setText(legendText)
 
     # --------------------------------------------------------------------------
-    def computeMusterPlotData(self, ylim):
+    def compute_muster_plot_data(self, ylim):
         singleY = np.array([ylim[0], ylim[1], ylim[1], ylim[0]])
 
         def computeConds(nrCond, tmpCond):
@@ -529,12 +529,12 @@ class OpenNFTManager(QWidget):
             self.musterInfo['yCond' + str(cond + 1)] = yCond
 
     # --------------------------------------------------------------------------
-    def drawMusterPlot(self, plotitem: pg.PlotItem):
+    def draw_muster_plot(self, plotitem: pg.PlotItem):
         ylim = cons.MUSTER_Y_LIMITS
 
         # For autoRTQA mode
         if True:
-            self.computeMusterPlotData(ylim)
+            self.compute_muster_plot_data(ylim)
             muster = []
 
             for i in range(self.musterInfo['condTotal']):
@@ -558,7 +558,7 @@ class OpenNFTManager(QWidget):
         return muster
 
     # --------------------------------------------------------------------------
-    def drawMcPlots(self, init, mcPlot, data):
+    def draw_mc_plots(self, init, mcPlot, data):
 
         mctrrot = mcPlot.getPlotItem()
 
@@ -579,16 +579,16 @@ class OpenNFTManager(QWidget):
         for i, c in enumerate(MC_PLOT_COLORS):
             plots.append(mctrrot.plot(pen=c))
 
-        self.drawMcPlots.__dict__['mctrrot'] = plots
+        self.draw_mc_plots.__dict__['mctrrot'] = plots
 
         x = np.arange(1, data.shape[0] + 1, dtype=np.float64)
 
         for pt, i1, in zip(
-                self.drawMcPlots.__dict__['mctrrot'], range(0, 6)):
+                self.draw_mc_plots.__dict__['mctrrot'], range(0, 6)):
             pt.setData(x=x, y=data[:, i1])
 
     # --------------------------------------------------------------------------
-    def drawRoiPlots(self, init, data, iter):
+    def draw_roi_plots(self, init, data, iter):
 
         data_raw = np.array(data[0, :, self.selected_roi], ndmin=2)
         data_proc = np.array(data[1, :, self.selected_roi], ndmin=2)
@@ -601,12 +601,12 @@ class OpenNFTManager(QWidget):
             # else:
             data_norm = np.vstack((data_norm, self.nfb_data[:, 0:iter]))
 
-        self.drawGivenRoiPlot(init, self.rawRoiPlot, data_raw)
-        self.drawGivenRoiPlot(init, self.procRoiPlot, data_proc, data_pos)
-        self.drawGivenRoiPlot(init, self.normRoiPlot, data_norm)
+        self.draw_given_roi_plot(init, self.rawRoiPlot, data_raw)
+        self.draw_given_roi_plot(init, self.procRoiPlot, data_proc, data_pos)
+        self.draw_given_roi_plot(init, self.normRoiPlot, data_norm)
 
     # --------------------------------------------------------------------------
-    def drawGivenRoiPlot(self, init, plotwidget: pg.PlotWidget, data, data_pos=None):
+    def draw_given_roi_plot(self, init, plotwidget: pg.PlotWidget, data, data_pos=None):
         plotitem = plotwidget.getPlotItem()
 
         sz, l = data.shape
@@ -616,7 +616,7 @@ class OpenNFTManager(QWidget):
             plotitem.enableAutoRange(enable=True, x=False, y=True)
 
             plotitem.clear()
-            muster = self.drawMusterPlot(plotitem)
+            muster = self.draw_muster_plot(plotitem)
 
             plots = []
 
@@ -628,11 +628,11 @@ class OpenNFTManager(QWidget):
                 p = plotitem.plot(pen=pen)
                 plots.append(p)
 
-            self.drawGivenRoiPlot.__dict__[plotitem] = plots, muster
+            self.draw_given_roi_plot.__dict__[plotitem] = plots, muster
 
         x = np.arange(1, l + 1, dtype=np.float64)
 
-        for p, y in zip(self.drawGivenRoiPlot.__dict__[plotitem][0], data):
+        for p, y in zip(self.draw_given_roi_plot.__dict__[plotitem][0], data):
             p.setData(x=x, y=np.array(y))
 
         if self.config.prot != 'InterBlock':
@@ -647,12 +647,12 @@ class OpenNFTManager(QWidget):
                 # posMin = posMin[inds]
                 # posMax = posMax[inds]
 
-                self.drawMinMaxProcRoiPlot(
+                self.draw_min_max_mroc_roi_plot(
                     init, posMin, posMax)
 
         items = plotitem.listDataItems()
 
-        for m in self.drawGivenRoiPlot.__dict__[plotitem][1]:
+        for m in self.draw_given_roi_plot.__dict__[plotitem][1]:
             items.remove(m)
 
         plotitem.autoRange(items=items)
@@ -662,10 +662,10 @@ class OpenNFTManager(QWidget):
             grid = True
         else:
             grid = False
-        self.basicSetupPlot(plotitem, grid)
+        self.basic_setup_plot(plotitem, grid)
 
     # --------------------------------------------------------------------------
-    def drawMinMaxProcRoiPlot(self, init, posMin, posMax):
+    def draw_min_max_mroc_roi_plot(self, init, posMin, posMax):
         plotitem = self.procRoiPlot.getPlotItem()
         sz = posMin.shape[0] + 1
         l = posMin.shape[1]
@@ -682,14 +682,14 @@ class OpenNFTManager(QWidget):
                 plotsMax.append(plotitem.plot(pen=pg.mkPen(
                     color=c, width=cons.ROI_PLOT_WIDTH)))
 
-            self.drawMinMaxProcRoiPlot.__dict__['posMin'] = plotsMin
-            self.drawMinMaxProcRoiPlot.__dict__['posMax'] = plotsMax
+            self.draw_min_max_mroc_roi_plot.__dict__['posMin'] = plotsMin
+            self.draw_min_max_mroc_roi_plot.__dict__['posMax'] = plotsMax
 
         x = np.arange(1, l + 1, dtype=np.float64)
 
         for pmi, mi, pma, ma in zip(
-                self.drawMinMaxProcRoiPlot.__dict__['posMin'], posMin,
-                self.drawMinMaxProcRoiPlot.__dict__['posMax'], posMax):
+                self.draw_min_max_mroc_roi_plot.__dict__['posMin'], posMin,
+                self.draw_min_max_mroc_roi_plot.__dict__['posMax'], posMax):
             mi = np.array(mi, ndmin=1)
             ma = np.array(ma, ndmin=1)
             pmi.setData(x=x, y=mi)
@@ -700,7 +700,6 @@ class OpenNFTManager(QWidget):
 
         if not self.reset_done:
             self.reset()
-
 
         if con.use_gui:
             self.actualize()
@@ -729,7 +728,7 @@ class OpenNFTManager(QWidget):
             self.roi_dict = dict()
             self.selected_roi = []
             roi_menu = QMenu()
-            roi_menu.triggered.connect(self.onRoiChecked)
+            roi_menu.triggered.connect(self.on_roi_checked)
             self.roiSelectorBtn.setMenu(roi_menu)
             nrROIs = int(self.nr_rois)
             for i in range(nrROIs):
@@ -757,10 +756,10 @@ class OpenNFTManager(QWidget):
             self._view_form_process.start()
 
             logger.info("  Setup plots...")
-            self.createMusterInfo()
+            self.create_muster_info()
 
-            self.setupRoiPlots()
-            self.setupMcPlots()
+            self.setup_roi_plots()
+            self.setup_mc_plots()
 
             self.btnStart.setEnabled(True)
 
@@ -893,7 +892,7 @@ class OpenNFTManager(QWidget):
         self.close_shmem()
 
     # --------------------------------------------------------------------------
-    def onChooseSetFile(self):
+    def on_choose_set_file(self):
         if con.donot_use_qfile_native_dialog:
             fname = QFileDialog.getOpenFileName(
                 self, "Select 'SET File'", str(self.setting_file_name), 'ini files (*.ini)',
@@ -903,10 +902,10 @@ class OpenNFTManager(QWidget):
                 self, "Select 'SET File'", str(self.setting_file_name), 'ini files (*.ini)')[0]
 
         fname = str(Path(fname))
-        self.chooseSetFile(fname)
+        self.choose_set_file(fname)
 
     # --------------------------------------------------------------------------
-    def onChooseWeightsFile(self):
+    def on_choose_weights_file(self):
         if con.donot_use_qfile_native_dialog:
             fname = QFileDialog.getOpenFileName(
                 self, "Select 'Weights File'", self.leWeightsFile.text(), 'all files (*.*)',
@@ -916,10 +915,10 @@ class OpenNFTManager(QWidget):
                 self, "Select 'Weights File'", self.leWeightsFile.text(), 'all files (*.*)')[0]
 
         fname = str(Path(fname))
-        self.chooseWeightsFile(fname)
+        self.choose_weights_file(fname)
 
     # --------------------------------------------------------------------------
-    def chooseWeightsFile(self, fname):
+    def choose_weights_file(self, fname):
         if not fname:
             return
 
@@ -930,7 +929,7 @@ class OpenNFTManager(QWidget):
         # self.P['WeightsFileName'] = fname
 
     # --------------------------------------------------------------------------
-    def onChooseProtocolFile(self):
+    def on_choose_protocol_file(self):
         fname = self.leProtocolFile.text()
         if con.donot_use_qfile_native_dialog:
             fname = QFileDialog.getOpenFileName(
@@ -945,7 +944,7 @@ class OpenNFTManager(QWidget):
             # self.P['ProtocolFile'] = fname
 
     # --------------------------------------------------------------------------
-    def onChooseStructBgFile(self):
+    def on_choose_struct_bg_file(self):
         if con.donot_use_qfile_native_dialog:
             fname = QFileDialog.getOpenFileName(
                 self, "Select Structural File", str(config.ROOT_PATH), 'Template files (*.nii)',
@@ -960,7 +959,7 @@ class OpenNFTManager(QWidget):
             # self.P['StructBgFile'] = fname
 
     # --------------------------------------------------------------------------
-    def onChooseMCTemplFile(self):
+    def on_choose_mc_templ_file(self):
         if con.donot_use_qfile_native_dialog:
             fname = QFileDialog.getOpenFileName(
                 self, "Select MCTempl File", str(config.ROOT_PATH), 'Template files (*.nii)',
@@ -978,7 +977,7 @@ class OpenNFTManager(QWidget):
             # self.P['MCTempl'] = fname
 
     # --------------------------------------------------------------------------
-    def onChooseFolder(self, name, le):
+    def on_choose_folder(self, name, le):
         dname = QFileDialog.getExistingDirectory(
             self, "Select '{}' directory".format(name), str(config.ROOT_PATH))
         dname = str(Path(dname))
@@ -987,7 +986,7 @@ class OpenNFTManager(QWidget):
             # self.P[name] = dname
 
     # --------------------------------------------------------------------------
-    def onChooseFile(self, name, le):
+    def on_choose_file(self, name, le):
         if con.donot_use_qfile_native_dialog:
             fname = QFileDialog.getOpenFileName(
                 self, "Select '{}' directory".format(name), str(config.ROOT_PATH), 'Any file (*.*)',
@@ -1002,11 +1001,11 @@ class OpenNFTManager(QWidget):
             # self.P[name] = fname
 
     # --------------------------------------------------------------------------
-    def onShowMoreParameters(self, flag: bool):
+    def on_show_more_parameters(self, flag: bool):
         self.stackedWidgetMain.setCurrentIndex(int(flag))
 
     # --------------------------------------------------------------------------
-    def chooseSetFile(self, fname):
+    def choose_set_file(self, fname):
         if not fname:
             return
 
@@ -1020,13 +1019,13 @@ class OpenNFTManager(QWidget):
         if con.use_gui:
             self.settings = QSettings(fname, QSettings.Format.IniFormat, self)
             self.leSetFile.setText(fname)
-            self.loadSettingsFromSetFile()
+            self.load_settings_from_set_file()
             self.btnSetup.setEnabled(True)
 
         self.is_set_file_chosen = True
 
     # --------------------------------------------------------------------------
-    def loadSettingsFromSetFile(self):
+    def load_settings_from_set_file(self):
 
         # --- top ---
         self.leProtocolFile.setText(self.settings.value('StimulationProtocol', ''))
@@ -1287,7 +1286,7 @@ class OpenNFTManager(QWidget):
             self.udp_send_condition = False
 
     # --------------------------------------------------------------------------
-    def onRoiChecked(self, action):
+    def on_roi_checked(self, action):
         if action.text() == "All":
             actList = self.roiSelectorBtn.menu().actions()
             actList = actList[0:-2]
@@ -1307,24 +1306,26 @@ class OpenNFTManager(QWidget):
         # if self.windowRTQA:
         #     self.rtqa_input["roi_checked"] = self.selected_roi
 
-        self.drawRoiPlots(True)
-        if self.isStopped:
+        iter_norm_number = self.exchange_data["iter_norm_number"]
+        data = self.ts_data[:, :iter_norm_number, :]
+        self.draw_roi_plots(True, data, iter_norm_number)
+        if self.exchange_data["is_stopped"]:
             # self.windowRTQA.plotRTQA()
-            self.updateOrthViewAsync()
+            self.update_orth_view_async()
 
     # --------------------------------------------------------------------------
-    def onChangePosMapVisible(self):
+    def on_change_pos_map_visible(self):
         is_visible = self.posMapCheckBox.isChecked()
 
         self.mosaicImageView.set_pos_map_visible(is_visible)
         self.orthView.set_pos_map_visible(is_visible)
 
         if self.exchange_data["is_stopped"]:
-            self.updateMosaicViewAsync()
-            self.updateOrthViewAsync()
+            self.update_mosaic_view_async()
+            self.update_orth_view_async()
 
     # --------------------------------------------------------------------------
-    def onChangeNegMapVisible(self):
+    def on_change_neg_map_visible(self):
         is_visible = self.negMapCheckBox.isChecked()
 
         self.exchange_data["is_neg"] = is_visible
@@ -1333,11 +1334,11 @@ class OpenNFTManager(QWidget):
         self.orthView.set_neg_map_visible(is_visible)
 
         if self.exchange_data["is_stopped"]:
-            self.updateMosaicViewAsync()
-            self.updateOrthViewAsync()
+            self.update_mosaic_view_async()
+            self.update_orth_view_async()
 
     # --------------------------------------------------------------------------
-    def onInteractWithMapImage(self):
+    def on_interact_with_map_image(self):
         sender = self.sender()
 
         if sender is self.pos_map_thresholds_widget:
@@ -1351,14 +1352,14 @@ class OpenNFTManager(QWidget):
             self.exchange_data["neg_thresholds"] = self.neg_map_thresholds_widget.get_thresholds()
 
         if self.exchange_data["view_mode"] == ImageViewMode.mosaic:
-            self.updateMosaicViewAsync()
-            self.onCheckMosaicViewUpdated()
+            self.update_mosaic_view_async()
+            self.on_check_mosaic_view_updated()
         else:
-            self.updateOrthViewAsync()
-            self.onCheckOrthViewUpdated()
+            self.update_orth_view_async()
+            self.on_check_orth_view_updated()
 
     # --------------------------------------------------------------------------
-    def onChangeImageViewMode(self, index):
+    def on_change_image_view_mode(self, index):
 
         if index == 0:
             stack_index = 0
@@ -1374,11 +1375,11 @@ class OpenNFTManager(QWidget):
         self.exchange_data["view_mode"] = mode
 
         if self.cbImageViewMode.isEnabled():
-            self.updateOrthViewAsync()
-            self.onInteractWithMapImage()
+            self.update_orth_view_async()
+            self.on_interact_with_map_image()
 
     # --------------------------------------------------------------------------
-    def updateMosaicViewAsync(self):
+    def update_mosaic_view_async(self):
 
         # if self.windowRTQA:
         #     is_snr_map_created = self.rtqa_input["rtqa_vol_ready"]
@@ -1405,7 +1406,7 @@ class OpenNFTManager(QWidget):
             self.exchange_data["overlay_ready"] = True
 
     # --------------------------------------------------------------------------
-    def updateOrthViewAsync(self):
+    def update_orth_view_async(self):
 
         if self.exchange_data["view_mode"] == ImageViewMode.orthview_epi:
             bgType = 'bgEPI'
@@ -1437,26 +1438,26 @@ class OpenNFTManager(QWidget):
         # self.view_form_input["ready"] = True
 
     # --------------------------------------------------------------------------
-    def onChangeOrthViewCursorPosition(self, pos, proj):
+    def on_change_orth_view_cursor_position(self, pos, proj):
         self.currentCursorPos = pos
         self.currentProjection = proj.value
 
         logger.info('New cursor coords {} for proj "{}" have been received', pos, proj.name)
-        self.updateOrthViewAsync()
-        self.onCheckOrthViewUpdated()
+        self.update_orth_view_async()
+        self.on_check_orth_view_updated()
 
     # --------------------------------------------------------------------------
-    def onCheckTimeSeriesUpdated(self):
+    def on_check_time_series_updated(self):
 
         if not (self.exchange_data is None) or not self.exchange_data["is_stopped"]:
 
             if self.exchange_data["data_ready_flag"]:
                 iter_norm_number = self.exchange_data["iter_norm_number"]
 
-                self.drawMcPlots(self.init, self.mcPlot, self.mc_data[:iter_norm_number, :])
+                self.draw_mc_plots(self.init, self.mcPlot, self.mc_data[:iter_norm_number, :])
 
                 data = self.ts_data[:, :iter_norm_number, :]
-                self.drawRoiPlots(self.init, data, iter_norm_number)
+                self.draw_roi_plots(self.init, data, iter_norm_number)
 
                 # if self.init:
                 #     self.init = False
@@ -1470,7 +1471,7 @@ class OpenNFTManager(QWidget):
         self.leCurrentVolume.setText('%d' % self.exchange_data["iter_norm_number"])
 
     # --------------------------------------------------------------------------
-    def onCheckMosaicViewUpdated(self):
+    def on_check_mosaic_view_updated(self):
 
         if self.exchange_data["view_mode"] == ImageViewMode.mosaic:
 
@@ -1506,7 +1507,7 @@ class OpenNFTManager(QWidget):
                 self.exchange_data["done_mosaic_overlay"] = False
 
     # --------------------------------------------------------------------------
-    def onCheckOrthViewUpdated(self):
+    def on_check_orth_view_updated(self):
 
         if self.exchange_data["view_mode"] != ImageViewMode.mosaic and self.exchange_data["done_orth"]:
 
@@ -1568,7 +1569,7 @@ class OpenNFTManager(QWidget):
             self.orthViewInitialize = False
 
     # --------------------------------------------------------------------------
-    def readAppSettings(self):
+    def read_app_settings(self):
         self.appSettings.beginGroup('UI')
 
         self.restoreGeometry(self.appSettings.value(
@@ -1592,10 +1593,10 @@ class OpenNFTManager(QWidget):
 
         self.appSettings.endGroup()
 
-        self.chooseSetFile(self.setting_file_name)
+        self.choose_set_file(self.setting_file_name)
 
     # --------------------------------------------------------------------------
-    def writeAppSettings(self):
+    def write_app_settings(self):
         self.appSettings.beginGroup('UI')
         self.appSettings.setValue('WindowGeometry', self.saveGeometry())
         self.appSettings.setValue('SplitterMainVerState', self.splitterMainVer.saveState())
@@ -1610,7 +1611,7 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def closeEvent(self, event):
 
-        self.writeAppSettings()
+        self.write_app_settings()
         self.tsTimer.stop()
         self.orthViewTimer.stop()
         self.mosaicTimer.stop()
@@ -1633,7 +1634,6 @@ class OpenNFTManager(QWidget):
     def close_shmem(self):
 
         if self.shmem_init:
-
             self.mc_shmem.close()
             self.mc_shmem.unlink()
             self.mosaic_shmem.close()

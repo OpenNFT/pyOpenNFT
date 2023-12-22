@@ -25,7 +25,7 @@ class NewFileEventHandler(FileSystemEventHandler):
             #     pass
             # else:
             #     # t1
-            #     self.recorder.recordEvent(erd.Times.t1, 0, time.time())
+            #     self.recorder.record_event(erd.Times.t1, 0, time.time())
             self.fq.put(event.src_path)
 
 

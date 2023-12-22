@@ -201,7 +201,7 @@ class OpenNFTCoreProj(mp.Process):
                 #         logger.info('Sending by UDP - instrValue = ')  # + str(self.displayData['instrValue'])
                         # self.udp_sender.send_data(self.displayData['instrValue'])
             # t1
-            self.recorder.recordEvent(erd.Times.t1, self.iteration.iter_number + 1, time.time())
+            self.recorder.record_event(erd.Times.t1, self.iteration.iter_number + 1, time.time())
             self.iteration.load_vol(vol_filename, "dcm")
 
             self.iteration.pre_iter = self.iteration.iter_number
@@ -217,12 +217,12 @@ class OpenNFTCoreProj(mp.Process):
             time_start = time.time()
 
             # t2
-            self.recorder.recordEvent(erd.Times.t2, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t2, self.iteration.iter_number+1, time.time())
             self.iteration.process_vol()
             stat_ready = self.iteration.iglm()
 
             # t3
-            self.recorder.recordEvent(erd.Times.t3, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t3, self.iteration.iter_number+1, time.time())
 
             if con.use_gui:
 
@@ -237,12 +237,12 @@ class OpenNFTCoreProj(mp.Process):
             self.iteration.process_time_series()
 
             # t4
-            self.recorder.recordEvent(erd.Times.t4, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t4, self.iteration.iter_number+1, time.time())
 
             self.nfb_calc.nfb_calc()
 
             # t5
-            self.recorder.recordEvent(erd.Times.t5, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t5, self.iteration.iter_number+1, time.time())
 
             # if self.nfb_calc.display_data:
             #     if self.use_udp_feedback:
@@ -281,7 +281,7 @@ class OpenNFTCoreProj(mp.Process):
             logger.info('{} {:.4f} {}', "Elapsed time: ", self.exchange_data["elapsed_time"], 's')
 
             # d0
-            self.recorder.recordEvent(erd.Times.d0, self.iteration.iter_number+1, self.exchange_data["elapsed_time"])
+            self.recorder.record_event(erd.Times.d0, self.iteration.iter_number+1, self.exchange_data["elapsed_time"])
             self.iteration.iter_number += 1
 
             if not self.exchange_data['offline'] and self.iteration.iter_number == self.config.volumes_nr:
@@ -296,7 +296,7 @@ class OpenNFTCoreProj(mp.Process):
         if self.iteration.iter_norm_number > 1:
             path = self.config.work_dir / ('NF_Data_' + str(self.config.nf_run_nr))
             fname = path / ('pyTimeVectors_' + str(self.config.nf_run_nr).zfill(2) + '.txt')
-            self.recorder.savetxt(str(fname))
+            self.recorder.save_txt(str(fname))
 
         if con.use_gui:
 
