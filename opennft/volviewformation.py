@@ -11,6 +11,7 @@ from opennft.utils import vol3d_img2d, get_mosaic_dim
 from opennft.mapimagewidget import MapImageThresholdsCalculator, RgbaMapImage, Thresholds
 from opennft.config import config as con
 
+from loguru import logger
 
 class VolViewFormation(mp.Process):
 
@@ -61,6 +62,10 @@ class VolViewFormation(mp.Process):
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order='F')
 
+        rtqa_vol_dim = tuple(self.dim) + (2,)
+        self.rtqa_vol_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[4])
+        self.rtqa_volume = np.ndarray(shape=rtqa_vol_dim, dtype=np.float32, buffer=self.rtqa_vol_shmem.buf, order='F')
+
         dims = self.exchange_data["proj_dims"]
         self.proj_t_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[5])
         self.proj_t = np.ndarray(shape=(dims[1], dims[0], 9),
@@ -99,8 +104,12 @@ class VolViewFormation(mp.Process):
                     self.exchange_data["done_mosaic_templ"] = True
 
                     if self.exchange_data["overlay_ready"]:
-                        if self.exchange_data["is_rtqa"]:
-                            overlay_vol = self.exchange_data["rtQA_volume"]
+                        if self.exchange_data["show_rtqa"]:
+                            logger.info("Showing rtQA")
+                            if self.exchange_data["rtQA_volume"] == 0:
+                                overlay_vol = self.rtqa_volume[:, :, :, 0].squeeze()
+                            else:
+                                overlay_vol = self.rtqa_volume[:, :, :, 1].squeeze()
                             overlay_img = vol3d_img2d(overlay_vol, self.xdim, self.ydim,
                                                       self.img2d_dimx, self.img2d_dimy, self.dim)
                             overlay_img = (overlay_img / np.max(overlay_img)) * 255
@@ -148,6 +157,16 @@ class VolViewFormation(mp.Process):
                         back_volume = self.anat_volume.volume
                         mat = self.anat_volume.mat
 
+                    if self.exchange_data["show_rtqa"]:
+                        if self.exchange_data["rtQA_volume"] == 0:
+                            overlay_vol = self.rtqa_volume[:, :, :, 0].squeeze()
+                        else:
+                            overlay_vol = self.rtqa_volume[:, :, :, 1].squeeze()
+                        neg_overlay_vol = []
+                    else:
+                        overlay_vol = self.stat_volume[:, :, :, 0].squeeze()
+                        neg_overlay_vol = self.stat_volume[:, :, :, 1].squeeze()
+
                     if con.use_roi:
                         ROI_vols = self.ROI_vols
                         ROI_mats = self.ROI_mats
@@ -171,10 +190,7 @@ class VolViewFormation(mp.Process):
                      overlay_t, overlay_c, overlay_s,
                      neg_overlay_t, neg_overlay_c, neg_overlay_s,
                      self.exchange_data["ROI_t"], self.exchange_data["ROI_c"], self.exchange_data["ROI_s"]
-                     ] = self.update_orth_view(back_volume, mat,
-                                               self.stat_volume[:, :, :, 0].squeeze(),
-                                               self.stat_volume[:, :, :, 1].squeeze(),
-                                               ROI_vols, ROI_mats)
+                     ] = self.update_orth_view(back_volume, mat, overlay_vol, neg_overlay_vol, ROI_vols, ROI_mats)
 
                     pos_maps_values = np.array(overlay_t.ravel(), dtype=np.uint8)
                     pos_maps_values = np.append(pos_maps_values, overlay_c.ravel())
@@ -215,6 +231,7 @@ class VolViewFormation(mp.Process):
         self.proj_t_shmem.close()
         self.proj_c_shmem.close()
         self.proj_s_shmem.close()
+        self.rtqa_vol_shmem.close()
 
     def prepare_orth_view(self, mat, dim):
         # set structure for Display and draw a first overlay

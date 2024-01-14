@@ -46,7 +46,11 @@ class OpenNFTCoreProj(mp.Process):
         self.recorder = erd.EventRecorder()
         self.recorder.initialize(self.config.volumes_nr)
 
-    # --------------------------------------------------------------------------
+        self.rtqa_input = None
+
+        logger.info("Calculation process initialized")
+
+        # --------------------------------------------------------------------------
     def init_data(self):
 
         config_path = Path().resolve()
@@ -91,6 +95,7 @@ class OpenNFTCoreProj(mp.Process):
         self.exchange_data["vol_mat"] = self.session.reference_vol.mat
         self.exchange_data["roi_names"] = self.session.roi_names
         self.exchange_data["iter_norm_number"] = self.iteration.iter_norm_number
+        self.exchange_data["dvars_scale"] = self.session.dvars_scale
 
     # --------------------------------------------------------------------------
     def init_shmem(self):
@@ -102,7 +107,7 @@ class OpenNFTCoreProj(mp.Process):
         self.mc_data = np.ndarray(shape=(nr_vol, 6), dtype=np.float32, buffer=self.mc_shmem.buf)
 
         self.ts_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[8])
-        self.ts_data = np.ndarray(shape=(5, nr_vol, nr_rois), dtype=np.float32, buffer=self.ts_shmem.buf)
+        self.ts_data = np.ndarray(shape=(8, nr_vol, nr_rois), dtype=np.float32, buffer=self.ts_shmem.buf)
 
         self.nfb_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[9])
         self.nfb_data = np.ndarray(shape=(1, nr_vol), dtype=np.float32, buffer=self.nfb_shmem.buf)
@@ -114,6 +119,11 @@ class OpenNFTCoreProj(mp.Process):
         stat_dim = tuple(self.session.reference_vol.dim) + (2,)
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
+
+    # --------------------------------------------------------------------------
+    def load_rtqa_dict(self, rtqa_input):
+
+        self.rtqa_input = rtqa_input
 
     # --------------------------------------------------------------------------
     # def init_udp_sender(self, udp_feedback_ip, udp_feedback_port, udp_feedback_controlchar, udp_send_condition):
@@ -264,17 +274,29 @@ class OpenNFTCoreProj(mp.Process):
 
                 self.mc_data[iter_number, :] = self.iteration.mr_time_series.mc_params[:, -1].T
                 for i in range(self.session.nr_rois):
-                    if self.config.prot != 'InterBlock':
-                        self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.disp_raw_time_series[i][
-                            iter_number].T
-                    else:
-                        self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.raw_time_series[i][iter_number]
+                    self.ts_data[7, iter_number, i] = self.iteration.mr_time_series.disp_raw_time_series[i][iter_number].T
+                    self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.raw_time_series[i][iter_number]
                     self.ts_data[1, iter_number, i] = self.iteration.mr_time_series.kalman_proc_time_series[i][iter_number]
                     self.ts_data[2, iter_number, i] = self.iteration.mr_time_series.scale_time_series[i][iter_number]
                     self.ts_data[3, iter_number, i] = self.iteration.mr_time_series.output_pos_min[i][iter_number]
                     self.ts_data[4, iter_number, i] = self.iteration.mr_time_series.output_pos_max[i][iter_number]
+                    self.ts_data[5, iter_number, i] = self.iteration.mr_time_series.glm_time_series[i][iter_number]
+                    self.ts_data[6, iter_number, i] = self.iteration.mr_time_series.no_reg_time_series[i][iter_number]
+
                 self.nfb_data[0, iter_number] = self.nfb_calc.disp_values[iter_number] / self.config.max_feedback_val
                 self.exchange_data["data_ready_flag"] = True
+
+            if self.exchange_data["is_rtqa"]:
+
+                if iter_number == 0:
+                    self.rtqa_input["offset_mc"] = self.iteration.mr_time_series.offset_mc.squeeze()
+
+                self.rtqa_input["beta_coeff"] = self.iteration.mr_time_series.lin_trend_betas
+                self.rtqa_input["pos_spikes"] = self.iteration.mr_time_series.flag_pos_deriv_spike
+                self.rtqa_input["neg_spikes"] = self.iteration.mr_time_series.flag_neg_deriv_spike
+                self.rtqa_input["mc_ts"] = self.mc_data[iter_number, :]
+                self.rtqa_input["iteration"] = iter_number
+                self.rtqa_input["data_ready"] = True
 
             self.exchange_data["elapsed_time"] = time.time() - time_start
 
@@ -308,4 +330,4 @@ class OpenNFTCoreProj(mp.Process):
 
         self.exchange_data['is_stopped'] = True
 
-        print("calc process finished")
+        logger.info("Calculation process finished")

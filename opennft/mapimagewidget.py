@@ -6,7 +6,7 @@ import typing as t
 from loguru import logger
 import numpy as np
 
-from matplotlib import cm
+from matplotlib import cm, colormaps
 from matplotlib import colors
 
 import pyqtgraph as pg
@@ -69,7 +69,7 @@ class RgbaMapImage:
         self._no_value = no_value
 
         if isinstance(colormap, str):
-            colormap = copy(cm.get_cmap(colormap))
+            colormap = copy(colormaps.get_cmap(colormap))
 
         self._colormap = colormap
         self._colormap.set_bad(alpha=0.0)

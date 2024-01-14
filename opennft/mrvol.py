@@ -91,18 +91,11 @@ class MrVol():
 
         self.volume = spm_smooth(self.volume, gkernel)
 
+    def clone(self):
 
+        cloned_mr_vol = MrVol()
+        cloned_mr_vol.volume = self.volume.copy()
+        cloned_mr_vol.mat = self.mat.copy()
+        cloned_mr_vol.dim = self.dim.copy()
 
-# --------------------------------------------------------------------------
-class MrROI():
-    """Contains single ROI
-    """
-    pass
-
-
-# --------------------------------------------------------------------------
-class MrReferenceVol():
-    """Contains registration reference volume for motion correction
-        aka mc_template
-    """
-    pass
+        return cloned_mr_vol

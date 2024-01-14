@@ -37,6 +37,7 @@ class NftSession():
         self.img2d_dimx = 0  # mosaic image size X
         self.img2d_dimy = 0  # mosaic image size Y
         self.spm = None
+        self.dvars_scale = con.default_dvars_threshold
 
     def setup(self):
 
@@ -113,6 +114,13 @@ class NftSession():
             for weight_file, ind_roi in zip(Path(self.config.weights_file_name).iterdir(), range(self.nr_rois)):
                 self.rois[ind_roi].load_weights(weight_file)
 
+        if con.use_rtqa:
+            wb_roi = MrROI()
+            self.dvars_scale = wb_roi.load_whole_brain_mask(self.reference_vol.clone())
+            self.rois.append(wb_roi)
+            self.roi_names.append(wb_roi.name)
+            self.nr_rois += 1
+
 
 # --------------------------------------------------------------------------
 class NftIteration:
@@ -126,7 +134,7 @@ class NftIteration:
         self.iter_norm_number = 0
         self.nr_blocks_in_sliding_window = 100
         self.mr_vol = MrVol()
-        self.mr_time_series = MrTimeSeries(session.nr_rois, session.nr_vols)
+        self.mr_time_series = MrTimeSeries(session.nr_rois)
         self.session = session
         self.bas_func = []
         self.sig_prproc_glm_design = []

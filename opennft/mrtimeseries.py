@@ -11,7 +11,7 @@ from rtspm import spm_imatrix
 class MrTimeSeries():
 
     # --------------------------------------------------------------------------
-    def __init__(self, nr_rois, nr_vols):
+    def __init__(self, nr_rois):
 
         self.raw_time_series = [None] * nr_rois
         self.disp_raw_time_series = [None] * nr_rois
@@ -21,6 +21,7 @@ class MrTimeSeries():
         self.glm_time_series = [None] * nr_rois
         self.no_reg_time_series = [None] * nr_rois
         self.scale_time_series = [None] * nr_rois
+        self.lin_trend_betas = [None] * nr_rois
         self.nr_rois = nr_rois
 
         # x, y, z, pitch, roll, yaw
@@ -47,16 +48,16 @@ class MrTimeSeries():
 
             if type == "PSC":
                 ts_value = np.mean(vol.volume[rois[ind_roi].voxel_index[:, 0],
-                                              rois[ind_roi].voxel_index[:, 1],
-                                              rois[ind_roi].voxel_index[:, 2]], axis=None)
+                rois[ind_roi].voxel_index[:, 1],
+                rois[ind_roi].voxel_index[:, 2]], axis=None)
 
             elif type == "SVM":
                 roi_vect = vol.volume[rois[ind_roi].voxel_index[:, 0],
-                                      rois[ind_roi].voxel_index[:, 1],
-                                      rois[ind_roi].voxel_index[:, 2]]
+                rois[ind_roi].voxel_index[:, 1],
+                rois[ind_roi].voxel_index[:, 2]]
                 weight_vect = rois[ind_roi].weights[rois[ind_roi].voxel_index[:, 0],
-                                                    rois[ind_roi].voxel_index[:, 1],
-                                                    rois[ind_roi].voxel_index[:, 2]]
+                rois[ind_roi].voxel_index[:, 1],
+                rois[ind_roi].voxel_index[:, 2]]
                 ts_value = np.dot(roi_vect, weight_vect)
 
             if self.raw_time_series[ind_roi] is None:
@@ -98,7 +99,7 @@ class MrTimeSeries():
             tmp_ind_end = ind_vol_norm
             tmp_begin = 0
             # !!!
-            tmp_raw_time_series = self.raw_time_series[i_roi][tmp_begin:tmp_ind_end+1]
+            tmp_raw_time_series = self.raw_time_series[i_roi][tmp_begin:tmp_ind_end + 1]
 
             # 6 MC regressors, linear trend, constant
             nr_regr_to_correct = 8
@@ -107,14 +108,15 @@ class MrTimeSeries():
             if con.cglm_ar1:
 
                 if tmp_ind_end == 0:
-                    self.raw_time_series_ar1[i_roi] = np.array((1 - con.a_ar1) * tmp_raw_time_series[tmp_ind_end], ndmin=1)
+                    self.raw_time_series_ar1[i_roi] = np.array((1 - con.a_ar1) * tmp_raw_time_series[tmp_ind_end],
+                                                               ndmin=1)
                 else:
                     self.raw_time_series_ar1[i_roi] = np.append(self.raw_time_series_ar1[i_roi],
                                                                 tmp_raw_time_series[tmp_ind_end] -
                                                                 con.a_ar1 * self.raw_time_series_ar1[i_roi][
                                                                     tmp_ind_end - 1])
 
-                tmp_raw_time_series = self.raw_time_series_ar1[i_roi][tmp_begin:tmp_ind_end+1]
+                tmp_raw_time_series = self.raw_time_series_ar1[i_roi][tmp_begin:tmp_ind_end + 1]
 
             tmp_raw_time_series = np.array(tmp_raw_time_series, ndmin=2).transpose()
 
@@ -126,7 +128,7 @@ class MrTimeSeries():
             regr_step = nr_bas_func + nr_regr_to_correct
             if tmp_ind_end < regr_step - 1:
 
-                tmp_regr = np.ones((tmp_ind_end+1, 1))
+                tmp_regr = np.ones((tmp_ind_end + 1, 1))
                 if con.cglm_ar1:
                     tmp_regr = ar_regr(con.a_ar1, tmp_regr)
                 cx0 = tmp_regr
@@ -135,7 +137,7 @@ class MrTimeSeries():
 
             elif (tmp_ind_end >= regr_step - 1) and (tmp_ind_end < 2 * regr_step - 1):
 
-                tmp_regr = np.hstack((np.ones((tmp_ind_end+1, 1)), lin_regr[0:tmp_ind_end+1]))
+                tmp_regr = np.hstack((np.ones((tmp_ind_end + 1, 1)), lin_regr[0:tmp_ind_end + 1]))
                 if con.cglm_ar1:
                     tmp_regr = ar_regr(con.a_ar1, tmp_regr)
                 cx0 = tmp_regr
@@ -144,8 +146,8 @@ class MrTimeSeries():
 
             elif (tmp_ind_end >= 2 * regr_step - 1) and (tmp_ind_end < 3 * regr_step - 1):
 
-                tmp_regr = np.hstack((np.ones((tmp_ind_end+1, 1)), lin_regr[0:tmp_ind_end+1]))
-                tmp_regr = np.hstack((tmp_regr, zscore(self.mc_params[:, 0:tmp_ind_end+1].T)))
+                tmp_regr = np.hstack((np.ones((tmp_ind_end + 1, 1)), lin_regr[0:tmp_ind_end + 1]))
+                tmp_regr = np.hstack((tmp_regr, zscore(self.mc_params[:, 0:tmp_ind_end + 1].T)))
                 if con.cglm_ar1:
                     tmp_regr = ar_regr(con.a_ar1, tmp_regr)
                 cx0 = tmp_regr
@@ -154,19 +156,38 @@ class MrTimeSeries():
 
             else:
 
-                tmp_regr = np.hstack((np.ones((tmp_ind_end+1, 1)), lin_regr[0:tmp_ind_end+1]))
-                tmp_regr = np.hstack((tmp_regr, zscore(self.mc_params[:, 0:tmp_ind_end+1].T)))
+                tmp_regr = np.hstack((np.ones((tmp_ind_end + 1, 1)), lin_regr[0:tmp_ind_end + 1]))
+                tmp_regr = np.hstack((tmp_regr, zscore(self.mc_params[:, 0:tmp_ind_end + 1].T)))
                 if con.cglm_ar1:
                     tmp_regr = ar_regr(con.a_ar1, tmp_regr)
-                cx0 = np.hstack((tmp_regr, bas_func[0:tmp_ind_end+1, :]))
+                cx0 = np.hstack((tmp_regr, bas_func[0:tmp_ind_end + 1, :]))
                 beta_reg = np.linalg.pinv(cx0) @ tmp_raw_time_series
                 tmp_glm_proc_time_series = (tmp_raw_time_series - cx0 @
                                             np.vstack((beta_reg[0:-1 - nr_bas_func + 1], np.zeros((nr_bas_func, 1)))))
+                if con.use_rtqa:
+                    tmp_no_reg_glm_proc_time_series = (tmp_raw_time_series - cx0 @
+                                                       np.vstack((np.zeros((len(beta_reg) - nr_bas_func, 1)),
+                                                                  beta_reg[-1 - nr_bas_func + 1:])))
 
             if tmp_ind_end == 0:
                 self.glm_time_series[i_roi] = np.array(tmp_glm_proc_time_series)
             else:
                 self.glm_time_series[i_roi] = np.append(self.glm_time_series[i_roi], tmp_glm_proc_time_series[-1])
+
+            if con.use_rtqa:
+
+                if tmp_ind_end == 0:
+                    self.no_reg_time_series[i_roi] = np.array(tmp_raw_time_series)
+                elif tmp_ind_end < 3 * regr_step:
+                    self.no_reg_time_series[i_roi] = np.append(self.no_reg_time_series[i_roi],
+                                                               tmp_raw_time_series[-1])
+                else:
+                    self.no_reg_time_series[i_roi] = np.append(self.no_reg_time_series[i_roi],
+                                                               tmp_no_reg_glm_proc_time_series[-1])
+                if tmp_ind_end >= regr_step - 1:
+                    self.lin_trend_betas[i_roi] = beta_reg[1]
+                else:
+                    self.lin_trend_betas[i_roi] = 0
 
             # 3. modified Kalman low-pass filter + spike identification & correction
             tmp_std = np.std(self.glm_time_series[i_roi])
@@ -174,11 +195,12 @@ class MrTimeSeries():
             self.s["R"][i_roi] = tmp_std ** 2
             kalman_threshold = .9 * tmp_std
 
-            temp_s = {"Q": self.s["Q"][i_roi], "R": self.s["R"][i_roi], "P": self.s["P"][i_roi], "x": self.s["x"][i_roi]}
+            temp_s = {"Q": self.s["Q"][i_roi], "R": self.s["R"][i_roi], "P": self.s["P"][i_roi],
+                      "x": self.s["x"][i_roi]}
 
             kalman_out, temp_s, self.flag_pos_deriv_spike[i_roi], self.flag_neg_deriv_spike[i_roi] = modif_kalman(
                 kalman_threshold, self.glm_time_series[i_roi][ind_vol_norm],
-                temp_s,self.flag_pos_deriv_spike[i_roi], self.flag_neg_deriv_spike[i_roi])
+                temp_s, self.flag_pos_deriv_spike[i_roi], self.flag_neg_deriv_spike[i_roi])
 
             if tmp_ind_end == 0:
                 self.kalman_proc_time_series[i_roi] = np.array(kalman_out, ndmin=1)
@@ -206,7 +228,7 @@ class MrTimeSeries():
 
             # 5. z-scoring and sigmoidal transform
             if is_svm:
-                zscored_val = zscore(self.scale_time_series[i_roi][0:ind_vol_norm+1])
+                zscored_val = zscore(self.scale_time_series[i_roi][0:ind_vol_norm + 1])
 
                 self.scale_time_series[i_roi][ind_vol_norm] = 1 / (1 + np.exp(-zscored_val[-1]))
 
@@ -224,4 +246,3 @@ class MrTimeSeries():
                 self.output_pos_max[i_roi] = np.append(self.output_pos_max[i_roi], self.pos_max[i_roi][-1])
             self.output_pos_min[-1] = np.append(self.output_pos_min[-1], mean_pos_min)
             self.output_pos_max[-1] = np.append(self.output_pos_max[-1], mean_pos_max)
-

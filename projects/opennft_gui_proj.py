@@ -15,11 +15,18 @@ from PyQt6.uic import loadUi
 from PyQt6.QtCore import QTimer, QSettings, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
 from loguru import logger
-from scipy.io import loadmat
 
+from opennft import (
+    config,
+    mosaicview,
+    projview,
+    mapimagewidget,
+    setting_utils,
+    rtqa_gui,
+    rtqa_calc,
+    volviewformation,
+)
 import opennft_console_proj
-from opennft import mosaicview, projview, mapimagewidget, volviewformation, setting_utils, config
-from opennft._logging import logging_setup
 from opennft.config import config as con
 from opennft import constants as cons
 
@@ -40,7 +47,7 @@ class OpenNFTManager(QWidget):
         self.setting_file_name = Path(__file__).absolute().resolve().parent
         self.tcp_data = dict.fromkeys(["use_tcp_data", "tcp_data_ip", "tcp_data_port"])
 
-        self.orthViewInitialize = False
+        self.orth_view_initialize = False
         self._core_process = None
         self._view_form_process = None
         self.reset_done = False
@@ -81,9 +88,14 @@ class OpenNFTManager(QWidget):
             self.read_app_settings()
 
             self.initialize_ui()
+            self.image_view_mode = ImageViewMode.mosaic
 
             self.init = False
             self.show()
+
+            self.calc_rtqa = None
+            self.window_rtqa = None
+
         else:
 
             self.choose_set_file(config.PKG_CONFIG_DIR / 'auto_config.ini')
@@ -106,16 +118,16 @@ class OpenNFTManager(QWidget):
 
         self.mcPlot = self.create_mc_plot(self.layoutPlot1)
         self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.create_roi_plots()
-        self.tsTimer = QTimer(self)
-        self.mosaicTimer = QTimer(self)
-        self.orthViewTimer = QTimer(self)
-        self.tsTimer.timeout.connect(self.on_check_time_series_updated)
-        self.mosaicTimer.timeout.connect(self.on_check_mosaic_view_updated)
-        self.orthViewTimer.timeout.connect(self.on_check_orth_view_updated)
+        self.ts_timer = QTimer(self)
+        self.mosaic_timer = QTimer(self)
+        self.orth_view_timer = QTimer(self)
+        self.ts_timer.timeout.connect(self.on_check_time_series_updated)
+        self.mosaic_timer.timeout.connect(self.on_check_mosaic_view_updated)
+        self.orth_view_timer.timeout.connect(self.on_check_orth_view_updated)
 
         self.currentCursorPos = self.exchange_data["cursor_pos"]
         self.currentProjection = self.exchange_data["flags_planes"]
-        self.orthViewInitialize = True
+        self.orth_view_initialize = True
 
         self.pbMoreParameters.setChecked(False)
 
@@ -167,6 +179,7 @@ class OpenNFTManager(QWidget):
         self.btnSetup.clicked.connect(self.setup)
         self.btnStart.clicked.connect(self.start)
         self.btnStop.clicked.connect(self.stop)
+        self.btnRTQA.clicked.connect(self.rtqa)
 
         self.on_change_pos_map_visible()
         self.on_change_neg_map_visible()
@@ -188,6 +201,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["mosaic_dim"] = 0
         self.exchange_data["is_ROI"] = con.use_roi
         self.exchange_data["is_rtqa"] = con.use_rtqa
+        self.exchange_data["show_rtqa"] = False
         self.exchange_data["vol_mat"] = None
         self.exchange_data["is_stopped"] = False
         self.exchange_data["ready_to_form"] = False
@@ -209,6 +223,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data["cursor_pos"] = (129, 95)
         self.exchange_data["flags_planes"] = projview.ProjectionType.coronal.value
         self.exchange_data['close_udp'] = False
+        self.exchange_data['dvars_scale'] = con.default_dvars_threshold
 
     # --------------------------------------------------------------------------
     def init_shmem(self):
@@ -217,7 +232,7 @@ class OpenNFTManager(QWidget):
         self.mc_shmem = shared_memory.SharedMemory(create=True, size=mc_array.nbytes, name=con.shmem_file_names[0])
         self.mc_data = np.ndarray(shape=mc_array.shape, dtype=mc_array.dtype, buffer=self.mc_shmem.buf)
 
-        time_series_array = np.zeros((5, self.nr_vol, self.nr_rois), dtype=np.float32)
+        time_series_array = np.zeros((8, self.nr_vol, self.nr_rois), dtype=np.float32)
         self.ts_shmem = shared_memory.SharedMemory(create=True, size=time_series_array.nbytes,
                                                    name=con.shmem_file_names[8])
         self.ts_data = np.ndarray(shape=time_series_array.shape, dtype=time_series_array.dtype,
@@ -242,6 +257,15 @@ class OpenNFTManager(QWidget):
         self.stat_shmem = shared_memory.SharedMemory(create=True, size=stat_array.nbytes, name=con.shmem_file_names[3])
         self.stat_data = np.ndarray(shape=stat_array.shape, dtype=stat_array.dtype, buffer=self.stat_shmem.buf,
                                     order='F')
+
+        if self.exchange_data["is_rtqa"]:
+            rtqa_dim = tuple(self.exchange_data["vol_dim"]) + (2,)
+            rtqa_array = np.zeros(rtqa_dim, dtype=np.float32)
+            self.rtqa_vol_shmem = shared_memory.SharedMemory(create=True, size=rtqa_array.nbytes,
+                                                             name=con.shmem_file_names[4])
+            self.rtqa_vol_data = np.ndarray(shape=rtqa_array.shape, dtype=rtqa_array.dtype,
+                                            buffer=self.rtqa_vol_shmem.buf,
+                                            order='F')
 
         dims = self.exchange_data["proj_dims"]
         proj_array = np.zeros((dims[1], dims[0], 9), dtype=np.float32)
@@ -275,6 +299,95 @@ class OpenNFTManager(QWidget):
             ROI_mats = []
 
         self._view_form_process = volviewformation.VolViewFormation(self.exchange_data, ROI_vols, ROI_mats)
+
+    # --------------------------------------------------------------------------
+    def rtqa_init(self):
+
+        self.btnRTQA.setEnabled(True)
+
+        self.rtqa_input = mp.Manager().dict()
+        self.rtqa_input["nr_rois"] = self.exchange_data["nr_rois"]
+        self.rtqa_input["dim"] = tuple([self.config.matrix_size_x, self.config.matrix_size_y, self.config.slices_nr])
+        self.rtqa_input["wb_roi_indexes"] = np.array(self.session.rois[-1].voxel_index, dtype=np.int32, ndmin=2).T
+        self.rtqa_input["muster_info"] = self.musterInfo
+        self.rtqa_input["xrange"] = self.config.volumes_nr - self.config.skip_vol_nr
+        self.rtqa_input["is_auto_rtqa"] = con.auto_rtqa
+        self.rtqa_input["roi_checked"] = self.selected_roi
+        if not con.auto_rtqa:
+            self.rtqa_input["ind_bas"] = np.array([[t[n] for t in self.session.prot_cond[0]] for n in (0, -1)]).T
+            self.rtqa_input["ind_cond"] = np.array([[t[n] for t in self.session.prot_cond[1]] for n in (0, -1)]).T
+        self.rtqa_input["is_stopped"] = False
+        self.rtqa_input["data_ready"] = False
+        self.rtqa_input["calc_ready"] = False
+        self.rtqa_input["roi_changed"] = False
+        self.rtqa_input["offset_mc"] = []
+        self.rtqa_input["beta_coeff"] = []
+        self.rtqa_input["pos_spikes"] = []
+        self.rtqa_input["neg_spikes"] = []
+        self.rtqa_input["is_new_dcm_block"] = True
+        self.rtqa_input["iteration"] = 0
+        self.rtqa_input["which_vol"] = 0
+        self.rtqa_input["dvars_scale"] = self.exchange_data["dvars_scale"]
+        self.rtqa_input["rtqa_vol_ready"] = False
+        self.rtqa_input["default_fd_thresholds"] = con.default_fd_thresholds
+        self.rtqa_input["default_dvars_threshold"] = con.default_dvars_threshold
+        self.rtqa_input["first_snr_volume"] = con.first_snr_volume
+        self.rtqa_input["default_fd_radius"] = con.default_fd_radius
+        self.rtqa_input["shmem_file_names"] = [con.shmem_file_names[0], con.shmem_file_names[8],
+                                               con.shmem_file_names[2], con.shmem_file_names[4]]
+
+        self.rtqa_output = mp.Manager().dict()
+        self.rtqa_output["show_vol"] = False
+        self.rtqa_output["rSNR"] = []
+        self.rtqa_output["rCNR"] = []
+        self.rtqa_output["rMean"] = []
+        self.rtqa_output["meanBas"] = []
+        self.rtqa_output["meanCond"] = []
+        self.rtqa_output["rVar"] = []
+        self.rtqa_output["varBas"] = []
+        self.rtqa_output["varCond"] = []
+        self.rtqa_output["glmProcTimeSeries"] = []
+        self.rtqa_output["rMSE"] = []
+        self.rtqa_output["linTrendCoeff"] = []
+        self.rtqa_output["rNoRegSNR"] = []
+        self.rtqa_output["DVARS"] = []
+        self.rtqa_output["excDVARS"] = []
+        self.rtqa_output["mc_params"] = []
+        self.rtqa_output["FD"] = []
+        self.rtqa_output["MD"] = []
+        self.rtqa_output["meanFD"] = []
+        self.rtqa_output["meanMD"] = []
+        self.rtqa_output["excFD"] = []
+        self.rtqa_output["excMD"] = []
+        self.rtqa_output["posSpikes"] = []
+        self.rtqa_output["negSpikes"] = []
+
+        if self.window_rtqa:
+            self.window_rtqa.deleteLater()
+
+        self.calc_rtqa = rtqa_calc.RTQACalculation(self.rtqa_input, self.rtqa_output, self.exchange_data)
+        self.window_rtqa = rtqa_gui.RTQAWindow(self.calc_rtqa, self.rtqa_input, self.rtqa_output)
+        self.calc_rtqa.start()
+
+        self.window_rtqa.volumeCheckBox.stateChanged.connect(self.on_show_rtqa_vol)
+        self.window_rtqa.volumeCheckBox.stateChanged.connect(self.on_change_neg_map_policy)
+        self.window_rtqa.comboBox.currentIndexChanged.connect(self.on_mode_changed)
+
+    # --------------------------------------------------------------------------
+    def on_show_rtqa_vol(self):
+
+        self.window_rtqa.rtqa_vol_state()
+        if self.exchange_data["is_stopped"]:
+            if self.image_view_mode == ImageViewMode.mosaic:
+                self.update_mosaic_view_async()
+            else:
+                self.update_orth_view_async()
+
+    # --------------------------------------------------------------------------
+    def rtqa(self):
+        self.window_rtqa.show()
+        # if self.exchange_data["is_stopped"]:
+        #     self.window_rtqa.draw_rtqa()
 
     # --------------------------------------------------------------------------
     def text_changed_dual(self, leFrom, leTo):
@@ -443,13 +556,15 @@ class OpenNFTManager(QWidget):
 
         # TODO: For autoRTQA mode
         if True:
-            grid = True
+            gridX = True
+            gridY = False
         else:
-            grid = False
+            gridX = False
+            gridY = False
 
-        self.basic_setup_plot(rawTimeSeries, grid)
-        self.basic_setup_plot(proc, grid)
-        self.basic_setup_plot(norm, grid)
+        self.basic_setup_plot(rawTimeSeries, gridX, gridY)
+        self.basic_setup_plot(proc, gridX, gridY)
+        self.basic_setup_plot(norm, gridX, gridY)
 
         self.draw_muster_plot(rawTimeSeries)
         self.draw_muster_plot(proc)
@@ -459,8 +574,8 @@ class OpenNFTManager(QWidget):
         norm.setYRange(-1, 1, padding=0.0)
 
     # --------------------------------------------------------------------------
-    def basic_setup_plot(self, plotitem, grid=True):
-        # For autoRTQA mode
+    def basic_setup_plot(self, plotitem, gridX=True, gridY=True):
+        #TODO: For autoRTQA mode
         if True:
             lastInds = np.zeros((self.musterInfo['condTotal'],))
             for i in range(self.musterInfo['condTotal']):
@@ -471,7 +586,7 @@ class OpenNFTManager(QWidget):
 
         plotitem.disableAutoRange(axis=pg.ViewBox.XAxis)
         plotitem.setXRange(1, xmax - 1, padding=0.0)
-        plotitem.showGrid(x=grid, y=grid, alpha=cons.PLOT_GRID_ALPHA)
+        plotitem.showGrid(x=gridX, y=gridY, alpha=cons.PLOT_GRID_ALPHA)
 
     # --------------------------------------------------------------------------
     def make_roi_plot_legend(self):
@@ -590,15 +705,15 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def draw_roi_plots(self, init, data, iter):
 
-        data_raw = np.array(data[0, :, self.selected_roi], ndmin=2)
+        if self.config.prot != 'InterBlock':
+            data_raw = np.array(data[7, :, self.selected_roi], ndmin=2)
+        else:
+            data_raw = np.array(data[0, :, self.selected_roi], ndmin=2)
         data_proc = np.array(data[1, :, self.selected_roi], ndmin=2)
         data_norm = np.array(data[2, :, self.selected_roi], ndmin=2)
         data_pos = np.array(data[3:5, :, self.selected_roi], ndmin=2)
 
         if self.config.plot_feedback:
-            # if iter == 1:
-            #     data_norm = np.hstack((data_norm, self.nfb_data[:, 0:iter]))
-            # else:
             data_norm = np.vstack((data_norm, self.nfb_data[:, 0:iter]))
 
         self.draw_given_roi_plot(init, self.rawRoiPlot, data_raw)
@@ -723,7 +838,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data['close_udp'] = False
 
         if con.use_gui:
-            self.orthViewInitialize = True
+            self.orth_view_initialize = True
 
             self.roi_dict = dict()
             self.selected_roi = []
@@ -763,6 +878,16 @@ class OpenNFTManager(QWidget):
 
             self.btnStart.setEnabled(True)
 
+            if self.exchange_data["is_rtqa"]:
+
+                if self.window_rtqa:
+                    if not self.rtqa_input is None:
+                        self.rtqa_input["is_stopped"] = True
+                    self.window_rtqa = None
+
+                self.rtqa_init()
+                self._core_process.load_rtqa_dict(self.rtqa_input)
+
         else:
 
             self.use_udp_feedback = self.exchange_data["use_udp_feedback"]
@@ -801,9 +926,13 @@ class OpenNFTManager(QWidget):
                 self.init = True
                 self.f_fin_nfb = True
 
-                self.tsTimer.start(30)
-                self.mosaicTimer.start(30)
-                self.orthViewTimer.start(30)
+                self.ts_timer.start(30)
+                self.mosaic_timer.start(30)
+                self.orth_view_timer.start(30)
+
+                if self.exchange_data["is_rtqa"]:
+                    self.window_rtqa.rtqa_draw_timer.start(30)
+                    
         else:
             pass
 
@@ -821,10 +950,10 @@ class OpenNFTManager(QWidget):
             self._core_process.terminate()
 
         self.exchange_data["is_stopped"] = True
-        # if self.windowRTQA:
-        #     if not self.rtqa_input is None:
-        #         self.rtqa_input["is_stopped"] = True
-        #     self.eng.workspace['rtQA_python'] = self.calc_rtqa.dataPacking()
+        if self.window_rtqa:
+            if not self.rtqa_input is None:
+                self.rtqa_input["is_stopped"] = True
+
         self.btnStop.setEnabled(False)
 
         # if 'isAutoRTQA' in self.P and not self.P['isAutoRTQA']:
@@ -852,7 +981,9 @@ class OpenNFTManager(QWidget):
         #         logger.info("Average elapsed time: {:.4f} s".format(
         #             np.sum(self.recorder.records[1:, erd.Times.d0]) / self.recorder.records[0, erd.Times.d0]))
 
-        self.tsTimer.stop()
+        self.ts_timer.stop()
+        if self.window_rtqa:
+            self.window_rtqa.rtqa_draw_timer.stop()
 
         logger.info('Finished.')
 
@@ -863,8 +994,8 @@ class OpenNFTManager(QWidget):
 
         if self._core_process is not None:
             if self._core_process.is_alive():
-                self.mosaicTimer.stop()
-                self.orthViewTimer.stop()
+                self.mosaic_timer.stop()
+                self.orth_view_timer.stop()
                 self._core_process.terminate()
         if self._view_form_process is not None:
             if self._view_form_process.is_alive():
@@ -1303,15 +1434,22 @@ class OpenNFTManager(QWidget):
             self.roi_dict[action.text()] = action.isChecked()
 
         self.selected_roi = np.where(list(self.roi_dict.values()))[0]
-        # if self.windowRTQA:
-        #     self.rtqa_input["roi_checked"] = self.selected_roi
+        if self.window_rtqa:
+            self.rtqa_input["roi_checked"] = self.selected_roi
 
         iter_norm_number = self.exchange_data["iter_norm_number"]
         data = self.ts_data[:, :iter_norm_number, :]
         self.draw_roi_plots(True, data, iter_norm_number)
         if self.exchange_data["is_stopped"]:
-            # self.windowRTQA.plotRTQA()
+            # self.window_rtqa.draw_rtqa()
             self.update_orth_view_async()
+
+    # --------------------------------------------------------------------------
+    def on_mode_changed(self):
+
+        if self.window_rtqa:
+            self.window_rtqa.on_combobox_changed()
+            self.on_show_rtqa_vol()
 
     # --------------------------------------------------------------------------
     def on_change_pos_map_visible(self):
@@ -1336,6 +1474,23 @@ class OpenNFTManager(QWidget):
         if self.exchange_data["is_stopped"]:
             self.update_mosaic_view_async()
             self.update_orth_view_async()
+
+    # --------------------------------------------------------------------------
+    def on_change_neg_map_policy(self):
+
+        if self.window_rtqa:
+            is_rtqa_volume = self.exchange_data["show_rtqa"]
+        else:
+            is_rtqa_volume = False
+
+        if is_rtqa_volume:
+            setattr(self, '__neg_map_state', self.negMapCheckBox.isChecked())
+            self.negMapCheckBox.setChecked(False)
+            self.negMapCheckBox.setEnabled(False)
+        else:
+            neg_map_state = getattr(self, '__neg_map_state', self.negMapCheckBox.isChecked())
+            self.negMapCheckBox.setChecked(neg_map_state)
+            self.negMapCheckBox.setEnabled(True)
 
     # --------------------------------------------------------------------------
     def on_interact_with_map_image(self):
@@ -1381,20 +1536,17 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     def update_mosaic_view_async(self):
 
-        # if self.windowRTQA:
-        #     is_snr_map_created = self.rtqa_input["rtqa_vol_ready"]
-        #     is_rtqa_volume = self.rtqa_output["show_vol"]
-        # else:
-        #     is_rtqa_volume = False
-        #     is_snr_map_created = False
+        if self.window_rtqa:
+            is_snr_map_created = self.rtqa_input["rtqa_vol_ready"]
+            is_rtqa_volume = self.rtqa_output["show_vol"]
+        else:
+            is_rtqa_volume = False
+            is_snr_map_created = False
 
-        is_rtqa_volume = False
+        self.exchange_data["show_rtqa"] = is_rtqa_volume
 
-        # if self.windowRTQA and self.view_form_input["is_rtqa"]:
-        #     if self.rtqa_input["which_vol"] == 0:
-        #         self.view_form_input["rtQA_volume"] = self.rtqa_output["snr_vol"]
-        #     else:
-        #         self.view_form_input["rtQA_volume"] = self.rtqa_output["cnr_vol"]
+        if self.window_rtqa and is_rtqa_volume:
+            self.exchange_data["rtQA_volume"] = self.rtqa_input["which_vol"]
 
         if is_rtqa_volume:
             self.exchange_data["is_neg"] = False
@@ -1413,7 +1565,7 @@ class OpenNFTManager(QWidget):
         else:
             bgType = 'bgStruct'
 
-        # is_rtqa_volume = self.rtqa_output["show_vol"] if self.windowRTQA else False
+        # is_rtqa_volume = self.rtqa_output["show_vol"] if self.window_rtqa else False
         is_rtqa_volume = False
 
         # if not self.view_form_input["ready"]:
@@ -1421,21 +1573,18 @@ class OpenNFTManager(QWidget):
         self.exchange_data["flags_planes"] = self.currentProjection
         self.exchange_data["bg_type"] = bgType
         self.exchange_data["is_rtqa"] = is_rtqa_volume
-        # if self.windowRTQA:
-        #     if self.rtqa_input["which_vol"] == 0:
-        #         self.view_form_input["rtQA_volume"] = self.rtqa_output["snr_vol"]
-        #     else:
-        #         self.view_form_input["rtQA_volume"] = self.rtqa_output["cnr_vol"]
+        if self.window_rtqa:
+            self.exchange_data["rtQA_volume"] = self.rtqa_input["which_vol"]
         if is_rtqa_volume:
             self.exchange_data["is_neg"] = False
         else:
             self.exchange_data["is_neg"] = self.negMapCheckBox.isChecked()
 
+        self.exchange_data["ready_to_form"] = True
+
         if self.exchange_data["is_stopped"]:
             self.exchange_data["ready_to_form"] = True
             self.exchange_data["overlay_ready"] = True
-
-        # self.view_form_input["ready"] = True
 
     # --------------------------------------------------------------------------
     def on_change_orth_view_cursor_position(self, pos, proj):
@@ -1461,6 +1610,11 @@ class OpenNFTManager(QWidget):
 
                 # if self.init:
                 #     self.init = False
+
+                if self.exchange_data["view_mode"] == ImageViewMode.mosaic:
+                    self.update_mosaic_view_async()
+                else:
+                    self.update_orth_view_async()
 
                 self.exchange_data["data_ready_flag"] = False
 
@@ -1563,10 +1717,10 @@ class OpenNFTManager(QWidget):
                 self.orthView.set_roi(projview.ProjectionType.coronal, roi_c, self.selected_roi)
                 self.orthView.set_roi(projview.ProjectionType.sagittal, roi_s, self.selected_roi)
 
-            if self.orthViewInitialize:
+            if self.orth_view_initialize:
                 self.orthView.reset_view()
 
-            self.orthViewInitialize = False
+            self.orth_view_initialize = False
 
     # --------------------------------------------------------------------------
     def read_app_settings(self):
@@ -1612,9 +1766,9 @@ class OpenNFTManager(QWidget):
     def closeEvent(self, event):
 
         self.write_app_settings()
-        self.tsTimer.stop()
-        self.orthViewTimer.stop()
-        self.mosaicTimer.stop()
+        self.ts_timer.stop()
+        self.orth_view_timer.stop()
+        self.mosaic_timer.stop()
         self.stop()
         self.hide()
 
@@ -1652,6 +1806,10 @@ class OpenNFTManager(QWidget):
             self.nfb_shmem.unlink()
             self.ts_shmem.close()
             self.ts_shmem.unlink()
+
+            if self.exchange_data["is_rtqa"]:
+                self.rtqa_vol_shmem.close()
+                self.rtqa_vol_shmem.unlink()
 
 
 if __name__ == '__main__':

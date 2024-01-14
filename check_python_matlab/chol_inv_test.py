@@ -66,6 +66,8 @@ def main():
     L_no_mkl = scipy.linalg.inv(L)
     iL_no_mkl = scipy.linalg.inv(L)
 
+    print(f"Matrix cond NumPy = {np.linalg.cond(L)}\n")
+
     d = np.max(np.abs((L_no_mkl-mL)))
     print(f"\nnorm(scipy_no_mkl.linalg.cholesky() - Matlab chol()) = {d}")
     d = np.max(np.abs((iL_no_mkl-miL)))
@@ -75,6 +77,7 @@ def main():
     print(f"norm(np_mkl.linalg.cholesky() - Matlab chol()) = {d}")
     d = np.max(np.abs((iL-miL)))
     print(f"norm(np_mkl.linalg.inv() - Matlab inv()) = {d}\n")
+
   
 
 if __name__ == '__main__':

@@ -22,8 +22,16 @@ use_sleep_in_stop: False
 
 use_gui: True
 use_roi: True
-use_rtqa: False
+use_rtqa: True
 use_iglm: True
+
+first_snr_volume: 1
+# FD defaults
+default_fd_radius: 50  # radius multiplying angular displacement in FD compution
+default_fd_thresholds: [0.1, 0.2, 0.5]  # FD thresholds to display by default
+
+# DVARS
+default_dvars_threshold: 5
 
 dicom_siemens_xa30: False
 
