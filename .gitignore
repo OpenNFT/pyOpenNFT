@@ -120,3 +120,6 @@ cython_debug/
 
 # VS
 .vs/
+
+# Tests
+/check_python_matlab/
