@@ -123,3 +123,4 @@ cython_debug/
 
 # Tests
 /check_python_matlab/
+/tests/data/
