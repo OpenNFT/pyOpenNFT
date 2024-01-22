@@ -70,9 +70,9 @@ class MrROI():
         # histogram fit with single exponent and single gaussian
         fun = lambda a, b, c, d, e, x: a * np.exp(-x * b) + c * np.exp((-(x - d) ** 2) / e)
         # data
-        xdata = edges[wb_mask_threshold:-1]
+        xdata = edges[wb_mask_threshold-1:-1]
         lxdata = len(xdata)
-        ydata = n[wb_mask_threshold:-1]
+        ydata = n[wb_mask_threshold-1:-1]
 
         # fit
         lb = np.array([1, 0, 0, 5, nbins / 10, nbins / 100])

@@ -30,9 +30,10 @@ class VolViewFormation(mp.Process):
 
         self.xdim, self.ydim, self.img2d_dimx, self.img2d_dimy = get_mosaic_dim(self.dim)
 
-        if not (self.exchange_data["StructBgFile"] is None):
-            self.anat_volume = MrVol()
-            self.anat_volume.load_vol(self.exchange_data["StructBgFile"], 'nii')
+        if not con.auto_rtqa:
+            if not (self.exchange_data["StructBgFile"] is None):
+                self.anat_volume = MrVol()
+                self.anat_volume.load_vol(self.exchange_data["StructBgFile"], 'nii')
 
         # ROIs
         self.ROI_vols = ROI_vols

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import nibabel as nib
+import pydicom
 
 from pathlib import Path
 from loguru import logger
@@ -10,7 +11,7 @@ from opennft.mrvol import MrVol
 from opennft.mrroi import MrROI
 from opennft.mrtimeseries import MrTimeSeries
 from opennft.iglm_vol import iglm_vol
-from opennft.utils import get_mosaic_dim, vol3d_img2d, img2d_vol3d, ar_regr, zscore
+from opennft.utils import get_mosaic_dim, img2d_vol3d, ar_regr, zscore, get_mat
 from opennft.config import config as con
 
 
@@ -24,6 +25,7 @@ class NftSession():
 
         self.config = config
         self.reference_vol = MrVol()  # mc_template
+        self.dim = (config.matrix_size_x, config.matrix_size_y, config.slices_nr)
         self.vect_end_cond = np.ones((self.config.volumes_nr - self.config.skip_vol_nr, 1))
         self.first_nf_inds = []
         self.pos_contrast = []
@@ -39,65 +41,88 @@ class NftSession():
         self.spm = None
         self.dvars_scale = con.default_dvars_threshold
 
-    def setup(self):
+    def setup(self, mc_templ_path):
 
-        mc_templ_path = self.config.mc_template_file
         self.reference_vol.load_vol(mc_templ_path, "nii")
         self.xdim_img_count, self.ydim_img_count, self.img2d_dimx, self.img2d_dimy = get_mosaic_dim(
             self.reference_vol.dim)
-        self.select_rois()
+
+    def setup_auto_rtqa(self, mc_template_file):
+
+        dcm = pydicom.dcmread(mc_template_file, force=True)
+
+        if not (hasattr(dcm, 'ImagePositionPatient') and hasattr(dcm, 'ImageOrientationPatient')):
+            logger.error("DICOM template has no ImagePositionPatient and ImageOrientationPatient and "
+                         "could not be used as EPI template\nPlease, check DICOM export or use NII EPI template\n")
+            return False
+
+        self.reference_vol.dim = np.array(self.dim)
+        self.reference_vol.mat = get_mat(self.dim, dcm)
+        self.xdim_img_count, self.ydim_img_count, self.img2d_dimx, self.img2d_dimy = get_mosaic_dim(
+            self.reference_vol.dim)
+        self.reference_vol.volume = np.array(img2d_vol3d(dcm.pixel_array, self.xdim_img_count,
+                                                         self.ydim_img_count,
+                                                         self.reference_vol.dim), order='F')
+
+        return True
 
     def set_protocol(self, simulation_protocol):
 
-        conditions = simulation_protocol["ConditionIndex"]
-        cond_length = len(conditions)
+        if not con.auto_rtqa:
+            conditions = simulation_protocol["ConditionIndex"]
+            cond_length = len(conditions)
 
-        self.prot_names = []
-        self.offsets = []
-        self.prot_cond = [None] * (cond_length + 1)
-        inc = 2
-        for i in range(cond_length):
-            self.prot_names.append(conditions[i]["ConditionName"])
+            self.prot_names = []
+            self.offsets = []
+            self.prot_cond = [None] * (cond_length + 1)
+            inc = 2
+            for i in range(cond_length):
+                self.prot_names.append(conditions[i]["ConditionName"])
 
-            # TODO: check if baseline field already exists in protocol
-            offsets = np.array(conditions[i]["OnOffsets"])
+                # TODO: check if baseline field already exists in protocol
+                offsets = np.array(conditions[i]["OnOffsets"])
 
-            for j in range(len(offsets)):
-                self.vect_end_cond[offsets[j][0] - 1:offsets[j][1]] = inc
-                if self.prot_cond[inc - 1] is None:
-                    self.prot_cond[inc - 1] = np.array(range(offsets[j][0], offsets[j][1] + 1))
+                for j in range(len(offsets)):
+                    self.vect_end_cond[offsets[j][0] - 1:offsets[j][1]] = inc
+                    if self.prot_cond[inc - 1] is None:
+                        self.prot_cond[inc - 1] = np.array(range(offsets[j][0], offsets[j][1] + 1))
+                    else:
+                        self.prot_cond[inc - 1] = np.vstack(
+                            (self.prot_cond[inc - 1], np.array(range(offsets[j][0], offsets[j][1] + 1))))
+
+                self.first_nf_inds.append(offsets[:, 0] - 1)
+
+                self.offsets.append(offsets)
+
+                inc = inc + 1
+
+            # Implicit baseline
+            bas_inds = np.where(self.vect_end_cond == 1)[0] + 1
+            bas_offsets = []
+            for i in range(len(self.offsets[0])):
+                if i == 0:
+                    inds = bas_inds[np.where(bas_inds < self.offsets[0][i][0])[0]]
                 else:
-                    self.prot_cond[inc - 1] = np.vstack(
-                        (self.prot_cond[inc - 1], np.array(range(offsets[j][0], offsets[j][1] + 1))))
+                    inds = bas_inds[np.where(np.logical_and(bas_inds > self.offsets[0][i - 1][1],
+                                                            bas_inds < self.offsets[0][i][0]))[0]]
 
-            self.first_nf_inds.append(offsets[:, 0] - 1)
+                bas_offsets.append(inds)
 
-            self.offsets.append(offsets)
+            inds = bas_inds[np.where(bas_inds > self.offsets[0][-1][1])[0]]
+            if len(inds) > 0:
+                bas_offsets.append(inds)
+            # bas_offsets = np.array(bas_offsets, ndmin=2)
+            self.prot_cond[0] = bas_offsets
 
-            inc = inc + 1
+            # Contrast and Conditions For Contrast
+            if "ContrastActivation" in simulation_protocol:
+                splitted_contrast = simulation_protocol["ContrastActivation"].split("*")
+                self.pos_contrast = np.array(splitted_contrast[0::2], dtype=np.int32)
+                self.neg_contrast = -self.pos_contrast
 
-        # Implicit baseline
-        bas_inds = np.where(self.vect_end_cond == 1)[0] + 1
-        bas_offsets = []
-        for i in range(len(self.offsets[0])):
-            if i == 0:
-                inds = bas_inds[np.where(bas_inds < self.offsets[0][i][0])[0]]
-            else:
-                inds = bas_inds[np.where(np.logical_and(bas_inds > self.offsets[0][i - 1][1],
-                                                        bas_inds < self.offsets[0][i][0]))[0]]
+        else:
 
-            bas_offsets.append(inds)
-
-        inds = bas_inds[np.where(bas_inds > self.offsets[0][-1][1])[0]]
-        if len(inds) > 0:
-            bas_offsets.append(inds)
-        # bas_offsets = np.array(bas_offsets, ndmin=2)
-        self.prot_cond[0] = bas_offsets
-
-        # Contrast and Conditions For Contrast
-        if "ContrastActivation" in simulation_protocol:
-            splitted_contrast = simulation_protocol["ContrastActivation"].split("*")
-            self.pos_contrast = np.array(splitted_contrast[0::2], dtype=np.int32)
+            self.pos_contrast = np.array([1, 1, 1, 1, 1, 1], ndmin=2, dtype=np.int32).T
             self.neg_contrast = -self.pos_contrast
 
     def select_rois(self):
@@ -114,12 +139,16 @@ class NftSession():
             for weight_file, ind_roi in zip(Path(self.config.weights_file_name).iterdir(), range(self.nr_rois)):
                 self.rois[ind_roi].load_weights(weight_file)
 
+    def wb_roi_init(self):
+
         if con.use_rtqa:
             wb_roi = MrROI()
             self.dvars_scale = wb_roi.load_whole_brain_mask(self.reference_vol.clone())
             self.rois.append(wb_roi)
             self.roi_names.append(wb_roi.name)
-            self.nr_rois += 1
+
+            if not con.auto_rtqa or con.use_epi_template:
+                self.nr_rois += 1
 
 
 # --------------------------------------------------------------------------
@@ -140,42 +169,55 @@ class NftIteration:
         self.sig_prproc_glm_design = []
         self.lin_regr = []
 
-        if con.iglm_ar1:
-            self.bas_func = ar_regr(con.a_ar1, session.spm["xX_x"][:, 0:-1])
-        else:
-            self.bas_func = session.spm["xX_x"][:, 0:-2]
+        if not con.auto_rtqa:
+            if con.iglm_ar1:
+                self.bas_func = ar_regr(con.a_ar1, session.spm["xX_x"][:, 0:-1])
+            else:
+                self.bas_func = session.spm["xX_x"][:, 0:-2]
 
-        self.nr_bas_func = len(self.bas_func[0])
+            self.nr_bas_func = len(self.bas_func[0])
+
+        else:
+            self.nr_bas_func = 6
+
         if not con.is_regr_iglm:
-
-            self.nr_bas_fct_regr = 1
+            if not con.auto_rtqa:
+                self.nr_bas_fct_regr = 1
+            else:
+                self.nr_bas_fct_regr = 6
 
         else:
-
             nr_high_pass_regr = len(session.spm["xX_K"]["x0"][0])
-            nr_mot_regr = 6
-
             is_high_pass = con.is_high_pass
             is_motion_regr = con.is_motion_regr
             is_lin_regr = con.is_lin_regr
 
-            if is_high_pass and is_motion_regr and is_lin_regr:
-                self.nr_bas_fct_regr = nr_mot_regr + nr_high_pass_regr + 2
-                # adding 6 head motion, linear, high-pass filter, and constant regressors
-            elif not is_high_pass and is_motion_regr and is_lin_regr:
-                self.nr_bas_fct_regr = nr_mot_regr + 2
-                # adding 6 head motion, linear, and constant regressors
-            elif is_high_pass and not is_motion_regr and is_lin_regr:
-                self.nr_bas_fct_regr = nr_high_pass_regr + 2
-                # dding high-pass filter, linear, and constant regressors
-            elif is_high_pass and not is_motion_regr and not is_lin_regr:
-                self.nr_bas_fct_regr = nr_high_pass_regr + 1
-                # adding high-pass filter, and constant regressors
-            elif not is_high_pass and not is_motion_regr and is_lin_regr:
-                self.nr_bas_fct_regr = 2
-                # adding linear, and constant regressors
+            if not con.auto_rtqa:
+                nr_mot_regr = 6
+                if is_high_pass and is_motion_regr and is_lin_regr:
+                    self.nr_bas_fct_regr = nr_mot_regr + nr_high_pass_regr + 2
+                    # adding 6 head motion, linear, high-pass filter, and constant regressors
+                elif not is_high_pass and is_motion_regr and is_lin_regr:
+                    self.nr_bas_fct_regr = nr_mot_regr + 2
+                    # adding 6 head motion, linear, and constant regressors
+                elif is_high_pass and not is_motion_regr and is_lin_regr:
+                    self.nr_bas_fct_regr = nr_high_pass_regr + 2
+                    # dding high-pass filter, linear, and constant regressors
+                elif is_high_pass and not is_motion_regr and not is_lin_regr:
+                    self.nr_bas_fct_regr = nr_high_pass_regr + 1
+                    # adding high-pass filter, and constant regressors
+                elif not is_high_pass and not is_motion_regr and is_lin_regr:
+                    self.nr_bas_fct_regr = 2  # adding linear, and constant regressors
 
-        # realigment parameters
+            else:
+                if is_high_pass and is_lin_regr:
+                    self.nr_bas_fct_regr = nr_high_pass_regr + 2
+                elif not is_high_pass and is_lin_regr:
+                    self.nr_bas_fct_regr = 2
+                elif is_high_pass and not is_lin_regr:
+                    self.nr_bas_fct_regr = nr_high_pass_regr + 1
+
+        # realignment parameters
         self.a0 = []
         self.x1 = []
         self.x2 = []
@@ -184,7 +226,7 @@ class NftIteration:
         self.b = []
 
         n = self.nr_bas_fct_regr + self.nr_bas_func
-        nr_vox_in_vol = self.session.reference_vol.dim.prod()
+        nr_vox_in_vol = self.session.dim[0] * self.session.dim[1] * self.session.dim[2]
         # iGLM parameters
         self.iglm_params = {
             "p_val": .01,
@@ -199,13 +241,38 @@ class NftIteration:
             "dyn_t_th": 0,
             "spm_mask_th": session.spm["xM_TH"].mean() * np.ones(session.spm["xM_TH"].shape),
             "stat_map_vect": np.zeros((nr_vox_in_vol, 1)),
-            "stat_map_3d_pos": np.zeros(self.session.reference_vol.dim),
-            "stat_map_3d_neg": np.zeros(self.session.reference_vol.dim)
+            "stat_map_3d_pos": np.zeros(self.session.dim),
+            "stat_map_3d_neg": np.zeros(self.session.dim)
+        }
+
+    # --------------------------------------------------------------------------
+    def auto_rtqa_later_reinit(self):
+
+        self.mr_time_series = MrTimeSeries(self.session.nr_rois)
+
+        n = self.nr_bas_fct_regr + self.nr_bas_func
+        nr_vox_in_vol = self.session.dim[0] * self.session.dim[1] * self.session.dim[2]
+        # iGLM parameters
+        self.iglm_params = {
+            "p_val": .01,
+            "t_contr_pos": self.session.pos_contrast,
+            "t_contr_neg": self.session.neg_contrast,
+            "cn": np.zeros((n, n)),
+            "dn": np.zeros((nr_vox_in_vol, n)),
+            "s2n": np.zeros((nr_vox_in_vol, 1)),
+            "tn_pos": np.zeros((nr_vox_in_vol, 1)),
+            "tn_neg": np.zeros((nr_vox_in_vol, 1)),
+            "t_th": np.zeros((self.session.nr_vols, 1)),
+            "dyn_t_th": 0,
+            "spm_mask_th": self.session.spm["xM_TH"].mean() * np.ones(self.session.spm["xM_TH"].shape),
+            "stat_map_vect": np.zeros((nr_vox_in_vol, 1)),
+            "stat_map_3d_pos": np.zeros(self.session.dim),
+            "stat_map_3d_neg": np.zeros(self.session.dim)
         }
 
     # --------------------------------------------------------------------------
     def load_vol(self, file_name, im_type):
-        # возможно стоит сделать по задел под мультимодальность
+
         self.mr_vol.load_vol(file_name, im_type)
         self.mr_vol.volume = np.array(img2d_vol3d(self.mr_vol.volume, self.session.xdim_img_count,
                                                   self.session.ydim_img_count, self.session.reference_vol.dim),
@@ -223,11 +290,16 @@ class NftIteration:
     def process_time_series(self):
         self.mr_time_series.acquiring(self.session.config.type, self.mr_vol, self.session.rois)
 
-        sl_wind = (self.session.offsets[0][0][0] - 1) * self.nr_blocks_in_sliding_window
+        if not con.auto_rtqa:
+            sl_wind = (self.session.offsets[0][0][0] - 1) * self.nr_blocks_in_sliding_window
+            bas_block_length = self.session.offsets[0][0][0] - 1
+        else:
+            sl_wind = self.session.nr_vols
+            bas_block_length = 0
         is_svm = self.session.config.type == 'SVM'
 
         self.mr_time_series.preprocessing(self.iter_norm_number, self.bas_func, self.lin_regr, sl_wind,
-                                          self.session.vect_end_cond, self.session.offsets[0][0][0] - 1, is_svm)
+                                          self.session.vect_end_cond, bas_block_length, is_svm)
 
     # --------------------------------------------------------------------------
     def iglm(self):
@@ -235,8 +307,11 @@ class NftIteration:
         ind_iglm = self.iter_norm_number
         stat_ready = False
 
+        if con.auto_rtqa:
+            is_motion_regr = False
+        else:
+            is_motion_regr = con.is_motion_regr
         is_high_pass = con.is_high_pass
-        is_motion_regr = con.is_motion_regr
         is_lin_regr = con.is_lin_regr
 
         tmp_regr = np.array([])
@@ -277,7 +352,10 @@ class NftIteration:
         if con.iglm_ar1:
             tmp_regr = ar_regr(con.a_ar1, tmp_regr)
 
-        bas_fct_regr = np.hstack((self.bas_func[0:ind_iglm + 1, :], tmp_regr))
+        if not con.auto_rtqa:
+            bas_fct_regr = np.hstack((self.bas_func[0:ind_iglm + 1, :], tmp_regr))
+        else:
+            bas_fct_regr = np.hstack((zscore(self.mr_time_series.mc_params[:, 0:ind_iglm + 1]).T, tmp_regr))
 
         t_contr_pos = np.vstack((self.iglm_params["t_contr_pos"], np.zeros((self.nr_bas_fct_regr, 1))))
         t_contr_neg = np.vstack((self.iglm_params["t_contr_neg"], np.zeros((self.nr_bas_fct_regr, 1))))
@@ -295,10 +373,10 @@ class NftIteration:
         self.iglm_params["stat_map_3d_neg"] = np.zeros(self.session.reference_vol.dim)
 
         idx_act_vox, dynt_th, \
-        t_th, cn, dn, sigma2n, \
-        tn, neg_e2n, bn, e2n = iglm_vol(cn, dn, s2n, tn, self.mr_vol.volume.flatten(order="F"),
-                                        ind_iglm + 1, self.nr_bas_func + self.nr_bas_fct_regr,
-                                        t_contr, bas_fct_regr, p_val, dynt_th, t_th, spm_mask_th)
+            t_th, cn, dn, sigma2n, \
+            tn, neg_e2n, bn, e2n = iglm_vol(cn, dn, s2n, tn, self.mr_vol.volume.flatten(order="F"),
+                                            ind_iglm + 1, self.nr_bas_func + self.nr_bas_fct_regr,
+                                            t_contr, bas_fct_regr, p_val, dynt_th, t_th, spm_mask_th)
 
         self.iglm_params["cn"] = cn
         self.iglm_params["dn"] = dn

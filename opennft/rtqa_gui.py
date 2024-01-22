@@ -658,8 +658,8 @@ class RTQAWindow(QtWidgets.QWidget):
 
                 self.init = False
 
-            if not self.input["is_stopped"]:
-                self.input["calc_ready"] = False
+                if not self.input["is_stopped"]:
+                    self.input["calc_ready"] = False
 
     # --------------------------------------------------------------------------
     def draw_stat_values(self, init, plotitem, data, color, style):

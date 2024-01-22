@@ -56,36 +56,50 @@ def scale_time_series(in_time_series, ind_vol, length_sl_wind, init_lim, tmp_pos
         tmp_max = np.median(sorted_time_series[int(-1-nr_elem-1):-1])
         tmp_min = np.median(sorted_time_series[0:int(nr_elem+1)])
 
-    if (ind_vol <= bas_block_length) or (ind_vol < length_sl_wind):
+    # zero bas_block_length stands for auto_rtqa mode
+    if bas_block_length > 0:
+        if (ind_vol <= bas_block_length) or (ind_vol < length_sl_wind):
+
+            if tmp_max > init_lim:
+                tmp_pos_max = tmp_max
+            else:
+                tmp_pos_max = init_lim
+            if tmp_min < -init_lim:
+                tmp_pos_min = tmp_min
+            else:
+                tmp_pos_min = -init_lim
+
+        else:
+
+            chk_max = np.max(in_time_series[ind_vol - length_sl_wind + 1: ind_vol])
+            chk_min = np.min(in_time_series[ind_vol - length_sl_wind + 1: ind_vol])
+
+            if (ind_vol > bas_block_length) and not (vect_end_cond[ind_vol] == vect_end_cond[ind_vol-1]):
+                if tmp_max > chk_max:
+                    tmp_pos_max = chk_max
+                else:
+                    tmp_pos_max = tmp_max
+                if tmp_min < chk_min:
+                    tmp_pos_min = chk_min
+                else:
+                    tmp_pos_min = tmp_min
+            else:
+                if (in_time_series[ind_vol]) > tmp_pos_max:
+                    tmp_pos_max = in_time_series[ind_vol]
+                if (in_time_series[ind_vol]) > tmp_pos_min:
+                    tmp_pos_min = in_time_series[ind_vol]
+
+    else:
 
         if tmp_max > init_lim:
             tmp_pos_max = tmp_max
         else:
             tmp_pos_max = init_lim
+
         if tmp_min < -init_lim:
-            tmp_pos_min = tmp_min
+            tmp_pos_min = tmp_min;
         else:
-            tmp_pos_min = -init_lim
-
-    else:
-
-        chk_max = np.max(in_time_series[ind_vol - length_sl_wind + 1: ind_vol])
-        chk_min = np.min(in_time_series[ind_vol - length_sl_wind + 1: ind_vol])
-
-        if (ind_vol > bas_block_length) and not (vect_end_cond[ind_vol] == vect_end_cond[ind_vol-1]):
-            if tmp_max > chk_max:
-                tmp_pos_max = chk_max
-            else:
-                tmp_pos_max = tmp_max
-            if tmp_min < chk_min:
-                tmp_pos_min = chk_min
-            else:
-                tmp_pos_min = tmp_min
-        else:
-            if (in_time_series[ind_vol]) > tmp_pos_max:
-                tmp_pos_max = in_time_series[ind_vol]
-            if (in_time_series[ind_vol]) > tmp_pos_min:
-                tmp_pos_min = in_time_series[ind_vol]
+            tmp_pos_min = -init_lim;
 
     out_data = (in_time_series[ind_vol]-tmp_pos_min) / (tmp_pos_max - tmp_pos_min)
 

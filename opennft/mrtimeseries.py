@@ -46,7 +46,7 @@ class MrTimeSeries():
 
         for ind_roi in range(self.nr_rois):
 
-            if type == "PSC":
+            if type == "PSC" or type == "Auto_RTQA":
                 ts_value = np.mean(vol.volume[rois[ind_roi].voxel_index[:, 0],
                 rois[ind_roi].voxel_index[:, 1],
                 rois[ind_roi].voxel_index[:, 2]], axis=None)
@@ -80,7 +80,10 @@ class MrTimeSeries():
 
     def preprocessing(self, ind_vol_norm, bas_func, lin_regr, sl_wind, vect_end_cond, bas_block_length, is_svm):
 
-        nr_bas_func = len(bas_func[0])
+        if not con.auto_rtqa:
+            nr_bas_func = len(bas_func[0])
+        else:
+            nr_bas_func = 2
 
         for i_roi in range(self.nr_rois):
 
@@ -160,14 +163,21 @@ class MrTimeSeries():
                 tmp_regr = np.hstack((tmp_regr, zscore(self.mc_params[:, 0:tmp_ind_end + 1].T)))
                 if con.cglm_ar1:
                     tmp_regr = ar_regr(con.a_ar1, tmp_regr)
-                cx0 = np.hstack((tmp_regr, bas_func[0:tmp_ind_end + 1, :]))
-                beta_reg = np.linalg.pinv(cx0) @ tmp_raw_time_series
-                tmp_glm_proc_time_series = (tmp_raw_time_series - cx0 @
-                                            np.vstack((beta_reg[0:-1 - nr_bas_func + 1], np.zeros((nr_bas_func, 1)))))
-                if con.use_rtqa:
-                    tmp_no_reg_glm_proc_time_series = (tmp_raw_time_series - cx0 @
-                                                       np.vstack((np.zeros((len(beta_reg) - nr_bas_func, 1)),
-                                                                  beta_reg[-1 - nr_bas_func + 1:])))
+
+                if not con.auto_rtqa:
+                    cx0 = np.hstack((tmp_regr, bas_func[0:tmp_ind_end + 1, :]))
+                    beta_reg = np.linalg.pinv(cx0) @ tmp_raw_time_series
+                    tmp_glm_proc_time_series = (tmp_raw_time_series - cx0 @
+                                                np.vstack((beta_reg[0:-1 - nr_bas_func + 1], np.zeros((nr_bas_func, 1)))))
+                    if con.use_rtqa:
+                        tmp_no_reg_glm_proc_time_series = (tmp_raw_time_series - cx0 @
+                                                           np.vstack((np.zeros((len(beta_reg) - nr_bas_func, 1)),
+                                                                      beta_reg[-1 - nr_bas_func + 1:])))
+                else:
+                    cx0 = tmp_regr
+                    beta_reg = np.linalg.pinv(cx0) @ tmp_raw_time_series
+                    tmp_glm_proc_time_series = (tmp_raw_time_series - cx0 @ beta_reg)
+                    tmp_no_reg_glm_proc_time_series = tmp_glm_proc_time_series
 
             if tmp_ind_end == 0:
                 self.glm_time_series[i_roi] = np.array(tmp_glm_proc_time_series)

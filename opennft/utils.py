@@ -65,7 +65,6 @@ def ar_regr(a, input):
 
 
 def zscore(x):
-
     np.seterr(divide='ignore', invalid='ignore')
     dim = np.nonzero(np.array(x.shape) != 1)[0]
 
@@ -88,3 +87,41 @@ def zscore(x):
 
     return z
 
+
+def null_space(matrix, rcond=None):
+    u, s, vh = np.linalg.svd(matrix, full_matrices=True)
+    m, n = u.shape[0], vh.shape[1]
+    if rcond is None:
+        rcond = np.finfo(s.dtype).eps * max(m, n)
+    tol = np.amax(s) * rcond
+    num = np.sum(s > tol, dtype=int)
+    nulls = vh[num:, :].T.conj()
+    return nulls
+
+
+def get_mat(dim, hdr):
+    analyze_to_dicom = np.vstack(
+        (np.hstack((np.diag([1, -1, 1]), np.array([0, (dim[1] - 1), 0], ndmin=2).T)), np.array([0, 0, 0, 1], ndmin=2)))
+    analyze_to_dicom = analyze_to_dicom * np.hstack((np.eye(4, 3), np.array([-1, -1, -1, 1], ndmin=2).T))
+
+    vox = np.array([hdr.PixelSpacing[0], hdr.PixelSpacing[1], np.float32(hdr.SpacingBetweenSlices)], ndmin=2)
+    pos = np.array(hdr.ImagePositionPatient, ndmin=2)
+    orient = np.reshape(np.array(hdr.ImageOrientationPatient), [2, 3]).T
+    orient = np.hstack((orient, null_space(orient.T)))
+    if np.linalg.det(orient) < 0:
+        orient[:, 2] = -orient[:, 2]
+
+    # The image position vector is not correct. In dicom this vector points to
+    # the upper left corner of the image. Perhaps it is unlucky that this is
+    # calculated in the syngo software from the vector pointing to the center
+    # of the slice (keep in mind: upper left slice) with the enlarged FoV.
+    dicom_to_patient = np.vstack((np.hstack((orient * np.diagflat(vox), pos.T)), np.array([0, 0, 0, 1], ndmin=2)))
+    truepos = dicom_to_patient @ np.append((np.array([hdr.Columns, hdr.Rows]) - dim[0:2]) / 2, [0, 1])
+
+    dicom_to_patient = np.vstack(
+        (np.hstack((orient * np.diag(vox), np.array(truepos[0:3], ndmin=2).T)), np.array([0, 0, 0, 1], ndmin=2)))
+
+    patient_to_tal = np.diag([-1, -1, 1, 1])
+    mat = patient_to_tal @ dicom_to_patient @ analyze_to_dicom
+
+    return mat

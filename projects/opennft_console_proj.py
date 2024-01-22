@@ -17,6 +17,7 @@ from opennft import eventrecorder as erd
 
 import opennft.nftsession as nftsession
 from opennft.config import config as con
+from opennft.utils import get_mosaic_dim
 
 
 class OpenNFTCoreProj(mp.Process):
@@ -43,6 +44,8 @@ class OpenNFTCoreProj(mp.Process):
         #     self.exchange_data["use_udp_feedback"] = self.config.use_udp_feedback
         # else:
         #     self.use_udp_feedback = self.exchange_data["use_udp_feedback"]
+        if self.exchange_data["offline"] is None:
+            self.exchange_data['offline'] = self.config.offline_mode
         self.recorder = erd.EventRecorder()
         self.recorder.initialize(self.config.volumes_nr)
 
@@ -51,6 +54,7 @@ class OpenNFTCoreProj(mp.Process):
         logger.info("Calculation process initialized")
 
         # --------------------------------------------------------------------------
+
     def init_data(self):
 
         config_path = Path().resolve()
@@ -63,17 +67,68 @@ class OpenNFTCoreProj(mp.Process):
         simulation_protocol = loader.simulation_protocol  # simulation protocol dictionary from JSON
 
         session = nftsession.NftSession(config)
+
         # setup ROIs for session
         # setup mr_reference for session
-        session.setup()
-        session.set_protocol(simulation_protocol)
-        session.spm = spm_setup(config.tr,
-                                config.volumes_nr - config.skip_vol_nr,
-                                np.mean(session.reference_vol.volume, axis=None),
-                                session.offsets,
-                                session.first_nf_inds,
-                                session.prot_names
-                                )
+        if not con.auto_rtqa:
+            session.setup(config.mc_template_file)
+            session.select_rois()
+            session.wb_roi_init()
+
+            session.set_protocol(simulation_protocol)
+            session.spm = spm_setup(config.tr,
+                                    config.volumes_nr - config.skip_vol_nr,
+                                    np.mean(session.reference_vol.volume, axis=None),
+                                    session.offsets,
+                                    session.first_nf_inds,
+                                    session.prot_names
+                                    )
+
+        else:
+
+            if con.select_rois and con.use_epi_template:
+                session.setup(self.exchange_data['MCTempl'])
+                session.select_rois()
+                session.wb_roi_init()
+
+                session.spm = spm_setup(1500,
+                                        config.volumes_nr - config.skip_vol_nr,
+                                        np.mean(session.reference_vol.volume, axis=None),
+                                        [], [], []
+                                        )
+
+            elif not con.select_rois and con.use_epi_template:
+                session.setup(self.exchange_data['MCTempl'])
+                session.wb_roi_init()
+
+                session.spm = spm_setup(1500,
+                                        config.volumes_nr - config.skip_vol_nr,
+                                        np.mean(session.reference_vol.volume, axis=None),
+                                        [], [], []
+                                        )
+
+            elif con.select_rois and not con.use_epi_template:
+                session.select_rois()
+                session.nr_rois += 1
+                session.reference_vol.dim = np.array(session.dim)
+                (session.xdim_img_count, session.ydim_img_count,
+                 session.img2d_dimx, session.img2d_dimy) = get_mosaic_dim(session.dim)
+                session.spm = spm_setup(1500,
+                                        config.volumes_nr - config.skip_vol_nr,
+                                        0, [], [], []
+                                        )
+
+            elif not con.select_rois and not con.use_epi_template:
+                session.nr_rois = 1
+                session.reference_vol.dim = np.array(session.dim)
+                session.spm = spm_setup(1500,
+                                        config.volumes_nr - config.skip_vol_nr,
+                                        0, [], [], []
+                                        )
+                (session.xdim_img_count, session.ydim_img_count,
+                 session.img2d_dimx, session.img2d_dimy) = get_mosaic_dim(session.dim)
+
+            session.set_protocol(simulation_protocol)
 
         self.session = session
         self.iteration = nftsession.NftIteration(session)
@@ -86,11 +141,43 @@ class OpenNFTCoreProj(mp.Process):
         self.nfb_calc = Nfb(session, self.iteration)
 
     # --------------------------------------------------------------------------
+    def init_data_auto_rtqa(self, mc_templ_name):
+
+        if not con.use_epi_template:
+            if not self.session.setup_auto_rtqa(mc_templ_name):
+                return False
+            self.exchange_data["vol_mat"] = self.session.reference_vol.mat
+            self.session.wb_roi_init()
+            self.iteration.iglm_params["spm_mask_th"] = (self.session.spm["xM_TH"].mean() *
+                                                         np.ones(self.session.spm["xM_TH"].shape))
+
+            self.session.spm = spm_setup(1500,
+                                         self.config.volumes_nr - self.config.skip_vol_nr,
+                                         np.mean(self.session.reference_vol.volume, axis=None),
+                                         [], [], []
+                                         )
+
+            ROI_vols = np.zeros(((self.session.nr_rois,) + tuple(self.session.rois[0].dim)))
+            ROI_mats = np.zeros((self.session.nr_rois, 4, 4))
+            for i_roi in range(self.session.nr_rois):
+                ROI_vols[i_roi, :, :, :] = self.session.rois[i_roi].volume
+                ROI_mats[i_roi, :, :] = self.session.rois[i_roi].mat
+
+            self.exchange_data["ROI_vols"] = ROI_vols
+            self.exchange_data["ROI_mats"] = ROI_mats
+
+            self.rtqa_input["wb_roi_indexes"] = np.array(self.session.rois[-1].voxel_index, dtype=np.int32, ndmin=2).T
+
+            self.iteration.auto_rtqa_later_reinit()
+
+        return True
+
+    # --------------------------------------------------------------------------
     def init_exchange_data(self):
 
         self.exchange_data["nr_vol"] = self.session.config.volumes_nr - self.session.config.skip_vol_nr
         self.exchange_data["nr_rois"] = self.session.nr_rois
-        self.exchange_data["vol_dim"] = self.session.reference_vol.dim
+        self.exchange_data["vol_dim"] = self.session.dim
         self.exchange_data["mosaic_dim"] = self.session.img2d_dimy, self.session.img2d_dimx
         self.exchange_data["vol_mat"] = self.session.reference_vol.mat
         self.exchange_data["roi_names"] = self.session.roi_names
@@ -120,6 +207,15 @@ class OpenNFTCoreProj(mp.Process):
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
 
+    def close_shmem(self):
+
+        if con.use_gui:
+            self.mc_shmem.close()
+            self.epi_shmem.close()
+            self.ts_shmem.close()
+            self.nfb_shmem.close()
+            self.stat_shmem.close()
+
     # --------------------------------------------------------------------------
     def load_rtqa_dict(self, rtqa_input):
 
@@ -145,7 +241,7 @@ class OpenNFTCoreProj(mp.Process):
     #     self.udp_cond_for_contrast = self.session.prot_names
     #     if self.udp_cond_for_contrast[0] != 'BAS':
     #         self.udp_cond_for_contrast.insert(0, 'BAS')
-
+    #
     # --------------------------------------------------------------------------
     # def finalize_udp_sender(self):
     #     if not self.use_udp_feedback:
@@ -164,7 +260,7 @@ class OpenNFTCoreProj(mp.Process):
         #                          self.exchange_data['udp_feedback_controlchar'],
         #                          self.exchange_data['udp_send_condition'])
 
-        if con.use_gui:
+        if con.use_gui or (not con.use_gui and con.use_rtqa):
             self.init_shmem()
         print("calc process started")
 
@@ -209,7 +305,7 @@ class OpenNFTCoreProj(mp.Process):
                 # elif self.config.type == 'SVM':
                 #     if self.nfb_calc.display_data and self.use_udp_feedback:
                 #         logger.info('Sending by UDP - instrValue = ')  # + str(self.displayData['instrValue'])
-                        # self.udp_sender.send_data(self.displayData['instrValue'])
+                # self.udp_sender.send_data(self.displayData['instrValue'])
             # t1
             self.recorder.record_event(erd.Times.t1, self.iteration.iter_number + 1, time.time())
             self.iteration.load_vol(vol_filename, "dcm")
@@ -221,18 +317,23 @@ class OpenNFTCoreProj(mp.Process):
                 self.iteration.iter_number += 1
                 continue
 
+            if con.auto_rtqa and not con.use_epi_template and self.iteration.iter_number == self.session.config.skip_vol_nr:
+                if not self.init_data_auto_rtqa(vol_filename):
+                    self.close_shmem()
+                    return
+
             self.exchange_data["init"] = (self.iteration.iter_number == self.session.config.skip_vol_nr)
             self.exchange_data["iter_norm_number"] = self.iteration.iter_norm_number
 
             time_start = time.time()
 
             # t2
-            self.recorder.record_event(erd.Times.t2, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t2, self.iteration.iter_number + 1, time.time())
             self.iteration.process_vol()
             stat_ready = self.iteration.iglm()
 
             # t3
-            self.recorder.record_event(erd.Times.t3, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t3, self.iteration.iter_number + 1, time.time())
 
             if con.use_gui:
 
@@ -247,12 +348,12 @@ class OpenNFTCoreProj(mp.Process):
             self.iteration.process_time_series()
 
             # t4
-            self.recorder.record_event(erd.Times.t4, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t4, self.iteration.iter_number + 1, time.time())
 
             self.nfb_calc.nfb_calc()
 
             # t5
-            self.recorder.record_event(erd.Times.t5, self.iteration.iter_number+1, time.time())
+            self.recorder.record_event(erd.Times.t5, self.iteration.iter_number + 1, time.time())
 
             # if self.nfb_calc.display_data:
             #     if self.use_udp_feedback:
@@ -270,40 +371,45 @@ class OpenNFTCoreProj(mp.Process):
 
             iter_number = self.iteration.iter_norm_number
 
-            if con.use_gui:
+            if con.use_gui or (not con.use_gui and con.use_rtqa):
 
                 self.mc_data[iter_number, :] = self.iteration.mr_time_series.mc_params[:, -1].T
                 for i in range(self.session.nr_rois):
-                    self.ts_data[7, iter_number, i] = self.iteration.mr_time_series.disp_raw_time_series[i][iter_number].T
+                    self.ts_data[7, iter_number, i] = self.iteration.mr_time_series.disp_raw_time_series[i][
+                        iter_number].T
                     self.ts_data[0, iter_number, i] = self.iteration.mr_time_series.raw_time_series[i][iter_number]
-                    self.ts_data[1, iter_number, i] = self.iteration.mr_time_series.kalman_proc_time_series[i][iter_number]
+                    self.ts_data[1, iter_number, i] = self.iteration.mr_time_series.kalman_proc_time_series[i][
+                        iter_number]
                     self.ts_data[2, iter_number, i] = self.iteration.mr_time_series.scale_time_series[i][iter_number]
                     self.ts_data[3, iter_number, i] = self.iteration.mr_time_series.output_pos_min[i][iter_number]
                     self.ts_data[4, iter_number, i] = self.iteration.mr_time_series.output_pos_max[i][iter_number]
                     self.ts_data[5, iter_number, i] = self.iteration.mr_time_series.glm_time_series[i][iter_number]
                     self.ts_data[6, iter_number, i] = self.iteration.mr_time_series.no_reg_time_series[i][iter_number]
 
-                self.nfb_data[0, iter_number] = self.nfb_calc.disp_values[iter_number] / self.config.max_feedback_val
+                if not con.auto_rtqa:
+                    self.nfb_data[0, iter_number] = self.nfb_calc.disp_values[
+                                                        iter_number] / self.config.max_feedback_val
                 self.exchange_data["data_ready_flag"] = True
 
             if self.exchange_data["is_rtqa"]:
 
-                if iter_number == 0:
-                    self.rtqa_input["offset_mc"] = self.iteration.mr_time_series.offset_mc.squeeze()
+                if self.rtqa_input:
+                    if iter_number == 0:
+                        self.rtqa_input["offset_mc"] = self.iteration.mr_time_series.offset_mc.squeeze()
 
-                self.rtqa_input["beta_coeff"] = self.iteration.mr_time_series.lin_trend_betas
-                self.rtqa_input["pos_spikes"] = self.iteration.mr_time_series.flag_pos_deriv_spike
-                self.rtqa_input["neg_spikes"] = self.iteration.mr_time_series.flag_neg_deriv_spike
-                self.rtqa_input["mc_ts"] = self.mc_data[iter_number, :]
-                self.rtqa_input["iteration"] = iter_number
-                self.rtqa_input["data_ready"] = True
+                    self.rtqa_input["beta_coeff"] = self.iteration.mr_time_series.lin_trend_betas
+                    self.rtqa_input["pos_spikes"] = self.iteration.mr_time_series.flag_pos_deriv_spike
+                    self.rtqa_input["neg_spikes"] = self.iteration.mr_time_series.flag_neg_deriv_spike
+                    self.rtqa_input["mc_ts"] = self.mc_data[iter_number, :]
+                    self.rtqa_input["iteration"] = iter_number
+                    self.rtqa_input["data_ready"] = True
 
             self.exchange_data["elapsed_time"] = time.time() - time_start
 
             logger.info('{} {:.4f} {}', "Elapsed time: ", self.exchange_data["elapsed_time"], 's')
 
             # d0
-            self.recorder.record_event(erd.Times.d0, self.iteration.iter_number+1, self.exchange_data["elapsed_time"])
+            self.recorder.record_event(erd.Times.d0, self.iteration.iter_number + 1, self.exchange_data["elapsed_time"])
             self.iteration.iter_number += 1
 
             if not self.exchange_data['offline'] and self.iteration.iter_number == self.config.volumes_nr:
@@ -320,14 +426,8 @@ class OpenNFTCoreProj(mp.Process):
             fname = path / ('pyTimeVectors_' + str(self.config.nf_run_nr).zfill(2) + '.txt')
             self.recorder.save_txt(str(fname))
 
-        if con.use_gui:
-
-            self.mc_shmem.close()
-            self.epi_shmem.close()
-            self.ts_shmem.close()
-            self.nfb_shmem.close()
-            self.stat_shmem.close()
-
         self.exchange_data['is_stopped'] = True
+        if self.exchange_data["is_rtqa"]:
+            self.rtqa_input['is_stopped'] = True
 
         logger.info("Calculation process finished")

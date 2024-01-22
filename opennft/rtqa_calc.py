@@ -30,14 +30,9 @@ class RTQACalculation(mp.Process):
         self.first_snr_vol = input["first_snr_volume"]
 
         if input["is_auto_rtqa"]:
-            xrange = int(input["xrange"])
             self.ind_bas = 0
             self.ind_cond = 0
         else:
-            last_inds = np.zeros((input["muster_info"]["condTotal"],))
-            for i in range(input["muster_info"]["condTotal"]):
-                last_inds[i] = input["muster_info"]["tmpCond" + str(i + 1)][-1][1]
-            xrange = int(max(last_inds))
             self.ind_bas = []
             for interval in input["ind_bas"]:
                 self.ind_bas.append(np.arange(interval[0] - 1, interval[1]))
@@ -47,6 +42,7 @@ class RTQACalculation(mp.Process):
                 self.ind_cond.append(np.arange(interval[0] - 1, interval[1]))
             self.ind_cond = np.array(self.ind_cond)
 
+        xrange = int(input["xrange"])
         self.xrange = xrange
 
         # main class data initialization block

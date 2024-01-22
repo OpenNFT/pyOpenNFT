@@ -20,9 +20,9 @@ shmem_file_names:
 donot_use_qfile_native_dialog: False
 use_sleep_in_stop: False
 
-use_gui: True
+use_gui: False
 use_roi: True
-use_rtqa: True
+use_rtqa: False
 use_iglm: True
 
 first_snr_volume: 1
@@ -40,6 +40,7 @@ nr_zero_pad_vol: False
 
 auto_rtqa: False
 use_epi_template: False
+select_rois: False
 
 is_regr_iglm: True
 
