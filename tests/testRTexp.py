@@ -20,7 +20,7 @@ mask = "001_000007_000"
 # fns = [1, 2, 3, 4, 6, 5, 7, 8]
 fns = None
 
-testCase = 'PSC'
+testCase = 'SVM'
 
 if testCase == 'PSC':
     srcpath = 'C:/_RT/rtData/NF_PSC/NF_Run_1_src'
@@ -28,8 +28,8 @@ if testCase == 'PSC':
     pause_in_sec = 1
 
 elif testCase == 'SVM':
-    srcpath = 'C:/_RT/rtExport/20220527.PC1954.PC1954_src'
-    dstpath = 'C:/_RT/rtExport/20220527.PC1954.PC1954'
+    srcpath = 'C:/_RT/rtData/NF_SVM/NF_Run_1_src'
+    dstpath = 'C:/_RT/rtData/NF_SVM/NF_Run_1'
     pause_in_sec = 1
 
 elif testCase == 'DCM':

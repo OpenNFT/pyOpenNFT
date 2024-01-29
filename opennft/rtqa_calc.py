@@ -33,13 +33,12 @@ class RTQACalculation(mp.Process):
             self.ind_bas = 0
             self.ind_cond = 0
         else:
-            self.ind_bas = []
+            self.ind_bas = np.array([])
             for interval in input["ind_bas"]:
-                self.ind_bas.append(np.arange(interval[0] - 1, interval[1]))
-            self.ind_bas = np.array(self.ind_bas)
-            self.ind_cond = []
+                self.ind_bas = np.append(self.ind_bas, np.arange(interval[0] - 1, interval[1]))
+            self.ind_cond = np.array([])
             for interval in input["ind_cond"]:
-                self.ind_cond.append(np.arange(interval[0] - 1, interval[1]))
+                self.ind_cond = np.append(self.ind_cond, np.arange(interval[0] - 1, interval[1]))
             self.ind_cond = np.array(self.ind_cond)
 
         xrange = int(input["xrange"])

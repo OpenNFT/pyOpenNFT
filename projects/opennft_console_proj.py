@@ -350,7 +350,7 @@ class OpenNFTCoreProj(mp.Process):
             # t4
             self.recorder.record_event(erd.Times.t4, self.iteration.iter_number + 1, time.time())
 
-            self.nfb_calc.nfb_calc()
+            self.nfb_calc.nfb_calc(con.use_rtqa)
 
             # t5
             self.recorder.record_event(erd.Times.t5, self.iteration.iter_number + 1, time.time())
@@ -384,7 +384,9 @@ class OpenNFTCoreProj(mp.Process):
                     self.ts_data[3, iter_number, i] = self.iteration.mr_time_series.output_pos_min[i][iter_number]
                     self.ts_data[4, iter_number, i] = self.iteration.mr_time_series.output_pos_max[i][iter_number]
                     self.ts_data[5, iter_number, i] = self.iteration.mr_time_series.glm_time_series[i][iter_number]
-                    self.ts_data[6, iter_number, i] = self.iteration.mr_time_series.no_reg_time_series[i][iter_number]
+
+                    if con.use_rtqa:
+                        self.ts_data[6, iter_number, i] = self.iteration.mr_time_series.no_reg_time_series[i][iter_number]
 
                 if not con.auto_rtqa:
                     self.nfb_data[0, iter_number] = self.nfb_calc.disp_values[

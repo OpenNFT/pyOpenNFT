@@ -63,9 +63,10 @@ class VolViewFormation(mp.Process):
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order='F')
 
-        rtqa_vol_dim = tuple(self.dim) + (2,)
-        self.rtqa_vol_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[4])
-        self.rtqa_volume = np.ndarray(shape=rtqa_vol_dim, dtype=np.float32, buffer=self.rtqa_vol_shmem.buf, order='F')
+        if con.use_rtqa:
+            rtqa_vol_dim = tuple(self.dim) + (2,)
+            self.rtqa_vol_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[4])
+            self.rtqa_volume = np.ndarray(shape=rtqa_vol_dim, dtype=np.float32, buffer=self.rtqa_vol_shmem.buf, order='F')
 
         dims = self.exchange_data["proj_dims"]
         self.proj_t_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[5])

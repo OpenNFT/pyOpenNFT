@@ -16,7 +16,7 @@ from opennft.config import config as con
 
 
 # --------------------------------------------------------------------------
-class NftSession():
+class NftSession:
     """Session contains data like P structure
     """
 

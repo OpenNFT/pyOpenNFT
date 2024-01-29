@@ -2,7 +2,7 @@ import numpy as np
 from scipy.io import savemat
 
 
-class Nfb():
+class Nfb:
 
     def __init__(self, session, iteration):
 
@@ -90,12 +90,15 @@ class Nfb():
         self.display_data["disp_blank_screen"] = 0
         self.display_data["task_seq"] = 0
 
-    def nfb_calc(self):
+    def nfb_calc(self, is_rtqa):
 
         type = self.session.config.type
         condition = self.condition
         ind_vol_norm = self.iteration.iter_norm_number
-        nr_rois = self.session.nr_rois
+        if is_rtqa:
+            nr_rois = self.session.nr_rois-1
+        else:
+            nr_rois = self.session.nr_rois
         scale_time_series = self.iteration.mr_time_series.scale_time_series
 
         max_fb_value = self.session.config.max_feedback_val

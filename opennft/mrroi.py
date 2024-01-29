@@ -72,7 +72,7 @@ class MrROI():
         # data
         xdata = edges[wb_mask_threshold-1:-1]
         lxdata = len(xdata)
-        ydata = n[wb_mask_threshold-1:-1]
+        ydata = n[wb_mask_threshold:]
 
         # fit
         lb = np.array([1, 0, 0, 5, nbins / 10, nbins / 100])

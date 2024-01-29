@@ -963,9 +963,10 @@ class OpenNFTManager(QWidget):
         if con.use_gui:
             if con.auto_rtqa:
                 self.actualize_auto_rtqa()
+                self.exchange_data['offline'] = self.cbOfflineMode3.isChecked()
             else:
                 self.actualize()
-            self.exchange_data['offline'] = self.cbOfflineMode.isChecked()
+                self.exchange_data['offline'] = self.cbOfflineMode.isChecked()
             self.exchange_data["use_udp_feedback"] = self.cbUseUDPFeedback.isChecked()
         else:
             self.exchange_data['offline'] = None
@@ -996,12 +997,15 @@ class OpenNFTManager(QWidget):
                 roi_menu = QMenu()
                 roi_menu.triggered.connect(self.on_roi_checked)
                 self.roiSelectorBtn.setMenu(roi_menu)
-                nrROIs = int(self.nr_rois)
-                for i in range(nrROIs):
-                    roi = 'ROI_{}'.format(i + 1)
+                nr_rois = int(self.nr_rois)
+                for i in range(nr_rois):
+                    if con.use_rtqa and i == nr_rois - 1:
+                        roi = 'Whole brain ROI'
+                    else:
+                        roi = 'ROI_{}'.format(i + 1)
                     roi_action = roi_menu.addAction(roi)
                     roi_action.setCheckable(True)
-                    if not (self.exchange_data["is_rtqa"] and i + 1 == nrROIs):
+                    if not (self.exchange_data["is_rtqa"] and i + 1 == nr_rois):
                         roi_action.setChecked(True)
                         self.roi_dict[roi] = True
                         self.selected_roi.append(i)
@@ -1066,6 +1070,8 @@ class OpenNFTManager(QWidget):
             self._core_process.load_rtqa_dict(self.rtqa_input)
 
         self.reset_done = False
+
+        logger.info("Setup finished")
 
     # --------------------------------------------------------------------------
     def start(self):
@@ -1508,7 +1514,7 @@ class OpenNFTManager(QWidget):
         self.settings.setValue('NrOfSlices', self.exchange_data['NrOfSlices'])
         self.settings.setValue('MatrixSizeX', self.exchange_data['MatrixSizeX'])
         self.settings.setValue('MatrixSizeY', self.exchange_data['MatrixSizeY'])
-        self.settings.setValue('OfflineMode', self.cbOfflineMode.isChecked())
+        self.settings.setValue('OfflineMode', self.cbOfflineMode3.isChecked())
 
     # --------------------------------------------------------------------------
     def actualize(self):
