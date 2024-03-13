@@ -3,13 +3,12 @@
 **Install and quick start**  
 
 1. Clone project from GitHub in pycharm
+### Using a virtual environment
 2. Install poetry in powershell by  
-`(Invoke-WebRequest -Uri https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py -UseBasicParsing).Content | py -3 -`
+`(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -`
+3. In pycharm terminal run   
+`poetry env use /path/to/python.exe`  
 4. In pycharm terminal run   
-`poetry env use /path/to/Python39/python.exe`  
-Python39 is preferable, because we have prebuilt wheels for it.  
-5. In pycharm terminal run   
-`poetry install`    
-  
-6. Add poetry interpreter in project settings in pycharm   
-7. Run tets  
+`poetry install`
+5. Add poetry interpreter in project settings in pycharm   
+6. Run tets  
