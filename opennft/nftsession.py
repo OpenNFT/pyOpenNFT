@@ -17,7 +17,7 @@ from opennft.config import config as con
 
 # --------------------------------------------------------------------------
 class NftSession:
-    """Session contains data like P structure
+    """Session contains main experiment data like P structure
     """
 
     # --------------------------------------------------------------------------
@@ -153,7 +153,7 @@ class NftSession:
 
 # --------------------------------------------------------------------------
 class NftIteration:
-    """Iteration contains data like main_loop_data
+    """Iteration contains data if each iteration like main_loop_data
     """
 
     # --------------------------------------------------------------------------

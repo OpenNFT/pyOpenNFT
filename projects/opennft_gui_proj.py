@@ -37,16 +37,18 @@ class ImageViewMode(str, enum.Enum):
     orthview_epi = 'bgEPI'
 
 
+# Manager process class
 class OpenNFTManager(QWidget):
 
     # --------------------------------------------------------------------------
     def __init__(self, *args, **kwargs):
 
+        # Exchange data for other processes initialization
         self.init_exchange_data()
 
+        # Setting file name and other variables initialization
         self.setting_file_name = Path(__file__).absolute().resolve().parent
         self.tcp_data = dict.fromkeys(["use_tcp_data", "tcp_data_ip", "tcp_data_port"])
-
         self.orth_view_initialize = False
         self._core_process = None
         self._view_form_process = None
@@ -59,6 +61,9 @@ class OpenNFTManager(QWidget):
 
         super().__init__(*args, **kwargs)
 
+        # Further work depends on with mode pyOpenNFT is run
+        # If GUI in not used - settings is read from auto_config.ini
+        # In that case this file must be prepared before non-GUI start
         if con.use_gui:
 
             loadUi(setting_utils.get_ui_file('opennft.ui'), self)
@@ -88,6 +93,7 @@ class OpenNFTManager(QWidget):
                 str(setting_utils.get_app_settings_file()), QSettings.Format.IniFormat, self)
             self.settings = QSettings('', QSettings.Format.IniFormat)
 
+            # Flag for auto_rtqa mode (resting state mode) initialization
             if not con.auto_rtqa:
                 self.frameParams.setEnabled(True)
                 self.frameShortParams.setEnabled(True)
@@ -146,6 +152,7 @@ class OpenNFTManager(QWidget):
             self.exit_timer.start(100)
 
     # --------------------------------------------------------------------------
+    # UI initialization
     def initialize_ui(self):
 
         top_size = int(self.height() * 0.7)
@@ -159,6 +166,7 @@ class OpenNFTManager(QWidget):
         self.cbImageViewMode.currentIndexChanged.connect(self.on_change_image_view_mode)
         self.orthView.cursorPositionChanged.connect(self.on_change_orth_view_cursor_position)
 
+        # Main plots and update timers initialization
         self.mcPlot = self.create_mc_plot(self.layoutPlot1)
         self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.create_roi_plots()
         self.ts_timer = QTimer(self)
@@ -174,6 +182,7 @@ class OpenNFTManager(QWidget):
 
         self.pbMoreParameters.setChecked(False)
 
+        # Different UI for auto_rtqa mode
         if not con.auto_rtqa:
             self.leFirstFile.textChanged.connect(lambda: self.text_changed_dual(self.leFirstFile, self.leFirstFile2))
             self.leFirstFile2.textChanged.connect(lambda: self.text_changed_dual(self.leFirstFile2, self.leFirstFile))
@@ -247,6 +256,7 @@ class OpenNFTManager(QWidget):
         self.on_change_use_udp_feedback()
 
     # --------------------------------------------------------------------------
+    # Exchange data dictionary initialization for inter-process communication
     def init_exchange_data(self):
 
         self.exchange_data = mp.Manager().dict()
@@ -287,6 +297,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data['dvars_scale'] = con.default_dvars_threshold
 
     # --------------------------------------------------------------------------
+    # Shared memory buffers initialization for large data exchange between processes
     def init_shmem(self):
 
         mc_array = np.zeros((self.exchange_data["nr_vol"], 6), dtype=np.float32)
@@ -334,6 +345,7 @@ class OpenNFTManager(QWidget):
         self.shmem_init = True
 
     # --------------------------------------------------------------------------
+    # Shared memory buffers initialization for projection images
     def init_proj_shmem(self):
 
         dims = self.exchange_data["proj_dims"]
@@ -355,6 +367,7 @@ class OpenNFTManager(QWidget):
         self.shmem_init = True
 
     # --------------------------------------------------------------------------
+    # Volume view formation process initialization
     def view_form_init(self):
 
         if not con.auto_rtqa or (con.auto_rtqa and con.use_epi_template):
@@ -374,6 +387,7 @@ class OpenNFTManager(QWidget):
         self._view_form_process = volviewformation.VolViewFormation(self.exchange_data, ROI_vols, ROI_mats)
 
     # --------------------------------------------------------------------------
+    # Real-time quality assessment process initialization
     def rtqa_init(self):
 
         self.rtqa_input = mp.Manager().dict()
@@ -452,6 +466,7 @@ class OpenNFTManager(QWidget):
         self.calc_rtqa.start()
 
     # --------------------------------------------------------------------------
+    # Different initialization path for auto_rtqa mode
     def init_auto_rtqa(self):
 
         logger.info("Setup application...")
@@ -467,6 +482,7 @@ class OpenNFTManager(QWidget):
         self.previous_iter_start_time = 0
 
     # --------------------------------------------------------------------------
+    # Connection with rtQA process for volume switching
     def on_show_rtqa_vol(self):
 
         self.window_rtqa.rtqa_vol_state()
@@ -477,6 +493,7 @@ class OpenNFTManager(QWidget):
                 self.update_orth_view_async()
 
     # --------------------------------------------------------------------------
+    # Shows rtQA window
     def rtqa(self):
         self.window_rtqa.show()
         if self.exchange_data["is_stopped"]:
@@ -1517,6 +1534,7 @@ class OpenNFTManager(QWidget):
         self.settings.setValue('OfflineMode', self.cbOfflineMode3.isChecked())
 
     # --------------------------------------------------------------------------
+    # Synchronizing information from ini file and parameters tab
     def actualize(self):
         logger.info("  Actualizing:")
 

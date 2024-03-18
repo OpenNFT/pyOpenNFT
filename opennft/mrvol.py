@@ -46,14 +46,6 @@ class MrVol():
 
         r = [{'mat': np.array([]), 'dim': np.array([]), 'Vol': np.array([])} for _ in range(2)]
 
-        # на будущее
-        # хотя добавление zero padding скорее подходит
-        # в отдельный метод при чтении/инициализации/сетапе
-        # is_zero_padding = iteration.session.config.zero_padding
-        # nr_zero_pad_vol = iteration.session.config.nr_zero_padding
-
-        # а может структуру R сформировать как переменную на этапе чтения вольюма?
-        # со всеми сопутствующими padding'ами
         r[0]["Vol"] = iteration.session.reference_vol.volume
         r[0]["mat"] = iteration.session.reference_vol.mat
         r[0]["dim"] = iteration.session.reference_vol.dim

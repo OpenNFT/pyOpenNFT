@@ -127,6 +127,7 @@ class RTQACalculation(mp.Process):
         self.output["posSpikes"] = self.pos_spikes
         self.output["negSpikes"] = self.neg_spikes
 
+    # --------------------------------------------------------------------------
     def init_shmem(self):
 
         nr_vol = self.exchange_data["nr_vol"]

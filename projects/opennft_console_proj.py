@@ -20,6 +20,7 @@ from opennft.config import config as con
 from opennft.utils import get_mosaic_dim
 
 
+# Calculation process class
 class OpenNFTCoreProj(mp.Process):
 
     # --------------------------------------------------------------------------
@@ -32,6 +33,7 @@ class OpenNFTCoreProj(mp.Process):
         self.config = None
         self.simulation_protocol = None
         self.nfb_calc = None
+
         # self.udp_sender = None
         # self.udp_send_condition = False
 
@@ -53,8 +55,8 @@ class OpenNFTCoreProj(mp.Process):
 
         logger.info("Calculation process initialized")
 
-        # --------------------------------------------------------------------------
-
+    # --------------------------------------------------------------------------
+    # Exchange data initialization for further process work
     def init_data(self):
 
         config_path = Path().resolve()
@@ -70,6 +72,7 @@ class OpenNFTCoreProj(mp.Process):
 
         # setup ROIs for session
         # setup mr_reference for session
+        # In auto_rtqa mode different cases are considered
         if not con.auto_rtqa:
             session.setup(config.mc_template_file)
             session.select_rois()
@@ -141,6 +144,7 @@ class OpenNFTCoreProj(mp.Process):
         self.nfb_calc = Nfb(session, self.iteration)
 
     # --------------------------------------------------------------------------
+    # Additional data initialization for auto_rtqa mode
     def init_data_auto_rtqa(self, mc_templ_name):
 
         if not con.use_epi_template:
@@ -173,6 +177,7 @@ class OpenNFTCoreProj(mp.Process):
         return True
 
     # --------------------------------------------------------------------------
+    # Initialize and update exchange data dictionary
     def init_exchange_data(self):
 
         self.exchange_data["nr_vol"] = self.session.config.volumes_nr - self.session.config.skip_vol_nr
@@ -185,6 +190,7 @@ class OpenNFTCoreProj(mp.Process):
         self.exchange_data["dvars_scale"] = self.session.dvars_scale
 
     # --------------------------------------------------------------------------
+    # Accessing shared memory buffers initialized by Manager process
     def init_shmem(self):
 
         nr_vol = self.session.config.volumes_nr - self.session.config.skip_vol_nr
@@ -207,6 +213,8 @@ class OpenNFTCoreProj(mp.Process):
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
 
+    # --------------------------------------------------------------------------
+    # Closing shared memory buffers
     def close_shmem(self):
 
         if con.use_gui:
@@ -217,11 +225,13 @@ class OpenNFTCoreProj(mp.Process):
             self.stat_shmem.close()
 
     # --------------------------------------------------------------------------
+    # Adding connection for rtQA dictionary in case of auto_rtqa mode
     def load_rtqa_dict(self, rtqa_input):
 
         self.rtqa_input = rtqa_input
 
     # --------------------------------------------------------------------------
+    # Initialize udp connection
     # def init_udp_sender(self, udp_feedback_ip, udp_feedback_port, udp_feedback_controlchar, udp_send_condition):
     #
     #     self.udp_send_condition = udp_send_condition
@@ -243,6 +253,7 @@ class OpenNFTCoreProj(mp.Process):
     #         self.udp_cond_for_contrast.insert(0, 'BAS')
     #
     # --------------------------------------------------------------------------
+    # Close UDP connection
     # def finalize_udp_sender(self):
     #     if not self.use_udp_feedback:
     #         return
@@ -251,6 +262,7 @@ class OpenNFTCoreProj(mp.Process):
     #     self.use_udp_feedback = False
 
     # --------------------------------------------------------------------------
+    # Main process routine, run from Manager process
     def run(self):
         # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
 
@@ -260,10 +272,12 @@ class OpenNFTCoreProj(mp.Process):
         #                          self.exchange_data['udp_feedback_controlchar'],
         #                          self.exchange_data['udp_send_condition'])
 
+        # No shared memory buffers are used in case non-GUI and non-rtQA mode
         if con.use_gui or (not con.use_gui and con.use_rtqa):
             self.init_shmem()
         print("calc process started")
 
+        # Waiting for files in MRI Watch Folder
         fw = FileWatcher()
         fw_path = Path(self.config.watch_dir)
         fw.start_watching(not self.exchange_data['offline'], fw_path, self.config.first_file_name,
@@ -271,7 +285,7 @@ class OpenNFTCoreProj(mp.Process):
                           file_ext="dcm", event_recorder=self.recorder)
 
         for vol_filename in fw:
-            # main loop iteration
+            # Main loop iteration
 
             # if self.exchange_data['close_udp']:
             #     self.finalize_udp_sender()
@@ -290,13 +304,14 @@ class OpenNFTCoreProj(mp.Process):
 
             if self.iteration.iter_number == 0:
                 logger.info(f"First volume initialization")
-                # do some first volume setup
+                # Do some first volume setup
 
             if self.iteration.pre_iter < self.iteration.iter_number:
-                # pre-acquisition routine
+                # Pre-acquisition routine and nfb initialization
                 self.iteration.iter_norm_number = self.iteration.iter_number - self.session.config.skip_vol_nr
                 self.nfb_calc.nfb_init()
 
+                # Sending initialized nfb data according to different nfb types
                 # if self.config.type in ['PSC', 'Corr']:
                 #     if self.iteration.iter_number > self.config.skip_vol_nr and self.udp_send_condition:
                 #         self.udp_sender.send_data(
@@ -307,11 +322,13 @@ class OpenNFTCoreProj(mp.Process):
                 #         logger.info('Sending by UDP - instrValue = ')  # + str(self.displayData['instrValue'])
                 # self.udp_sender.send_data(self.displayData['instrValue'])
             # t1
+            # Volume acquisition
             self.recorder.record_event(erd.Times.t1, self.iteration.iter_number + 1, time.time())
             self.iteration.load_vol(vol_filename, "dcm")
 
             self.iteration.pre_iter = self.iteration.iter_number
 
+            # Skipping volumes according to experiment settings
             if self.iteration.iter_number < self.session.config.skip_vol_nr:
                 logger.info(f"Scan file skipped")
                 self.iteration.iter_number += 1
@@ -328,13 +345,17 @@ class OpenNFTCoreProj(mp.Process):
             time_start = time.time()
 
             # t2
+            # Volume processing
             self.recorder.record_event(erd.Times.t2, self.iteration.iter_number + 1, time.time())
             self.iteration.process_vol()
+            # iGLM routine
             stat_ready = self.iteration.iglm()
 
             # t3
             self.recorder.record_event(erd.Times.t3, self.iteration.iter_number + 1, time.time())
 
+            # If GUI is used - volume data is transferred to shared memory buffers
+            # So GUI, Volume view formation and rtQA processes can use it to further processing
             if con.use_gui:
 
                 self.epi_volume[:, :, :] = self.iteration.mr_vol.volume
@@ -345,16 +366,18 @@ class OpenNFTCoreProj(mp.Process):
 
                 self.exchange_data["ready_to_form"] = True
 
+            # Time series acquisition and processing
             self.iteration.process_time_series()
 
             # t4
+            # Neurofeedback calculation
             self.recorder.record_event(erd.Times.t4, self.iteration.iter_number + 1, time.time())
-
             self.nfb_calc.nfb_calc(con.use_rtqa)
 
             # t5
             self.recorder.record_event(erd.Times.t5, self.iteration.iter_number + 1, time.time())
 
+            # TODO: Sending neurofeedback via UDP
             # if self.nfb_calc.display_data:
             #     if self.use_udp_feedback:
             #         # logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
@@ -371,6 +394,7 @@ class OpenNFTCoreProj(mp.Process):
 
             iter_number = self.iteration.iter_norm_number
 
+            # Transferring all time-series data to shared memory buffers, so it can be used by other processes
             if con.use_gui or (not con.use_gui and con.use_rtqa):
 
                 self.mc_data[iter_number, :] = self.iteration.mr_time_series.mc_params[:, -1].T
@@ -386,13 +410,16 @@ class OpenNFTCoreProj(mp.Process):
                     self.ts_data[5, iter_number, i] = self.iteration.mr_time_series.glm_time_series[i][iter_number]
 
                     if con.use_rtqa:
-                        self.ts_data[6, iter_number, i] = self.iteration.mr_time_series.no_reg_time_series[i][iter_number]
+                        self.ts_data[6, iter_number, i] = self.iteration.mr_time_series.no_reg_time_series[i][
+                            iter_number]
 
                 if not con.auto_rtqa:
                     self.nfb_data[0, iter_number] = self.nfb_calc.disp_values[
                                                         iter_number] / self.config.max_feedback_val
+
                 self.exchange_data["data_ready_flag"] = True
 
+            # Optional small data transferring via multiprocessing dictionaries to rtQA process
             if self.exchange_data["is_rtqa"]:
 
                 if self.rtqa_input:
@@ -419,6 +446,7 @@ class OpenNFTCoreProj(mp.Process):
                 fw.stop()
                 break
 
+        # Saving all data to .mat files for further analysis
         self.iteration.save_time_series(self.config.work_dir / ('NF_Data_' + str(self.config.nf_run_nr)))
         self.iteration.save_stat_vols(self.config.work_dir / ('NF_Data_' + str(self.config.nf_run_nr)))
         self.nfb_calc.nfb_save(self.config.work_dir / ('NF_Data_' + str(self.config.nf_run_nr)))

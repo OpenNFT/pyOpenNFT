@@ -27,7 +27,7 @@ use_iglm: True
 
 first_snr_volume: 1
 # FD defaults
-default_fd_radius: 50  # radius multiplying angular displacement in FD compution
+default_fd_radius: 50  # radius multiplying angular displacement in FD computation
 default_fd_thresholds: [0.1, 0.2, 0.5]  # FD thresholds to display by default
 
 # DVARS

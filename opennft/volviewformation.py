@@ -13,8 +13,12 @@ from opennft.config import config as con
 
 from loguru import logger
 
+
+# Volume view formation process class
+# Is used for projection image formation, 2D EPI map and overlays formation
 class VolViewFormation(mp.Process):
 
+    # --------------------------------------------------------------------------
     def __init__(self, service_data, ROI_vols, ROI_mats):
         mp.Process.__init__(self)
         self.str_param = dict([])
@@ -45,6 +49,7 @@ class VolViewFormation(mp.Process):
         dims = np.squeeze(np.round(np.diff(bb, axis=0).T + 1))
         self.exchange_data["proj_dims"] = dims.astype(np.int32)
 
+    # --------------------------------------------------------------------------
     def init_shmem(self):
 
         self.mosaic_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[1])
@@ -66,7 +71,8 @@ class VolViewFormation(mp.Process):
         if con.use_rtqa:
             rtqa_vol_dim = tuple(self.dim) + (2,)
             self.rtqa_vol_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[4])
-            self.rtqa_volume = np.ndarray(shape=rtqa_vol_dim, dtype=np.float32, buffer=self.rtqa_vol_shmem.buf, order='F')
+            self.rtqa_volume = np.ndarray(shape=rtqa_vol_dim, dtype=np.float32, buffer=self.rtqa_vol_shmem.buf,
+                                          order='F')
 
         dims = self.exchange_data["proj_dims"]
         self.proj_t_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[5])
@@ -84,6 +90,7 @@ class VolViewFormation(mp.Process):
                                  dtype=np.float32,
                                  buffer=self.proj_s_shmem.buf)
 
+    # --------------------------------------------------------------------------
     def run(self):
 
         self.init_shmem()
@@ -235,6 +242,7 @@ class VolViewFormation(mp.Process):
         self.proj_s_shmem.close()
         self.rtqa_vol_shmem.close()
 
+    # --------------------------------------------------------------------------
     def prepare_orth_view(self, mat, dim):
         # set structure for Display and draw a first overlay
         self.str_param = {'n': 0, 'bb': [], 'space': np.eye(4, 4), 'centre': np.zeros((1, 3)), 'mode': 1,
@@ -259,6 +267,7 @@ class VolViewFormation(mp.Process):
         # Display modes: [Background + Stat + ROIs, Background + Stat, Background + ROIs]
         self.str_param['mode_displ'] = np.array([0, 0, 1])
 
+    # --------------------------------------------------------------------------
     def update_orth_view(self, vol, mat, overlay_vol, neg_overlay_vol, ROI_vols, ROI_mats):
 
         bb = self.str_param['bb']
@@ -362,6 +371,7 @@ class VolViewFormation(mp.Process):
 
         return back_imgt, back_imgc, back_imgs, overlay_imgt, overlay_imgc, overlay_imgs, neg_overlay_imgt, neg_overlay_imgc, neg_overlay_imgs, ROI_t, ROI_c, ROI_s
 
+    # --------------------------------------------------------------------------
     def roi_boundaries(self, roi):
         roi[np.isnan(roi)] = 0
         contours, _ = cv2.findContours(roi.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -375,6 +385,7 @@ class VolViewFormation(mp.Process):
 
         return boundaries
 
+    # --------------------------------------------------------------------------
     def get_orth_vol(self, coord_param, vol, m):
         temp = np.array([0, np.nan], order='F')
 
@@ -395,6 +406,7 @@ class VolViewFormation(mp.Process):
 
         return imgt, imgc, imgs
 
+    # --------------------------------------------------------------------------
     def findcent(self, coord_loc, flags_planes):
 
         centre = np.array([])
@@ -428,6 +440,7 @@ class VolViewFormation(mp.Process):
 
         return centre
 
+    # --------------------------------------------------------------------------
     def max_bb(self, mat, dim, space, premul):
 
         mn = np.array([np.inf] * 3, ndmin=2)
@@ -440,6 +453,7 @@ class VolViewFormation(mp.Process):
 
         return bb
 
+    # --------------------------------------------------------------------------
     def get_bbox(self, mat, dim, premul):
         p = spm_imatrix(mat)
         vx = p[6:9]
@@ -467,6 +481,7 @@ class VolViewFormation(mp.Process):
 
         return bb, vx
 
+    # --------------------------------------------------------------------------
     def resolution(self, mat, space, bb):
         res_default = 1
 
