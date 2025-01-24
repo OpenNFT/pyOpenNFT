@@ -1,6 +1,7 @@
 ﻿import fnmatch
 import glob
 import os
+import time
 from pathlib import Path
 import queue
 import re
@@ -8,12 +9,11 @@ import re
 from loguru import logger
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
+from opennft import eventrecorder as erd
 
 
 class NewFileEventHandler(FileSystemEventHandler):
-    def __init__(self, filepat, fq: queue.Queue, recorder=None):
-    # TODO Fix erd
-    # def __init__(self, filepat, fq: queue.Queue, recorder: erd.EventRecorder=None):
+    def __init__(self, filepat, fq: queue.Queue, recorder: erd.EventRecorder=None):
         self.filepat = filepat
         self.fq = fq
         self.recorder = recorder
@@ -21,10 +21,11 @@ class NewFileEventHandler(FileSystemEventHandler):
     def on_created(self, event):
         # if not event.is_directory and event.src_path.endswith(self.filepat):
         if not event.is_directory and fnmatch.fnmatch(os.path.basename(event.src_path), self.filepat):
-            if not self.recorder is None:
-                pass
-                # t1
-                # FIX self.recorder.recordEvent(erd.Times.t1, 0, time.time())
+            # if self.recorder is None:
+            #     pass
+            # else:
+            #     # t1
+            #     self.recorder.record_event(erd.Times.t1, 0, time.time())
             self.fq.put(event.src_path)
 
 
@@ -46,13 +47,14 @@ class FileWatcher():
 
     def __next__(self) -> Path:
         # TODO find all files_queue in old version!!!
-        fname = None
+        filename = None
         try:
-            fname = self.files_queue.get_nowait()
+            filename = self.files_queue.get_nowait()
         except queue.Empty:
-            fname = None
+            return None
+            # raise StopIteration
 
-        return Path(fname)
+        return Path(filename)
     # --------------------------------------------------------------------------
 
     def get_search_string(self, file_name_template, path, ext) -> str:
@@ -108,7 +110,7 @@ class FileWatcher():
             self.fs_observer.start()
         else:       
             path = os.path.join(os.path.dirname(path), self.search_string)
-            logger.info('Offline searching for {}', path)
+            logger.info(f"Offline searching for {path}")
             files = sorted(glob.glob(path))
         
             if not files:
@@ -124,6 +126,9 @@ class FileWatcher():
         # TODO move to the call
         # self.call_timer.start()
     # --------------------------------------------------------------------------
+    def stop(self):
+
+        self.fs_observer.stop()
 
 
 if __name__ == '__main__':

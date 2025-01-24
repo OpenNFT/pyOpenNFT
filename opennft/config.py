@@ -15,6 +15,9 @@ from .log import configure_logger
 
 ROOT_PATH = Path(__file__).parent
 PKG_CONFIG_DIR = ROOT_PATH / 'configs'
+UI_PATH = ROOT_PATH / 'ui'
+OpenNFT_ICON = ROOT_PATH / 'ui' / 'images' / 'appicon.png'
+AUTO_RTQA_SETTINGS = ROOT_PATH / 'configs' / 'auto_rtqa_settings.ini'
 
 SITE_CONFIG_DIR = Path(appdirs.site_config_dir(APP_NAME))
 USER_CONFIG_DIR = Path(appdirs.user_config_dir(APP_NAME))

@@ -1,3 +1,5 @@
+import time
+
 import numpy as np
 from scipy.io import savemat
 
@@ -33,7 +35,9 @@ def test_orth_vol(data_path, nii_image_1, struct_image, orth_matlab, orth_matlab
     mat = struct_image.affine
     vol = np.array(struct_image.get_fdata(), order='F')
 
+    start = time.time()
     imgt, imgc, imgs = uov.update_orth_view(str_param1, vol, mat)
+    print(time.time()-start)
 
     resl_dic = {"imgt_p_struct": imgt, "imgc_p_struct": imgc, "imgs_p_struct": imgs}
     savemat(data_path / "orth_python_struct.mat", resl_dic)

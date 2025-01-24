@@ -1,2 +1,52 @@
 # OpenNFT default configuration file
 ---
+
+cglm_ar1: True
+a_ar1: 0.2
+iglm_ar1: True
+shmem_file_names:
+  - mc_ts
+  - mosaic
+  - epi_volume
+  - stat_volume
+  - rtqa_volume
+  - orth_view_t
+  - orth_view_c
+  - orth_view_s
+  - time_series
+  - nfb
+  - anat_volume
+
+donot_use_qfile_native_dialog: False
+use_sleep_in_stop: False
+
+use_gui: True
+use_roi: True
+use_rtqa: True
+use_iglm: True
+
+first_snr_volume: 1
+# FD defaults
+default_fd_radius: 50  # radius multiplying angular displacement in FD computation
+default_fd_thresholds: [0.1, 0.2, 0.5]  # FD thresholds to display by default
+
+# DVARS
+default_dvars_threshold: 5
+
+dicom_siemens_xa30: False
+
+is_zero_padding: False
+nr_zero_pad_vol: False
+
+auto_rtqa: False
+use_epi_template: False
+select_rois: False
+
+is_regr_iglm: True
+
+is_high_pass: True
+is_motion_regr: True
+is_lin_regr: True
+
+use_ptb: False
+
