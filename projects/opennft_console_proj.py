@@ -302,9 +302,10 @@ class OpenNFTCoreProj(mp.Process):
 
             logger.info(f"Got scan file: {vol_filename}")
 
+            print("array:", self.exchange_data['scan_time_marks'])
             if self.iteration.iter_number == 0:
+                self.exchange_data['zero_time'] = time.time()
                 logger.info(f"First volume initialization")
-                # Do some first volume setup
 
             if self.iteration.pre_iter < self.iteration.iter_number:
                 # Pre-acquisition routine and nfb initialization
@@ -396,6 +397,7 @@ class OpenNFTCoreProj(mp.Process):
 
             # Transferring all time-series data to shared memory buffers, so it can be used by other processes
             if con.use_gui or (not con.use_gui and con.use_rtqa):
+                self.exchange_data['scan_time_marks'].append(time.time())
 
                 self.mc_data[iter_number, :] = self.iteration.mr_time_series.mc_params[:, -1].T
                 for i in range(self.session.nr_rois):

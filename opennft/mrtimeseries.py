@@ -3,6 +3,7 @@ from opennft.config import config as con
 from opennft.utils import ar_regr, zscore
 from opennft.modif_kalman import modif_kalman
 from opennft.scale_time_series import scale_time_series
+import time
 
 from rtspm import spm_imatrix
 
@@ -14,6 +15,7 @@ class MrTimeSeries:
     def __init__(self, nr_rois):
 
         self.raw_time_series = [None] * nr_rois
+        self.time_marks = []
         self.disp_raw_time_series = [None] * nr_rois
         self.raw_time_series_ar1 = [None] * nr_rois
         self.init_lim = [None] * nr_rois
@@ -70,6 +72,7 @@ class MrTimeSeries:
                 self.raw_time_series[ind_roi] = np.array([ts_value])
             else:
                 self.raw_time_series[ind_roi] = np.append(self.raw_time_series[ind_roi], ts_value)
+            self.time_marks.append(time.time())
 
     def motion_correction_parameters(self, reference_mat, vol_mat):
 
