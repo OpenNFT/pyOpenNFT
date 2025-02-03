@@ -2,6 +2,7 @@ import enum
 import re
 import time
 import sys
+import requests
 from pathlib import Path
 
 import numpy as np
@@ -14,6 +15,7 @@ from PyQt6.QtGui import QPalette, QIcon, QRegularExpressionValidator
 from PyQt6.uic import loadUi
 from PyQt6.QtCore import QTimer, QSettings, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
+from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from loguru import logger
 
 from opennft import (
@@ -35,7 +37,6 @@ class ImageViewMode(str, enum.Enum):
     mosaic = 'mosaic'
     orthview_anat = 'bgAnat'
     orthview_epi = 'bgEPI'
-
 
 # Manager process class
 class OpenNFTManager(QWidget):
@@ -151,6 +152,28 @@ class OpenNFTManager(QWidget):
             self.exit_timer.timeout.connect(self.on_check_exit)
             self.exit_timer.start(100)
 
+    # def handle_rest_data(self, value):
+    #     current_volume = self.exchange_data["iter_norm_number"]
+    #     self.rest_data.append((current_volume, value))
+    def fetch_rest_data(self):
+        # TODO turn on/off from settings or based on existence of request address
+        # TODO set server name
+        # TODO maybe, request to set LSL stream name
+
+        """Function to make the API request"""
+        try:
+            response = requests.get('http://127.0.0.1:8000/get_prediction_time')
+            if response.status_code == 200:
+                value = response.json()#.get('value', 0.0)
+                value = .5
+                if len(self.rest_buffer) == 0 or (self.exchange_data["iter_norm_number"] != self.rest_buffer[-1][0]):
+                    self.rest_buffer.append(
+                        (time.time(), value)  # self.exchange_data["iter_norm_number"]
+                    )
+            else:
+                logger.info(f"Error: {response.status_code}")
+        except Exception as e:
+            logger.info(f"Request failed: {e}")
     # --------------------------------------------------------------------------
     # UI initialization
     def initialize_ui(self):
@@ -170,6 +193,12 @@ class OpenNFTManager(QWidget):
         self.mcPlot = self.create_mc_plot(self.layoutPlot1)
         self.rawRoiPlot, self.procRoiPlot, self.normRoiPlot = self.create_roi_plots()
         self.ts_timer = QTimer(self)
+
+        self.rest_buffer = []
+        self.rest_timer = QTimer(self)
+        self.rest_timer.timeout.connect(self.fetch_rest_data)
+        self.rest_timer.start(1000 * 5)
+
         self.mosaic_timer = QTimer(self)
         self.orth_view_timer = QTimer(self)
         self.ts_timer.timeout.connect(self.on_check_time_series_updated)
@@ -258,8 +287,8 @@ class OpenNFTManager(QWidget):
     # --------------------------------------------------------------------------
     # Exchange data dictionary initialization for inter-process communication
     def init_exchange_data(self):
-
-        self.exchange_data = mp.Manager().dict()
+        manager = mp.Manager()
+        self.exchange_data = manager.dict()
 
         self.exchange_data["set_file"] = ""
 
@@ -268,6 +297,8 @@ class OpenNFTManager(QWidget):
         self.exchange_data["init"] = False
         self.exchange_data["nr_vol"] = 0
         self.exchange_data["nr_rois"] = 0
+        self.exchange_data['scan_time_marks'] = manager.list()
+        self.exchange_data['zero_time'] = None
         self.exchange_data["vol_dim"] = 0
         self.exchange_data["mosaic_dim"] = 0
         self.exchange_data["is_ROI"] = con.use_roi
@@ -852,7 +883,7 @@ class OpenNFTManager(QWidget):
 
             self.draw_given_roi_plot.__dict__[plotitem] = plots, muster
 
-        x = np.arange(1, l + 1, dtype=np.float64)
+        x = np.array(self.exchange_data['scan_time_marks']) - self.exchange_data['zero_time']
 
         for p, y in zip(self.draw_given_roi_plot.__dict__[plotitem][0], data):
             p.setData(x=x, y=np.array(y))
@@ -884,6 +915,20 @@ class OpenNFTManager(QWidget):
         else:
             grid = False
         self.basic_setup_plot(plotitem, grid)
+
+        # Draw REST data on the normalized plot
+
+        if self.rest_buffer:
+            x = [(point[0] - self.exchange_data['zero_time']) for point in self.rest_buffer]
+            y = [point[1] for point in self.rest_buffer]
+            if x and y:
+                if not hasattr(self, 'self.rest_plot_item') or self.rest_plot_item is None:
+                    # pen = pg.mkPen(color=c, width=cons.ROI_PLOT_WIDTH)
+                    # p = plotitem.plot(pen=pen)
+
+                    self.rest_plot_item = self.normRoiPlot.plot(x, y, pen='r', symbol='o', name='REST Data')
+                else:
+                    self.rest_plot_item.setData(x=x, y=y)
 
     # --------------------------------------------------------------------------
     def draw_min_max_mroc_roi_plot(self, init, posMin, posMax):
@@ -2059,6 +2104,9 @@ class OpenNFTManager(QWidget):
         self.ts_timer.stop()
         self.orth_view_timer.stop()
         self.mosaic_timer.stop()
+        # self.rest_worker.stop_fetching()
+        # self.rest_thread.quit()
+        # self.rest_thread.wait()
         self.stop()
         self.hide()
 
