@@ -1,12 +1,12 @@
 # -*- coding: utf-8 -*-
-
+import socket
+import struct
 import time
 from pathlib import Path
 from loguru import logger
 import multiprocessing as mp
 from multiprocessing import shared_memory
 import numpy as np
-# from pyniexp.connection import Udp
 from rtspm import spm_setup
 
 from opennft.filewatcher import FileWatcher
@@ -34,18 +34,17 @@ class OpenNFTCoreProj(mp.Process):
         self.simulation_protocol = None
         self.nfb_calc = None
 
-        # self.udp_sender = None
-        # self.udp_send_condition = False
-
         self.exchange_data = service_dict
         self.init_data()
         self.init_exchange_data()
-        # if self.exchange_data["use_udp_feedback"] is None:
-        #     self.use_udp_feedback = self.config.use_udp_feedback
-        #     self.exchange_data['offline'] = self.config.offline_mode
-        #     self.exchange_data["use_udp_feedback"] = self.config.use_udp_feedback
-        # else:
-        #     self.use_udp_feedback = self.exchange_data["use_udp_feedback"]
+
+        if self.config.udp_send_condition:
+            self.udp_sender = socket.socket(
+                family=socket.AF_INET, type=socket.SOCK_DGRAM
+            )
+        self.udp_ip = str(self.config.udp_feedback_address)
+        self.udp_port = self.config.udp_feedback_port
+
         if self.exchange_data["offline"] is None:
             self.exchange_data['offline'] = self.config.offline_mode
         self.recorder = erd.EventRecorder()
@@ -231,46 +230,8 @@ class OpenNFTCoreProj(mp.Process):
         self.rtqa_input = rtqa_input
 
     # --------------------------------------------------------------------------
-    # Initialize udp connection
-    # def init_udp_sender(self, udp_feedback_ip, udp_feedback_port, udp_feedback_controlchar, udp_send_condition):
-    #
-    #     self.udp_send_condition = udp_send_condition
-    #
-    #     if not self.use_udp_feedback:
-    #         return
-    #
-    #     self.udp_sender = Udp(
-    #         IP=udp_feedback_ip,
-    #         port=udp_feedback_port,
-    #         control_signal=udp_feedback_controlchar,
-    #         encoding='UTF-8'
-    #     )
-    #     self.udp_sender.connect_for_sending()
-    #     self.udp_sender.sending_time_stamp = True
-    #
-    #     self.udp_cond_for_contrast = self.session.prot_names
-    #     if self.udp_cond_for_contrast[0] != 'BAS':
-    #         self.udp_cond_for_contrast.insert(0, 'BAS')
-    #
-    # --------------------------------------------------------------------------
-    # Close UDP connection
-    # def finalize_udp_sender(self):
-    #     if not self.use_udp_feedback:
-    #         return
-    #     if self.udp_sender is not None:
-    #         self.udp_sender.close()
-    #     self.use_udp_feedback = False
-
-    # --------------------------------------------------------------------------
     # Main process routine, run from Manager process
     def run(self):
-        # config: https://github.com/OpenNFT/pyOpenNFT/pull/9
-
-        # if self.use_udp_feedback:
-        #     self.init_udp_sender(self.exchange_data['udp_feedback_ip'],
-        #                          self.exchange_data['udp_feedback_port'],
-        #                          self.exchange_data['udp_feedback_controlchar'],
-        #                          self.exchange_data['udp_send_condition'])
 
         # No shared memory buffers are used in case non-GUI and non-rtQA mode
         if con.use_gui or (not con.use_gui and con.use_rtqa):
@@ -311,16 +272,6 @@ class OpenNFTCoreProj(mp.Process):
                 self.iteration.iter_norm_number = self.iteration.iter_number - self.session.config.skip_vol_nr
                 self.nfb_calc.nfb_init()
 
-                # Sending initialized nfb data according to different nfb types
-                # if self.config.type in ['PSC', 'Corr']:
-                #     if self.iteration.iter_number > self.config.skip_vol_nr and self.udp_send_condition:
-                #         self.udp_sender.send_data(
-                #             self.udp_cond_for_contrast[int(self.nfb_calc.condition - 1)])
-
-                # elif self.config.type == 'SVM':
-                #     if self.nfb_calc.display_data and self.use_udp_feedback:
-                #         logger.info('Sending by UDP - instrValue = ')  # + str(self.displayData['instrValue'])
-                # self.udp_sender.send_data(self.displayData['instrValue'])
             # t1
             # Volume acquisition
             self.recorder.record_event(erd.Times.t1, self.iteration.iter_number + 1, time.time())
@@ -377,20 +328,14 @@ class OpenNFTCoreProj(mp.Process):
             # t5
             self.recorder.record_event(erd.Times.t5, self.iteration.iter_number + 1, time.time())
 
-            # TODO: Sending neurofeedback via UDP
-            # if self.nfb_calc.display_data:
-            #     if self.use_udp_feedback:
-            #         # logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
-            #         # self.udp_sender.send_data(float(self.nfb_calc.display_data['disp_value']))
-            #
-            #         cond = self.nfb_calc.condition
-            #         if cond == 2:
-            #             val = 'N ' + str(self.nfb_calc.display_data["disp_value"])
-            #         else:
-            #             val = 'B ' + str(self.nfb_calc.display_data["disp_value"])
-            #
-            #         logger.info('Sending by UDP - dispValue = {}', val)
-            #         self.udp_sender.send_data(val)
+            if self.udp_sender is not None:
+                logger.info('Sending by UDP - dispValue = {}', self.nfb_calc.display_data['disp_value'])
+                content = struct.pack('!f', float(self.nfb_calc.display_data['disp_value']))
+
+                self.udp_sender.sendto(content,
+                    (self.udp_ip,
+                    self.udp_port)
+                )
 
             iter_number = self.iteration.iter_norm_number
 
