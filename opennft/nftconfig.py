@@ -64,6 +64,8 @@ class LegacyNftConfig(BaseModel):
     udp_send_condition: Optional[bool] = Field(alias='UDPSendCondition')
     min_feedback_val: Optional[int] = Field(alias='MinFeedbackVal')
     sham_file: Optional[Path] = Field(alias='ShamFile')
+    rest_api_request: Optional[str] = Field(alias='PredictionRESTReq')
+    rest_time_interval: Optional[float] = Field(alias='PredictionRESTTimeInterval')
 
 
 FilePathLike = Union[str, Path]
