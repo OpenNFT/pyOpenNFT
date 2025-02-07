@@ -17,6 +17,7 @@ from PyQt6.QtCore import QTimer, QSettings, QRegularExpression
 from PyQt6.QtWidgets import QApplication, QWidget, QFileDialog, QMenu
 from PyQt6.QtCore import QObject, QThread, pyqtSignal
 from loguru import logger
+from rest_interface import RestWorker
 
 from opennft import (
     config,
@@ -152,24 +153,6 @@ class OpenNFTManager(QWidget):
             self.exit_timer.timeout.connect(self.on_check_exit)
             self.exit_timer.start(100)
 
-    # def handle_rest_data(self, value):
-    #     current_volume = self.exchange_data["iter_norm_number"]
-    #     self.rest_data.append((current_volume, value))
-    def fetch_rest_data(self):
-        """Function to make the API request"""
-        if self.config.rest_api_request is not None:
-            try:
-                response = requests.get(self.config.rest_api_request)
-                if response.status_code == 200:
-                    value = response.json()
-                    if len(self.rest_buffer) == 0 or (self.exchange_data["iter_norm_number"] != self.rest_buffer[-1][0]):
-                        self.rest_buffer.append(
-                            (time.time(), value)
-                        )
-                else:
-                    logger.info(f"Error: {response.status_code}")
-            except Exception as e:
-                logger.info(f"Request failed: {e}")
     # --------------------------------------------------------------------------
     # UI initialization
     def initialize_ui(self):
@@ -192,8 +175,7 @@ class OpenNFTManager(QWidget):
 
         self.rest_buffer = []
         self.rest_timer = QTimer(self)
-        self.rest_timer.timeout.connect(self.fetch_rest_data)
-
+        self.rest_timer.timeout.connect(self.start_fetch_rest_data)
 
         self.mosaic_timer = QTimer(self)
         self.orth_view_timer = QTimer(self)
@@ -325,6 +307,18 @@ class OpenNFTManager(QWidget):
 
     # --------------------------------------------------------------------------
     # Shared memory buffers initialization for large data exchange between processes
+    def start_fetch_rest_data(self):
+        """Start the worker thread to fetch data"""
+        self.rest_worker = RestWorker(self.config.rest_api_request)
+        self.rest_worker.finished.connect(self.handle_fetch_result)
+        self.rest_worker.start()
+
+    def handle_fetch_result(self, value):
+        """Handle the result from the worker thread"""
+        if value is not None:
+            if len(self.rest_buffer) == 0 or (self.exchange_data["iter_norm_number"] != self.rest_buffer[-1][0]):
+                self.rest_buffer.append((time.time(), value))
+
     def init_shmem(self):
 
         mc_array = np.zeros((self.exchange_data["nr_vol"], 6), dtype=np.float32)
