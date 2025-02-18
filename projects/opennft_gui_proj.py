@@ -917,7 +917,6 @@ class OpenNFTManager(QWidget):
             y = [k[1] for k in self.rest_buffer]
             x = np.arange(0, len(y)) * self.config.rest_time_interval / self.config.tr * 1000
 
-            print(len(y), y)
             if len(x)>0 and len(y)>0:
                 if not hasattr(self, 'self.rest_plot_item') or self.rest_plot_item is None:
                     # pen = pg.mkPen(color=c, width=cons.ROI_PLOT_WIDTH)
