@@ -270,6 +270,7 @@ class OpenNFTManager(QWidget):
 
         self.exchange_data["set_file"] = ""
 
+        self.exchange_data['REST_skipped_n'] = 0
         self.exchange_data["vvf_run"] = True
         self.exchange_data["data_ready_flag"] = False
         self.exchange_data["init"] = False
@@ -315,7 +316,8 @@ class OpenNFTManager(QWidget):
 
     def handle_fetch_result(self, value):
         """Handle the result from the worker thread"""
-        if value is not None:
+        has_skipped_enough = self.exchange_data['REST_skipped_n'] > self.config.skip_vol_nr
+        if value is not None and has_skipped_enough:
             if len(self.rest_buffer) == 0 or (self.exchange_data["iter_norm_number"] != self.rest_buffer[-1][0]):
                 self.rest_buffer.append((time.time(), value))
 
@@ -824,13 +826,10 @@ class OpenNFTManager(QWidget):
 
         self.draw_mc_plots.__dict__['mctrrot'] = plots
 
-        x = np.array(self.exchange_data['scan_time_marks']) - self.exchange_data['zero_time']
 
         for pt, i1, in zip(
                 self.draw_mc_plots.__dict__['mctrrot'], range(0, 6)):
-            truelen = len(data[:, i1])
-            if len(x) != truelen:
-                x = x[-truelen:]
+            x = np.arange(len(data[:, i1]))
             pt.setData(x=x, y=data[:, i1])
 
     # --------------------------------------------------------------------------
@@ -876,9 +875,9 @@ class OpenNFTManager(QWidget):
 
             self.draw_given_roi_plot.__dict__[plotitem] = plots, muster
 
-        x = np.array(self.exchange_data['scan_time_marks']) - self.exchange_data['zero_time']
 
         for p, y in zip(self.draw_given_roi_plot.__dict__[plotitem][0], data):
+            x = np.arange(len(y))
             if len(x) != len(y):
                 p.setData(x=x[1:], y=np.array(y))
             else:
@@ -915,9 +914,11 @@ class OpenNFTManager(QWidget):
         # Draw REST data on the normalized plot
 
         if self.rest_buffer:
-            x = [(point[0] - self.exchange_data['zero_time']) for point in self.rest_buffer]
-            y = [point[1] for point in self.rest_buffer]
-            if x and y:
+            y = [k[1] for k in self.rest_buffer]
+            x = np.arange(0, len(y)) * self.config.rest_time_interval / self.config.tr * 1000
+
+            print(len(y), y)
+            if len(x)>0 and len(y)>0:
                 if not hasattr(self, 'self.rest_plot_item') or self.rest_plot_item is None:
                     # pen = pg.mkPen(color=c, width=cons.ROI_PLOT_WIDTH)
                     # p = plotitem.plot(pen=pen)
@@ -954,6 +955,7 @@ class OpenNFTManager(QWidget):
                 self.draw_min_max_mroc_roi_plot.__dict__['posMax'], posMax):
             if len(x) > len(mi):
                 x = x[-len(mi):]
+            x = np.arange(len(mi))
             mi = np.array(mi, ndmin=1)
             ma = np.array(ma, ndmin=1)
             pmi.setData(x=x, y=mi)
