@@ -25,6 +25,8 @@ class MrVol():
     def load_vol(self, file_path, vol_type):
 
         self.vol_type = vol_type
+        if str(file_path).endswith(".nii") or str(file_path).endswith(".nii.gz"):
+            vol_type = 'nii'
         if vol_type == "nii":
             image = nibabel.load(file_path, mmap=False)
             self.volume = np.array(image.get_fdata(), dtype=np.float32, order='F')
