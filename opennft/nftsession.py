@@ -274,9 +274,10 @@ class NftIteration:
     def load_vol(self, file_name, im_type):
 
         self.mr_vol.load_vol(file_name, im_type)
-        self.mr_vol.volume = np.array(img2d_vol3d(self.mr_vol.volume, self.session.xdim_img_count,
-                                                  self.session.ydim_img_count, self.session.reference_vol.dim),
-                                      order='F')
+        if len(self.mr_vol.volume.shape) == 2:
+            self.mr_vol.volume = np.array(img2d_vol3d(self.mr_vol.volume, self.session.xdim_img_count,
+                                                      self.session.ydim_img_count, self.session.reference_vol.dim),
+                                          order='F')
 
     # --------------------------------------------------------------------------
     def process_vol(self):
@@ -356,9 +357,8 @@ class NftIteration:
             bas_fct_regr = np.hstack((self.bas_func[0:ind_iglm + 1, :], tmp_regr))
         else:
             bas_fct_regr = np.hstack((zscore(self.mr_time_series.mc_params[:, 0:ind_iglm + 1]).T, tmp_regr))
-
-        t_contr_pos = np.vstack((self.iglm_params["t_contr_pos"], np.zeros((self.nr_bas_fct_regr, 1))))
-        t_contr_neg = np.vstack((self.iglm_params["t_contr_neg"], np.zeros((self.nr_bas_fct_regr, 1))))
+        t_contr_pos = np.vstack((self.iglm_params["t_contr_pos"].reshape(-1, 1), np.zeros((self.nr_bas_fct_regr, 1))))
+        t_contr_neg = np.vstack((self.iglm_params["t_contr_neg"].reshape(-1, 1), np.zeros((self.nr_bas_fct_regr, 1))))
 
         cn = self.iglm_params["cn"]
         dn = self.iglm_params["dn"]
