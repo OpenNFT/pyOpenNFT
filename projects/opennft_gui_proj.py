@@ -875,7 +875,7 @@ class OpenNFTManager(QWidget):
 
             self.draw_given_roi_plot.__dict__[plotitem] = plots, muster
 
-
+        print(data.mean(axis=1))
         for p, y in zip(self.draw_given_roi_plot.__dict__[plotitem][0], data):
             x = np.arange(len(y))
             if len(x) != len(y):
@@ -1136,7 +1136,8 @@ class OpenNFTManager(QWidget):
 
     # --------------------------------------------------------------------------
     def start(self):
-        self.rest_timer.start(int(self.config.rest_time_interval * 1000))
+        if self.config.rest_time_interval is not None:
+            self.rest_timer.start(int(self.config.rest_time_interval * 1000))
         if con.auto_rtqa:
 
             self.setup()
