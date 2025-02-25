@@ -1,7 +1,9 @@
 import enum
+import pickle
 import re
 import time
 import sys
+import os
 import requests
 from pathlib import Path
 
@@ -174,6 +176,7 @@ class OpenNFTManager(QWidget):
         self.ts_timer = QTimer(self)
 
         self.rest_buffer = []
+        self.rest_requests_times = []
         self.rest_timer = QTimer(self)
         self.rest_timer.timeout.connect(self.start_fetch_rest_data)
 
@@ -316,10 +319,14 @@ class OpenNFTManager(QWidget):
 
     def handle_fetch_result(self, value):
         """Handle the result from the worker thread"""
+        request_time = time.time()
         has_skipped_enough = self.exchange_data['REST_skipped_n'] > self.config.skip_vol_nr
+        response_time = time.time()
         if value is not None and has_skipped_enough:
             if len(self.rest_buffer) == 0 or (self.exchange_data["iter_norm_number"] != self.rest_buffer[-1][0]):
-                self.rest_buffer.append((time.time(), value))
+                self.rest_buffer.append((request_time, value))
+        self.rest_requests_times.append((request_time, response_time))
+
 
     def init_shmem(self):
 
@@ -2098,6 +2105,8 @@ class OpenNFTManager(QWidget):
 
     # --------------------------------------------------------------------------
     def closeEvent(self, event):
+        pickle.dump(self.rest_requests_times,
+                    open(os.path.join(self.config.work_dir, 'HTTP_request_times.pickle'), 'wb'))
 
         self.write_app_settings()
         self.ts_timer.stop()
