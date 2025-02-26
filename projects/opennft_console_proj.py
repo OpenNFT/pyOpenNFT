@@ -42,6 +42,8 @@ class OpenNFTCoreProj(mp.Process):
             self.udp_sender = socket.socket(
                 family=socket.AF_INET, type=socket.SOCK_DGRAM
             )
+        else:
+            self.udp_sender = None
         self.udp_ip = str(self.config.udp_feedback_address)
         self.udp_port = self.config.udp_feedback_port
 
