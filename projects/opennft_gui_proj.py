@@ -1587,6 +1587,7 @@ class OpenNFTManager(QWidget):
         self.exchange_data['WatchFolder'] = self.leWatchFolder.text()
 
         self.exchange_data['Type'] = self.cbType.currentText()
+        self.exchange_data['RoiFilesFolder'] = self.leRoiAnatFolder.text()
         self.exchange_data['RoiAnatOperation'] = self.leRoiAnatOperation.text()
         self.exchange_data['RoiGroupFolder'] = self.leRoiGroupFolder.text()
         self.exchange_data['StructBgFile'] = self.leStructBgFile.text()
@@ -1679,6 +1680,7 @@ class OpenNFTManager(QWidget):
         self.settings.setValue('StimulationProtocol', self.exchange_data['ProtocolFile'])
         self.settings.setValue('WorkFolder', self.exchange_data['WorkFolder'])
         self.settings.setValue('WatchFolder', self.exchange_data['WatchFolder'])
+        self.settings.setValue('RoiFilesFolder', self.exchange_data['RoiFilesFolder'])
         self.settings.setValue('RoiAnatOperation', self.exchange_data['RoiAnatOperation'])
         self.settings.setValue('RoiGroupFolder', self.exchange_data['RoiGroupFolder'])
         self.settings.setValue('StructBgFile', self.exchange_data['StructBgFile'])

@@ -65,6 +65,7 @@ class OpenNFTCoreProj(mp.Process):
         loader.load(config_path)
 
         config = loader.config  # LegacyNftConfig instance
+        self.config_sync(config)
         simulation_protocol = loader.simulation_protocol  # simulation protocol dictionary from JSON
 
         session = nftsession.NftSession(config)
@@ -211,6 +212,25 @@ class OpenNFTCoreProj(mp.Process):
         stat_dim = tuple(self.session.reference_vol.dim) + (2,)
         self.stat_shmem = shared_memory.SharedMemory(name=con.shmem_file_names[3])
         self.stat_volume = np.ndarray(shape=stat_dim, dtype=np.float32, buffer=self.stat_shmem.buf, order="F")
+
+    # --------------------------------------------------------------------------
+    # Config file and experiment parameters synchronization
+    def config_sync(self, config):
+
+        config.volumes_nr = self.exchange_data["NrOfVolumes"]
+        config.skip_vol_nr = self.exchange_data["nrSkipVol"]
+        config.roi_files_dir = self.exchange_data["RoiFilesFolder"]
+        config.type = self.exchange_data["Type"]
+        config.weights_file_name = self.exchange_data["WeightsFileName"]
+        config.watch_dir = self.exchange_data["WatchFolder"]
+        config.first_file_name = self.exchange_data["FirstFileName"]
+        config.max_feedback_val = self.exchange_data["MaxFeedbackVal"]
+        config.work_dir = Path(self.exchange_data["WorkFolder"])
+        config.prot = self.exchange_data["ProtocolFile"]
+        config.matrix_size_x = self.exchange_data["MatrixSizeX"]
+        config.matrix_size_y = self.exchange_data["MatrixSizeY"]
+        config.slices_nr = self.exchange_data["NrOfSlices"]
+        config.plot_feedback = self.exchange_data["PlotFeedback"]
 
     # --------------------------------------------------------------------------
     # Closing shared memory buffers

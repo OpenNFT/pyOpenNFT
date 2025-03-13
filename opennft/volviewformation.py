@@ -367,9 +367,12 @@ class VolViewFormation(mp.Process):
 
                 ROI_t[j] = self.roi_boundaries(temp_t.T)
                 ROI_c[j] = self.roi_boundaries(temp_c.T)
-                ROI_s[j] = self.roi_boundaries(temp_s.T)
+                ROI_s[j] = self.roi_boundaries(np.fliplr(temp_s.T))
 
-        return back_imgt, back_imgc, back_imgs, overlay_imgt, overlay_imgc, overlay_imgs, neg_overlay_imgt, neg_overlay_imgc, neg_overlay_imgs, ROI_t, ROI_c, ROI_s
+        return (back_imgt, back_imgc, np.fliplr(back_imgs),
+                overlay_imgt, overlay_imgc, np.fliplr(overlay_imgs),
+                neg_overlay_imgt, neg_overlay_imgc, neg_overlay_imgs,
+                ROI_t, ROI_c, ROI_s)
 
     # --------------------------------------------------------------------------
     def roi_boundaries(self, roi):
