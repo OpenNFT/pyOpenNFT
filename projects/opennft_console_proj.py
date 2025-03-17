@@ -230,7 +230,6 @@ class OpenNFTCoreProj(mp.Process):
         config.matrix_size_x = self.exchange_data["MatrixSizeX"]
         config.matrix_size_y = self.exchange_data["MatrixSizeY"]
         config.slices_nr = self.exchange_data["NrOfSlices"]
-        config.plot_feedback = self.exchange_data["PlotFeedback"]
 
     # --------------------------------------------------------------------------
     # Closing shared memory buffers
