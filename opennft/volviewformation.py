@@ -323,9 +323,9 @@ class VolViewFormation(mp.Process):
         back_imgs = np.nan_to_num(back_imgs)
         back_imgs[back_imgs < 0] = 0
 
-        back_imgt = ((back_imgt / np.max(back_imgt)) * 255).T
-        back_imgc = ((back_imgc / np.max(back_imgc)) * 255).T
-        back_imgs = ((back_imgs / np.max(back_imgs)) * 255).T
+        back_imgt = ((back_imgt / np.max(back_imgt)) * 255)
+        back_imgc = ((back_imgc / np.max(back_imgc)) * 255)
+        back_imgs = ((back_imgs / np.max(back_imgs)) * 255)
 
         if self.exchange_data["bg_type"] != "bgEPI":
             m = np.array(np.linalg.solve(self.str_param['space'], self.str_param['premul']) @ self.mat_epi, order='F')
@@ -334,18 +334,18 @@ class VolViewFormation(mp.Process):
         overlay_imgt = np.nan_to_num(overlay_imgt)
         overlay_imgc = np.nan_to_num(overlay_imgc)
         overlay_imgs = np.nan_to_num(overlay_imgs)
-        overlay_imgt = ((overlay_imgt / np.max(overlay_imgt)) * 255).T
-        overlay_imgc = ((overlay_imgc / np.max(overlay_imgc)) * 255).T
-        overlay_imgs = ((overlay_imgs / np.max(overlay_imgs)) * 255).T
+        overlay_imgt = ((overlay_imgt / np.max(overlay_imgt)) * 255)
+        overlay_imgc = ((overlay_imgc / np.max(overlay_imgc)) * 255)
+        overlay_imgs = ((overlay_imgs / np.max(overlay_imgs)) * 255)
 
         if self.exchange_data["is_neg"]:
             neg_overlay_imgt, neg_overlay_imgc, neg_overlay_imgs = self.get_orth_vol(coord_param, neg_overlay_vol, m)
             neg_overlay_imgt = np.nan_to_num(neg_overlay_imgt)
             neg_overlay_imgc = np.nan_to_num(neg_overlay_imgc)
             neg_overlay_imgs = np.nan_to_num(neg_overlay_imgs)
-            neg_overlay_imgt = ((neg_overlay_imgt / np.max(neg_overlay_imgt)) * 255).T
-            neg_overlay_imgc = ((neg_overlay_imgc / np.max(neg_overlay_imgc)) * 255).T
-            neg_overlay_imgs = ((neg_overlay_imgs / np.max(neg_overlay_imgs)) * 255).T
+            neg_overlay_imgt = ((neg_overlay_imgt / np.max(neg_overlay_imgt)) * 255)
+            neg_overlay_imgc = ((neg_overlay_imgc / np.max(neg_overlay_imgc)) * 255)
+            neg_overlay_imgs = ((neg_overlay_imgs / np.max(neg_overlay_imgs)) * 255)
 
         else:
             neg_overlay_imgt = None
@@ -365,12 +365,12 @@ class VolViewFormation(mp.Process):
                 m = np.array(np.linalg.solve(self.str_param['space'], self.str_param['premul']) @ mat, order='F')
                 temp_t, temp_c, temp_s = self.get_orth_vol(coord_param, vol, m)
 
-                ROI_t[j] = self.roi_boundaries(temp_t.T)
-                ROI_c[j] = self.roi_boundaries(temp_c.T)
-                ROI_s[j] = self.roi_boundaries(np.fliplr(temp_s.T))
+                ROI_t[j] = self.roi_boundaries(temp_t)
+                ROI_c[j] = self.roi_boundaries(temp_c)
+                ROI_s[j] = self.roi_boundaries(temp_s)
 
-        return (back_imgt, back_imgc, np.fliplr(back_imgs),
-                overlay_imgt, overlay_imgc, np.fliplr(overlay_imgs),
+        return (back_imgt, back_imgc, back_imgs,
+                overlay_imgt, overlay_imgc, overlay_imgs,
                 neg_overlay_imgt, neg_overlay_imgc, neg_overlay_imgs,
                 ROI_t, ROI_c, ROI_s)
 
@@ -395,17 +395,17 @@ class VolViewFormation(mp.Process):
         mat_t = np.array(linalg.inv(coord_param['tm0'] @ m), order='F')
         imgt = np.zeros((coord_param['td'][0], coord_param['td'][1]), order='F')
         spm_slice_vol(vol, imgt, mat_t, temp)
-        imgt = imgt
+        imgt = imgt.T
 
         mat_c = np.array(linalg.inv(coord_param['cm0'] @ m), order='F')
         imgc = np.zeros((coord_param['cd'][0], coord_param['cd'][1]), order='F')
         spm_slice_vol(vol, imgc, mat_c, temp)
-        imgc = imgc
+        imgc = imgc.T
 
         mat_s = np.array(linalg.inv(coord_param['sm0'] @ m), order='F')
         imgs = np.zeros((coord_param['sd'][0], coord_param['sd'][1]), order='F')
         spm_slice_vol(vol, imgs, mat_s, temp)
-        imgs = imgs
+        imgs = np.fliplr(imgs.T)
 
         return imgt, imgc, imgs
 
