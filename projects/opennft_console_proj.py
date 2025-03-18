@@ -221,16 +221,18 @@ class OpenNFTCoreProj(mp.Process):
         config.volumes_nr = self.exchange_data["NrOfVolumes"]
         config.skip_vol_nr = self.exchange_data["nrSkipVol"]
         config.roi_files_dir = self.exchange_data["RoiFilesFolder"]
-        config.type = self.exchange_data["Type"]
-        config.weights_file_name = self.exchange_data["WeightsFileName"]
         config.watch_dir = self.exchange_data["WatchFolder"]
         config.first_file_name = self.exchange_data["FirstFileName"]
-        config.max_feedback_val = self.exchange_data["MaxFeedbackVal"]
         config.work_dir = Path(self.exchange_data["WorkFolder"])
-        config.prot = self.exchange_data["ProtocolFile"]
+        config.prot = self.exchange_data["Prot"]
         config.matrix_size_x = self.exchange_data["MatrixSizeX"]
         config.matrix_size_y = self.exchange_data["MatrixSizeY"]
         config.slices_nr = self.exchange_data["NrOfSlices"]
+
+        if not con.auto_rtqa:
+            config.weights_file_name = self.exchange_data["WeightsFileName"]
+            config.max_feedback_val = self.exchange_data["MaxFeedbackVal"]
+            config.type = self.exchange_data["Type"]
 
     # --------------------------------------------------------------------------
     # Closing shared memory buffers
