@@ -322,27 +322,49 @@ class OpenNFTManager(QWidget):
     def init_shmem(self):
 
         mc_array = np.zeros((self.exchange_data["nr_vol"], 6), dtype=np.float32)
-        self.mc_shmem = shared_memory.SharedMemory(create=True, size=mc_array.nbytes, name=con.shmem_file_names[0])
+        try:
+            self.mc_shmem = shared_memory.SharedMemory(create=True, size=mc_array.nbytes, name=con.shmem_file_names[0])
+        except FileExistsError:
+            self.mc_shmem = shared_memory.SharedMemory(create=False, size=mc_array.nbytes, name=con.shmem_file_names[0])
         self.mc_data = np.ndarray(shape=mc_array.shape, dtype=mc_array.dtype, buffer=self.mc_shmem.buf)
 
         time_series_array = np.zeros((8, self.exchange_data["nr_vol"], self.exchange_data["nr_rois"]), dtype=np.float32)
-        self.ts_shmem = shared_memory.SharedMemory(create=True, size=time_series_array.nbytes,
-                                                   name=con.shmem_file_names[8])
+        try:
+            self.ts_shmem = shared_memory.SharedMemory(create=True, size=time_series_array.nbytes,
+                                                       name=con.shmem_file_names[8])
+        except FileExistsError:
+            self.ts_shmem = shared_memory.SharedMemory(create=False, size=time_series_array.nbytes,
+                                                       name=con.shmem_file_names[8])
         self.ts_data = np.ndarray(shape=time_series_array.shape, dtype=time_series_array.dtype,
                                   buffer=self.ts_shmem.buf)
 
         nfb_array = np.zeros((1, self.exchange_data["nr_vol"]), dtype=np.float32)
-        self.nfb_shmem = shared_memory.SharedMemory(create=True, size=nfb_array.nbytes, name=con.shmem_file_names[9])
+        try:
+            self.nfb_shmem = shared_memory.SharedMemory(create=True, size=nfb_array.nbytes,
+                                                        name=con.shmem_file_names[9])
+        except FileExistsError:
+            self.nfb_shmem = shared_memory.SharedMemory(create=False, size=nfb_array.nbytes,
+                                                        name=con.shmem_file_names[9])
         self.nfb_data = np.ndarray(shape=nfb_array.shape, dtype=nfb_array.dtype, buffer=self.nfb_shmem.buf)
 
         mosaic_array = np.zeros(self.exchange_data["mosaic_dim"] + (9,), dtype=np.float32)
-        self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes * 9,
-                                                       name=con.shmem_file_names[1])
+        try:
+            self.mosaic_shmem = shared_memory.SharedMemory(create=True, size=mosaic_array.nbytes * 9,
+                                                           name=con.shmem_file_names[1])
+        except FileExistsError:
+            self.mosaic_shmem = shared_memory.SharedMemory(create=False, size=mosaic_array.nbytes * 9,
+                                                           name=con.shmem_file_names[1])
         self.mosaic_data = np.ndarray(shape=mosaic_array.shape, dtype=mosaic_array.dtype, buffer=self.mosaic_shmem.buf)
 
         vol_array = np.zeros(self.exchange_data["vol_dim"], dtype=np.float32)
-        self.epi_shmem = shared_memory.SharedMemory(create=True, size=vol_array.nbytes, name=con.shmem_file_names[2])
+        try:
+            self.epi_shmem = shared_memory.SharedMemory(create=True, size=vol_array.nbytes,
+                                                        name=con.shmem_file_names[2])
+        except FileExistsError:
+            self.epi_shmem = shared_memory.SharedMemory(create=False, size=vol_array.nbytes,
+                                                        name=con.shmem_file_names[2])
         self.epi_data = np.ndarray(shape=vol_array.shape, dtype=vol_array.dtype, buffer=self.epi_shmem.buf, order='F')
+
         if not con.auto_rtqa or con.use_epi_template:
             self.epi_data[:, :, :] = self._core_process.session.reference_vol.volume
         else:
@@ -350,15 +372,25 @@ class OpenNFTManager(QWidget):
 
         stat_dim = tuple(self.exchange_data["vol_dim"]) + (2,)
         stat_array = np.zeros(stat_dim, dtype=np.float32)
-        self.stat_shmem = shared_memory.SharedMemory(create=True, size=stat_array.nbytes, name=con.shmem_file_names[3])
+        try:
+            self.stat_shmem = shared_memory.SharedMemory(create=True, size=stat_array.nbytes,
+                                                         name=con.shmem_file_names[3])
+        except FileExistsError:
+            self.stat_shmem = shared_memory.SharedMemory(create=False, size=stat_array.nbytes,
+                                                         name=con.shmem_file_names[3])
         self.stat_data = np.ndarray(shape=stat_array.shape, dtype=stat_array.dtype, buffer=self.stat_shmem.buf,
                                     order='F')
 
         if self.exchange_data["is_rtqa"]:
             rtqa_dim = tuple(self.exchange_data["vol_dim"]) + (2,)
             rtqa_array = np.zeros(rtqa_dim, dtype=np.float32)
-            self.rtqa_vol_shmem = shared_memory.SharedMemory(create=True, size=rtqa_array.nbytes,
-                                                             name=con.shmem_file_names[4])
+            try:
+                self.rtqa_vol_shmem = shared_memory.SharedMemory(create=True, size=rtqa_array.nbytes,
+                                                                 name=con.shmem_file_names[4])
+            except FileExistsError:
+                self.rtqa_vol_shmem = shared_memory.SharedMemory(create=False, size=rtqa_array.nbytes,
+                                                                 name=con.shmem_file_names[4])
+
             self.rtqa_vol_data = np.ndarray(shape=rtqa_array.shape, dtype=rtqa_array.dtype,
                                             buffer=self.rtqa_vol_shmem.buf,
                                             order='F')
@@ -1137,7 +1169,6 @@ class OpenNFTManager(QWidget):
     def start(self):
         self.rest_timer.start(int(self.config.rest_time_interval * 1000))
         if con.auto_rtqa:
-
             self.setup()
 
         if not self._core_process.is_alive():
@@ -1936,7 +1967,6 @@ class OpenNFTManager(QWidget):
             if self.exchange_data["data_ready_flag"]:
 
                 if con.auto_rtqa and not self.auto_rtqa_setup:
-
                     self.setup_auto_rtqa()
 
                 iter_norm_number = self.exchange_data["iter_norm_number"]
