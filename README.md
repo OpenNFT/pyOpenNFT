@@ -1,3 +1,10 @@
+This repo contains the code of our MICCAI 2025 paper: ""
+
+Ekaterina Antipushina, Nikita Davydov, Riccardo De Feo, Evgeny, Artem Nikonorov, Yury Koush
+
+Skoltech
+
+
 # pyOpenNFT
 
 **Install and quick start**  
