@@ -1,11 +1,12 @@
+# pyOpenNFT
+
 This repo contains the code of our MICCAI 2025 paper: "pyOpenNFT": an open-source Python framework for ML-based real-time fMRI and EEG-fMRI neurofeedback"
 
-Ekaterina Antipushina, Nikita Davydov, Riccardo De Feo, Evgeny, Artem Nikonorov, Yury Koush
+Ekaterina Antipushina, Nikita Davydov, Riccardo De Feo, Evgeny Prilepin, Artem Nikonorov, Yury Koush
 
 Skoltech, Samara University
 
 
-# pyOpenNFT
 
 **Install and quick start**  
 
