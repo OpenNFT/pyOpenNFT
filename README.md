@@ -1,22 +1,68 @@
 # pyOpenNFT
 
-This repo contains the code of our MICCAI 2025 paper: "pyOpenNFT": an open-source Python framework for ML-based real-time fMRI and EEG-fMRI neurofeedback"
+This repo contains the code of our MICCAI 2025 paper: **"pyOpenNFT: an open-source Python framework for ML-based real-time fMRI and EEG-fMRI neurofeedback"**
 
 Ekaterina Antipushina, Nikita Davydov, Riccardo De Feo, Evgeny Prilepin, Artem Nikonorov, Yury Koush
 
 Skoltech, Samara University
 
+📄 [Paper](link-to-paper) | 🖼️ [Project Page](http://opennft.org) 
 
+---
 
-**Install and quick start**  
+## Install and Quick Start
 
-1. Clone project from GitHub in pycharm
-2. Install poetry in powershell by  
-`(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -`
-3. In PyCharm terminal run   
-`poetry env use /path/to/python.exe`  
-4. In pycharm terminal run   
-`poetry install`
-5. Add poetry interpreter in project settings in PyCharm   
-6. Run 
-`python .\projects\opennft_gui_proj.py`
+**Prerequisites:** Python 3.10, Poetry
+
+1. Clone project from GitHub
+   ```bash
+   git clone https://github.com/[your-repo]/pyOpenNFT.git
+   cd pyOpenNFT
+   ```
+
+2. Install Poetry in PowerShell (Windows):
+   ```powershell
+   (Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+   ```
+
+3. Setup environment:
+   ```bash
+   poetry env use /path/to/python.exe
+   poetry install
+   ```
+
+4. Run GUI version:
+   ```bash
+   python .\projects\opennft_gui_proj.py
+   ```
+
+---
+
+## Directory Structure
+
+```
+pyOpenNFT/
+├── projects/
+│   ├── opennft_gui_proj.py      # GUI version
+│   └── opennft_nogui_proj.py    # Non-GUI version
+├── config/                       # Configuration files (.ini, .json)
+├── data/
+│   ├── watch/                   # Incoming fMRI data folder
+│   ├── work/                    # Processed data output
+│   └── structural/              # Anatomical images
+├── prediction_server/           # EEG-fMRI prediction API
+└── pyopennft/                   # Core framework code
+```
+
+---
+
+## Citation
+
+```bibtex
+@inproceedings{antipushina2025pyopennft,
+  title={pyOpenNFT: an open-source Python framework for ML-based real-time fMRI and EEG-fMRI neurofeedback},
+  author={Antipushina, Ekaterina and Davydov, Nikita and De Feo, Riccardo and Prilepin, Evgeny and Nikonorov, Artem and Koush, Yury},
+  booktitle={Medical Image Computing and Computer Assisted Intervention--MICCAI 2025},
+  year={2025}
+}
+```
