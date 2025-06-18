@@ -42,6 +42,8 @@ class OpenNFTCoreProj(mp.Process):
             self.udp_sender = socket.socket(
                 family=socket.AF_INET, type=socket.SOCK_DGRAM
             )
+        else:
+            self.udp_sender = None
         self.udp_ip = str(self.config.udp_feedback_address)
         self.udp_port = self.config.udp_feedback_port
 
@@ -304,6 +306,8 @@ class OpenNFTCoreProj(mp.Process):
             if self.iteration.iter_number < self.session.config.skip_vol_nr:
                 logger.info(f"Scan file skipped")
                 self.iteration.iter_number += 1
+                if 'REST_skipped_n' in self.exchange_data:
+                    self.exchange_data['REST_skipped_n'] = self.iteration.iter_number
                 continue
 
             if con.auto_rtqa and not con.use_epi_template and self.iteration.iter_number == self.session.config.skip_vol_nr:
@@ -313,7 +317,8 @@ class OpenNFTCoreProj(mp.Process):
 
             self.exchange_data["init"] = (self.iteration.iter_number == self.session.config.skip_vol_nr)
             self.exchange_data["iter_norm_number"] = self.iteration.iter_norm_number
-
+            if 'REST_skipped_n' in self.exchange_data:
+                self.exchange_data['REST_skipped_n'] += 1
             time_start = time.time()
 
             # t2

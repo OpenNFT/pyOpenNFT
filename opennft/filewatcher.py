@@ -108,7 +108,7 @@ class FileWatcher():
             self.fs_observer = Observer()
             self.fs_observer.schedule(event_handler, path, recursive=True)
             self.fs_observer.start()
-        else:       
+        else:
             path = os.path.join(os.path.dirname(path), self.search_string)
             logger.info(f"Offline searching for {path}")
             files = sorted(glob.glob(path))

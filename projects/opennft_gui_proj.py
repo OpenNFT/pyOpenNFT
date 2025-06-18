@@ -1,7 +1,9 @@
 import enum
+import pickle
 import re
 import time
 import sys
+import os
 import requests
 from pathlib import Path
 
@@ -174,6 +176,7 @@ class OpenNFTManager(QWidget):
         self.ts_timer = QTimer(self)
 
         self.rest_buffer = []
+        self.rest_requests_times = []
         self.rest_timer = QTimer(self)
         self.rest_timer.timeout.connect(self.start_fetch_rest_data)
 
@@ -270,6 +273,7 @@ class OpenNFTManager(QWidget):
 
         self.exchange_data["set_file"] = ""
 
+        self.exchange_data['REST_skipped_n'] = 0
         self.exchange_data["vvf_run"] = True
         self.exchange_data["data_ready_flag"] = False
         self.exchange_data["init"] = False
@@ -313,11 +317,15 @@ class OpenNFTManager(QWidget):
         self.rest_worker.finished.connect(self.handle_fetch_result)
         self.rest_worker.start()
 
-    def handle_fetch_result(self, value):
+    def handle_fetch_result(self, response):
         """Handle the result from the worker thread"""
-        if value is not None:
+        has_skipped_enough = self.exchange_data['REST_skipped_n'] > self.config.skip_vol_nr
+        if response is not None and has_skipped_enough:
+            value, request_time, request_end = response
             if len(self.rest_buffer) == 0 or (self.exchange_data["iter_norm_number"] != self.rest_buffer[-1][0]):
-                self.rest_buffer.append((time.time(), value))
+                self.rest_buffer.append((request_time, value))
+                self.rest_requests_times.append((request_time, request_end))
+
 
     def init_shmem(self):
 
@@ -856,13 +864,10 @@ class OpenNFTManager(QWidget):
 
         self.draw_mc_plots.__dict__['mctrrot'] = plots
 
-        x = np.array(self.exchange_data['scan_time_marks']) - self.exchange_data['zero_time']
 
         for pt, i1, in zip(
                 self.draw_mc_plots.__dict__['mctrrot'], range(0, 6)):
-            truelen = len(data[:, i1])
-            if len(x) != truelen:
-                x = x[-truelen:]
+            x = np.arange(len(data[:, i1]))
             pt.setData(x=x, y=data[:, i1])
 
     # --------------------------------------------------------------------------
@@ -908,9 +913,8 @@ class OpenNFTManager(QWidget):
 
             self.draw_given_roi_plot.__dict__[plotitem] = plots, muster
 
-        x = np.array(self.exchange_data['scan_time_marks']) - self.exchange_data['zero_time']
-
         for p, y in zip(self.draw_given_roi_plot.__dict__[plotitem][0], data):
+            x = np.arange(len(y))
             if len(x) != len(y):
                 p.setData(x=x[1:], y=np.array(y))
             else:
@@ -947,9 +951,10 @@ class OpenNFTManager(QWidget):
         # Draw REST data on the normalized plot
 
         if self.rest_buffer:
-            x = [(point[0] - self.exchange_data['zero_time']) for point in self.rest_buffer]
-            y = [point[1] for point in self.rest_buffer]
-            if x and y:
+            y = [k[1] for k in self.rest_buffer]
+            x = np.arange(0, len(y)) * self.config.rest_time_interval / self.config.tr * 1000
+
+            if len(x)>0 and len(y)>0:
                 if not hasattr(self, 'self.rest_plot_item') or self.rest_plot_item is None:
                     # pen = pg.mkPen(color=c, width=cons.ROI_PLOT_WIDTH)
                     # p = plotitem.plot(pen=pen)
@@ -986,6 +991,7 @@ class OpenNFTManager(QWidget):
                 self.draw_min_max_mroc_roi_plot.__dict__['posMax'], posMax):
             if len(x) > len(mi):
                 x = x[-len(mi):]
+            x = np.arange(len(mi))
             mi = np.array(mi, ndmin=1)
             ma = np.array(ma, ndmin=1)
             pmi.setData(x=x, y=mi)
@@ -1167,7 +1173,8 @@ class OpenNFTManager(QWidget):
 
     # --------------------------------------------------------------------------
     def start(self):
-        self.rest_timer.start(int(self.config.rest_time_interval * 1000))
+        if self.config.rest_time_interval is not None:
+            self.rest_timer.start(int(self.config.rest_time_interval * 1000))
         if con.auto_rtqa:
             self.setup()
 
@@ -2129,6 +2136,8 @@ class OpenNFTManager(QWidget):
 
     # --------------------------------------------------------------------------
     def closeEvent(self, event):
+        pickle.dump((self.rest_requests_times, self.rest_buffer),
+                    open(os.path.join(self.config.work_dir, 'HTTP_requests_log.pickle'), 'wb'))
 
         self.write_app_settings()
         self.ts_timer.stop()
