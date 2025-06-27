@@ -63,6 +63,8 @@ PredictionRESTTimeInterval=1
 ```
 In the first line ``PredictionRESTReq`` is where pyOpenNFT will send GET requests, expecting a single value as a response, and ``PredictionRESTTimeInterval`` defines the frequency of these requests (specified in seconds). 
 
+For an implementation of a prediction server, including training code, refer to [this](https://github.com/OpenNFT/EEG-fMRI-NFT) repository 
+
 ---
 ## Citation
 
