@@ -6,7 +6,7 @@ Ekaterina Antipushina, Nikita Davydov, Riccardo De Feo, Evgeny Prilepin, Artem N
 
 Skoltech, Samara University
 
-📄 [Paper](link-to-paper) | 🖼️ [Project Page](http://opennft.org) 
+📄 [Paper](link-to-paper) 
 
 ---
 
